@@ -95,6 +95,36 @@
           }
         }
       }
+    },
+    "original_essential_obligation_assessments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "theme",
+          "evidence_ids",
+          "status",
+          "supporting_insight_ids",
+          "explanation"
+        ],
+        "properties": {
+          "theme": {"type": "string", "minLength": 1},
+          "evidence_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "status": {
+            "type": "string",
+            "enum": ["covered", "partial", "uncovered"]
+          },
+          "supporting_insight_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "explanation": {"type": "string", "minLength": 1}
+        }
+      }
     }
   },
   "$defs": {

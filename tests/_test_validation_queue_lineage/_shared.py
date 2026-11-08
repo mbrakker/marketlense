@@ -402,7 +402,10 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
     responses["grounding_validation_output_v4"] = responses[
         "grounding_validation_output_v3"
     ]
-    if schema_name == "public_editorial_quality_review_v3":
+    if schema_name in {
+        "public_editorial_quality_review_v3",
+        "public_editorial_quality_review_v4",
+    }:
         public_items = _public_review_items_from_call(call)
         report_evidence_ids = list(
             dict.fromkeys(

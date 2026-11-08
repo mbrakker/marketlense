@@ -2454,21 +2454,34 @@ def finalize_regeneration_candidate_artifacts(
                     continue
                 if not isinstance(item, dict):
                     continue
-                evidence_id = _s(item.get("evidence_id")).strip()
-                if not evidence_id.startswith("verified-fact:"):
+                evidence_ids = _artifact_evidence_ids(item)
+                verified_ids = [
+                    evidence_id
+                    for evidence_id in evidence_ids
+                    if evidence_id.casefold().startswith("verified-fact:")
+                ]
+                if not verified_ids:
                     continue
+                canonical_spans: list[dict[str, Any]] = []
+                if any(
+                    not span_index.get(evidence_id.casefold())
+                    for evidence_id in verified_ids
+                ):
+                    canonical_spans = []
+                else:
+                    for evidence_id in evidence_ids:
+                        canonical_spans.extend(
+                            deepcopy(span)
+                            for span in span_index.get(evidence_id.casefold(), [])
+                            if isinstance(span, dict)
+                        )
                 texts = list(
                     dict.fromkeys(
                         _s(span.get("text")).strip()
-                        for span in span_index.get(evidence_id.casefold(), [])
+                        for span in canonical_spans
                         if isinstance(span, dict) and _s(span.get("text")).strip()
                     )
                 )
-                canonical_spans = [
-                    deepcopy(span)
-                    for span in span_index.get(evidence_id.casefold(), [])
-                    if isinstance(span, dict)
-                ]
                 item["evidence_spans"] = canonical_spans
                 pages = list(
                     dict.fromkeys(

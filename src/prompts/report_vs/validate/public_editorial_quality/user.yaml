@@ -34,3 +34,14 @@ text: |
   and the reason identifies a substantive analytical or commercial-quality
   defect. Do not use that allowance for a factual, source-grounded, number,
   population, timeframe, attribution, causal or guaranteed business assertion.
+
+  If report_scope.original_editorial_plan_coverage includes
+  original_essential_obligations, add exactly one
+  original_essential_obligation_assessments object for each exact obligation
+  theme. Use status covered, partial, or uncovered; cite only the obligation's
+  authorized evidence_ids; list the final insight or public item IDs that
+  support the assessment; and give a substantive explanation. One final item
+  may support more than one obligation when it genuinely covers each one.
+  Do not omit, duplicate, rename, or invent obligations, evidence IDs, or
+  supporting items. A report_verdict status=pass requires every original
+  essential obligation to be covered.

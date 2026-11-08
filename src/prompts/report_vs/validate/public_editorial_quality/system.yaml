@@ -108,3 +108,17 @@ text: |
   unlocalizable defect. Never request broad report regeneration or invent
   evidence IDs. Return only JSON satisfying the public-editorial-quality
   schema.
+
+  When report_scope.original_editorial_plan_coverage contains
+  original_essential_obligations, also return exactly one
+  original_essential_obligation_assessments entry for every original
+  obligation. Preserve each obligation's exact theme identity, cite only its
+  authorized evidence_ids, identify the supporting final insight or public
+  item IDs, and explain substantively whether the obligation is covered,
+  partial, or uncovered. A single final item may support multiple obligations
+  when the wording genuinely covers both; semantic merging is allowed, but do
+  not treat a shared topic or source page as coverage. Do not invent an
+  obligation, evidence ID, supporting item, or coverage status. A verified
+  report_verdict with status=pass is invalid if any original essential
+  obligation is partial or uncovered. Legacy report scopes without this plan
+  contract do not require the additional assessment field.

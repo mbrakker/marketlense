@@ -40,6 +40,7 @@ from src.generators.artifact_generator import (
     store_artifacts_payload,
 )
 from src.generators.artifact_normalization import (
+    _ordered_item_evidence_ids,
     artifact_base_variables,
     artifact_evidence_span_index,
     artifact_quote_candidates,
@@ -805,20 +806,23 @@ def _build_grounding_package(
             pages=issue_pages,
             section=target.target_section,
         )
+        missing_evidence_ids: List[str] = []
     else:
-        relevant_evidence = (
-            _replacement_evidence_entries(
+        if quarantined_ids:
+            relevant_evidence = _replacement_evidence_entries(
                 evidence_packs=evidence_packs,
                 excluded_evidence_ids=set(quarantined_ids),
                 search_text=search_text,
                 pages=issue_pages,
                 section=target.target_section,
             )
-            if quarantined_ids
-            else _collect_relevant_evidence_entries(
-                target.issues, evidence_packs, doc_map
+            missing_evidence_ids = []
+        else:
+            relevant_evidence, missing_evidence_ids = (
+                _collect_required_relevant_evidence_entries(
+                    target.issues, evidence_packs, doc_map
+                )
             )
-        )
     if not relevant_evidence and target.target_section in {
         "summary",
         "expert_comment",
@@ -842,7 +846,12 @@ def _build_grounding_package(
             section=target.target_section,
         )
     evidence_ids = _unique_strings(
-        _entry_evidence_id(entry) for entry in relevant_evidence
+        evidence_id
+        for entry in relevant_evidence
+        for evidence_id in _entry_evidence_ids(entry)
+    )
+    required_evidence_ids = _unique_strings(
+        evidence_id for issue in target.issues for evidence_id in issue.evidence_ids
     )
     evidence_windows = (
         []
@@ -856,6 +865,8 @@ def _build_grounding_package(
             {"idx": window.idx, "text": window.text} for window in evidence_windows[:4]
         ],
         "evidence_ids": evidence_ids,
+        "required_evidence_ids": required_evidence_ids,
+        "missing_evidence_ids": missing_evidence_ids,
         "quarantined_evidence_ids": quarantined_ids,
         "pages": issue_pages,
     }
@@ -897,6 +908,8 @@ def retained_grounding_evidence_ids_for_target(
         evidence_packs=evidence_packs,
         doc_map=doc_map,
     )
+    if package.get("missing_evidence_ids"):
+        return []
     if target.target_section == "summary":
         claims = _copy_dict(artifacts.get("summary")).get("claim_evidence_map")
         claim_targets = _summary_claim_map_targets_for_claims(
@@ -1284,11 +1297,19 @@ def _doc_map_section_evidence_entries(
     """Return canonical retained DocMap entries in their existing package shape."""
 
     entries: List[Dict[str, Any]] = []
+    normalized_target_ids = (
+        {_normalized_evidence_id(value) for value in target_ids if _s(value).strip()}
+        if target_ids is not None
+        else None
+    )
     for section in doc_map.get("sections") or []:
         if not isinstance(section, dict):
             continue
         section_id = _s(section.get("id")).strip()
-        if not section_id or (target_ids is not None and section_id not in target_ids):
+        if not section_id or (
+            normalized_target_ids is not None
+            and _normalized_evidence_id(section_id) not in normalized_target_ids
+        ):
             continue
         entries.append(
             {
@@ -1449,7 +1470,7 @@ def _all_pack_entries(pack_name: str, value: Any) -> List[Dict[str, Any]]:
         return entries
     if not isinstance(value, dict):
         return entries
-    if _s(value.get("id") or value.get("evidence_id")).strip():
+    if _s(value.get("id") or value.get("evidence_id") or value.get("fact_id")).strip():
         entries.append({"pack_name": pack_name, "entry": value})
     for nested in value.values():
         if isinstance(nested, (dict, list)):
@@ -1461,7 +1482,151 @@ def _entry_evidence_id(entry: Dict[str, Any]) -> str:
     payload = entry.get("entry") if isinstance(entry, dict) else None
     payload = payload if isinstance(payload, dict) else entry
     payload = payload if isinstance(payload, dict) else {}
-    return _s(payload.get("id") or payload.get("evidence_id")).strip()
+    return _s(
+        payload.get("id")
+        or payload.get("evidence_id")
+        or (
+            f"verified-fact:{_s(payload.get('fact_id')).strip()}"
+            if _s(entry.get("pack_name")).strip() == "verified_facts"
+            and _s(payload.get("fact_id")).strip()
+            else ""
+        )
+    ).strip()
+
+
+def _entry_evidence_ids(entry: Dict[str, Any]) -> List[str]:
+    payload = entry.get("entry") if isinstance(entry, dict) else None
+    payload = payload if isinstance(payload, dict) else entry
+    if not isinstance(payload, dict):
+        return []
+    values: List[Any] = [
+        payload.get("id"),
+        payload.get("evidence_id"),
+    ]
+    values.extend(payload.get("evidence_ids") or [])
+    if (
+        _s(entry.get("pack_name")).strip() == "verified_facts"
+        and _s(payload.get("fact_id")).strip()
+    ):
+        values.append(f"verified-fact:{_s(payload.get('fact_id')).strip()}")
+    return _unique_strings(values)
+
+
+def _merge_evidence_entry(
+    existing: Dict[str, Any], incoming: Dict[str, Any]
+) -> Dict[str, Any]:
+    merged = deepcopy(existing)
+    existing_payload = merged.get("entry")
+    incoming_payload = incoming.get("entry")
+    if not isinstance(existing_payload, dict) or not isinstance(incoming_payload, dict):
+        return merged
+    existing_ids = {
+        _normalized_evidence_id(value) for value in _entry_evidence_ids(merged)
+    }
+    additional_ids = [
+        value
+        for value in _entry_evidence_ids(incoming)
+        if _normalized_evidence_id(value) not in existing_ids
+    ]
+    if additional_ids:
+        evidence_ids = existing_payload.get("evidence_ids")
+        if not isinstance(evidence_ids, list):
+            evidence_ids = []
+            existing_payload["evidence_ids"] = evidence_ids
+        evidence_ids.extend(
+            value for value in additional_ids if value not in evidence_ids
+        )
+    for merge_field in ("pages", "evidence_spans", "source_spans"):
+        incoming_values = incoming_payload.get(merge_field)
+        if not isinstance(incoming_values, list):
+            continue
+        current_values = existing_payload.get(merge_field)
+        if not isinstance(current_values, list):
+            existing_payload[merge_field] = deepcopy(incoming_values)
+            continue
+        for value in incoming_values:
+            if value not in current_values:
+                current_values.append(deepcopy(value))
+    return merged
+
+
+def _collect_required_relevant_evidence_entries(
+    issues: List[RegenerationIssue],
+    evidence_packs: Dict[str, Any],
+    doc_map: Dict[str, Any],
+) -> tuple[List[Dict[str, Any]], List[str]]:
+    required = _unique_strings(
+        evidence_id
+        for issue in issues
+        for evidence_id in issue.evidence_ids
+        if _s(evidence_id).strip()
+    )
+    if not required:
+        return [], []
+    required_keys = {_normalized_evidence_id(value) for value in required}
+    selected_entries: List[Dict[str, Any]] = []
+    selected_indexes: Dict[str, int] = {}
+    source_entries: List[Dict[str, Any]] = []
+    pack_names = [
+        name
+        for name in ("findings", "verified_facts", "quote_candidates")
+        if name in evidence_packs
+    ]
+    pack_names.extend(name for name in evidence_packs if name not in pack_names)
+    for pack_name in pack_names:
+        source_entries.extend(_all_pack_entries(pack_name, evidence_packs[pack_name]))
+    if isinstance(doc_map, dict):
+        source_entries.extend(_doc_map_section_evidence_entries(doc_map, required_keys))
+    for entry in source_entries:
+        entry_ids = _entry_evidence_ids(entry)
+        matching_ids = [
+            evidence_id
+            for evidence_id in entry_ids
+            if _normalized_evidence_id(evidence_id) in required_keys
+        ]
+        if not matching_ids:
+            continue
+        matching_keys = {
+            _normalized_evidence_id(evidence_id) for evidence_id in matching_ids
+        }
+        existing_indexes = {
+            selected_indexes[key] for key in matching_keys if key in selected_indexes
+        }
+        if existing_indexes:
+            representative_index = min(existing_indexes)
+            selected_entries[representative_index] = _merge_evidence_entry(
+                selected_entries[representative_index], entry
+            )
+        else:
+            representative_index = len(selected_entries)
+            selected_entries.append(deepcopy(entry))
+        for key in matching_keys:
+            selected_indexes[key] = representative_index
+    ordered_entries: List[Dict[str, Any]] = []
+    emitted_entry_indexes: set[int] = set()
+    for evidence_id in required:
+        key = _normalized_evidence_id(evidence_id)
+        selected_index = selected_indexes.get(key)
+        if selected_index is None:
+            continue
+        if selected_index in emitted_entry_indexes:
+            continue
+        emitted_entry_indexes.add(selected_index)
+        ordered_entries.append(selected_entries[selected_index])
+    # A composite source entry can satisfy several required IDs.  The first
+    # representative is emitted once, while its complete ID list remains in
+    # the package's required/evidence ID projections.
+    selected_keys = {
+        _normalized_evidence_id(evidence_id)
+        for entry in ordered_entries
+        for evidence_id in _entry_evidence_ids(entry)
+    }
+    missing = [
+        evidence_id
+        for evidence_id in required
+        if _normalized_evidence_id(evidence_id) not in selected_keys
+    ]
+    return ordered_entries, missing
 
 
 def _collect_relevant_evidence_entries(
@@ -1469,18 +1634,10 @@ def _collect_relevant_evidence_entries(
     evidence_packs: Dict[str, Any],
     doc_map: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    target_ids = {
-        evidence_id
-        for issue in issues
-        for evidence_id in issue.evidence_ids
-        if _s(evidence_id).strip()
-    }
-    entries: List[Dict[str, Any]] = []
-    if target_ids and isinstance(doc_map, dict):
-        entries.extend(_doc_map_section_evidence_entries(doc_map, target_ids))
-    for pack_name, pack in evidence_packs.items():
-        entries.extend(_collect_pack_entries(pack_name, pack, target_ids))
-    return entries[:8]
+    entries, _missing = _collect_required_relevant_evidence_entries(
+        issues, evidence_packs, doc_map
+    )
+    return entries
 
 
 def _collect_pack_entries(
@@ -1488,38 +1645,19 @@ def _collect_pack_entries(
     pack: Any,
     target_ids: set[str],
 ) -> List[Dict[str, Any]]:
-    entries: List[Dict[str, Any]] = []
     if not target_ids:
-        return entries
-    if isinstance(pack, list):
-        for entry in pack:
-            if not isinstance(entry, dict):
-                continue
-            pack_id = _s(entry.get("id") or entry.get("evidence_id"))
-            if pack_id in target_ids:
-                entries.append(
-                    {
-                        "pack_name": pack_name,
-                        "entry": entry,
-                    }
-                )
-        return entries
-    if not isinstance(pack, dict):
-        return entries
-    for key, value in pack.items():
-        if isinstance(value, list):
-            entries.extend(_collect_pack_entries(pack_name, value, target_ids))
-        elif isinstance(value, dict):
-            pack_id = _s(value.get("id") or value.get("evidence_id"))
-            if pack_id in target_ids:
-                entries.append(
-                    {
-                        "pack_name": pack_name,
-                        "key": key,
-                        "entry": value,
-                    }
-                )
-    return entries
+        return []
+    normalized_target_ids = {
+        _normalized_evidence_id(value) for value in target_ids if _s(value).strip()
+    }
+    return [
+        entry
+        for entry in _all_pack_entries(pack_name, pack)
+        if any(
+            _normalized_evidence_id(evidence_id) in normalized_target_ids
+            for evidence_id in _entry_evidence_ids(entry)
+        )
+    ]
 
 
 def _artifact_state(
@@ -5743,7 +5881,13 @@ def _regenerate_one_final_insight(
     if execution.target.repair_action == "REBIND_EVIDENCE":
         mutable_paths.update(
             field_name
-            for field_name in ("evidence_id", "evidence", "evidence_spans", "pages")
+            for field_name in (
+                "evidence_id",
+                "evidence_ids",
+                "evidence",
+                "evidence_spans",
+                "pages",
+            )
             if f"insights_final[item={insight_id}].{field_name}"
             in execution.target.allowed_paths
         )
@@ -5807,7 +5951,7 @@ def _regenerate_one_final_insight(
             _set_insight_path_value(repaired, field_path, deepcopy(regenerated_value))
     repaired["id"] = insight_id
     if execution.target.repair_action == "REBIND_EVIDENCE":
-        rebound_evidence_id = _s(repaired.get("evidence_id")).strip()
+        rebound_evidence_ids = _ordered_item_evidence_ids(repaired)
         package_evidence_ids = {
             _s(value).strip().casefold()
             for value in execution.grounding_package.get("evidence_ids", [])
@@ -5829,23 +5973,32 @@ def _regenerate_one_final_insight(
             doc_map={},
             evidence_packs=direct_evidence_packs,
         )
-        canonical_spans = [
-            span
-            for span in canonical_span_index.get(rebound_evidence_id.casefold(), [])
-            if span.get("source_pack")
-            in {
-                "findings",
-                "quote_candidates",
-                "verified_facts",
-            }
-            and isinstance(span.get("page"), int)
-            and span["page"] > 0
-            and _s(span.get("text")).strip()
-        ]
+        canonical_spans: List[Dict[str, Any]] = []
+        for rebound_evidence_id in rebound_evidence_ids:
+            eligible_spans = [
+                span
+                for span in canonical_span_index.get(rebound_evidence_id.casefold(), [])
+                if span.get("source_pack")
+                in {
+                    "findings",
+                    "quote_candidates",
+                    "verified_facts",
+                }
+                and isinstance(span.get("page"), int)
+                and span["page"] > 0
+                and _s(span.get("text")).strip()
+            ]
+            if not eligible_spans:
+                canonical_spans = []
+                break
+            canonical_spans.extend(eligible_spans)
         if (
-            not rebound_evidence_id
-            or rebound_evidence_id.casefold() not in package_evidence_ids
-            or rebound_evidence_id.casefold() in quarantined_evidence_ids
+            not rebound_evidence_ids
+            or any(
+                evidence_id.casefold() not in package_evidence_ids
+                or evidence_id.casefold() in quarantined_evidence_ids
+                for evidence_id in rebound_evidence_ids
+            )
             or not canonical_spans
         ):
             raise AppError(
@@ -5858,7 +6011,7 @@ def _regenerate_one_final_insight(
                 context={
                     "report_id": execution.runtime.request.report_id,
                     "insight_id": insight_id,
-                    "evidence_id": rebound_evidence_id,
+                    "evidence_ids": rebound_evidence_ids,
                 },
             )
         canonical_insight = deepcopy(repaired)
@@ -5871,18 +6024,14 @@ def _regenerate_one_final_insight(
             evidence_packs=direct_evidence_packs,
         )
         rebound_spans = canonical_insight.get("evidence_spans")
-        if not any(
-            isinstance(span, dict)
-            and span.get("source_pack")
-            in {
-                "findings",
-                "quote_candidates",
-                "verified_facts",
-            }
-            and isinstance(span.get("page"), int)
-            and span["page"] > 0
-            and _s(span.get("text")).strip()
+        rebound_span_ids = {
+            _s(span.get("evidence_id")).strip().casefold()
             for span in rebound_spans or []
+            if isinstance(span, dict)
+        }
+        if not all(
+            evidence_id.casefold() in rebound_span_ids
+            for evidence_id in rebound_evidence_ids
         ):
             raise AppError(
                 code="regeneration_evidence_rebind_unresolved",
@@ -5894,16 +6043,28 @@ def _regenerate_one_final_insight(
                 context={
                     "report_id": execution.runtime.request.report_id,
                     "insight_id": insight_id,
-                    "evidence_id": rebound_evidence_id,
+                    "evidence_ids": rebound_evidence_ids,
                 },
             )
-        for field_name in ("evidence", "pages", "evidence_spans"):
+        for field_name in (
+            "evidence_id",
+            "evidence_ids",
+            "evidence",
+            "pages",
+            "evidence_spans",
+        ):
+            if field_name in {"evidence_id", "evidence_ids"} and (
+                f"insights_final[item={insight_id}].{field_name}"
+                not in execution.target.allowed_paths
+            ):
+                continue
             if canonical_insight.get(field_name) == original.get(field_name):
                 continue
             repaired[field_name] = deepcopy(canonical_insight.get(field_name))
-            execution.state.deterministic_mutation_paths.append(
-                f"insights_final[item={insight_id}].{field_name}"
-            )
+            if field_name != "evidence_id":
+                execution.state.deterministic_mutation_paths.append(
+                    f"insights_final[item={insight_id}].{field_name}"
+                )
     if execution.state.visual_authority_candidates:
         authoritative = next(
             (

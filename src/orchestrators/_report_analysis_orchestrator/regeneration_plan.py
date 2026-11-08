@@ -30,6 +30,7 @@ from src.utils.editorial_identity import (
     insight_entity_id_from_public_item_id,
 )
 from src.utils.errors import AppError
+from src.utils.verified_facts import fact_for_evidence_id, validated_verified_facts
 
 __all__ = [
     "BROAD_TARGETS",
@@ -95,8 +96,7 @@ def _lookup_insight_grounding(
     # not turn it into a report-wide evidence package by walking every item.
     if not insight_id:
         return [], []
-    evidence_ids: List[str] = []
-    pages: List[int] = []
+    matching_bindings: List[List[str]] = []
     for key in ("insights_final", "insights_candidates"):
         for entry in artifacts.get(key) or []:
             if not isinstance(entry, dict):
@@ -104,27 +104,20 @@ def _lookup_insight_grounding(
             entry_id = insight_entity_id(entry)
             if entry_id != insight_id:
                 continue
-            declared_ids = [entry.get("evidence_id")]
-            declared_ids.extend(entry.get("evidence_ids") or [])
-            declared_ids.extend(
-                span.get("evidence_id")
-                for span in entry.get("evidence_spans") or []
-                if isinstance(span, dict)
-            )
-            for raw_evidence_id in declared_ids:
-                evidence_id = str(raw_evidence_id or "").strip()
-                if evidence_id and evidence_id not in evidence_ids:
-                    evidence_ids.append(evidence_id)
-            for page in entry.get("pages") or []:
-                if isinstance(page, int) and page not in pages:
-                    pages.append(page)
-            for span in entry.get("evidence_spans") or []:
-                if not isinstance(span, dict):
-                    continue
-                page = span.get("page")
-                if isinstance(page, int) and page not in pages:
-                    pages.append(page)
-    return evidence_ids, pages
+            matching_bindings.append(_evidence_ids_for_item(entry))
+    if not matching_bindings:
+        return [], []
+    binding_keys = {
+        tuple(sorted(value.casefold() for value in binding if value))
+        for binding in matching_bindings
+    }
+    if len(binding_keys) > 1:
+        # A final/candidate duplicate with a different evidence binding is an
+        # ambiguous repair authority.  Do not pool both bindings and let the
+        # model choose between unrelated facts.
+        return [], []
+    evidence_ids = matching_bindings[0]
+    return evidence_ids, _pages_for_evidence_ids(evidence_ids, artifacts)
 
 
 def _lookup_topic_grounding(
@@ -178,28 +171,67 @@ def _pages_for_evidence_ids(
         return []
     pages: List[int] = []
 
+    # A verified fact is the authoritative page binding.  Do not let a stale
+    # projection with the same ID add unrelated pages to a canonical fact.
+    canonical_ids: set[str] = set()
+    try:
+        facts = validated_verified_facts(artifacts)
+    except AppError:
+        facts = {}
+    for raw_evidence_id in evidence_ids:
+        evidence_id = str(raw_evidence_id or "").strip()
+        fact = fact_for_evidence_id(facts, evidence_id)
+        if fact is None:
+            continue
+        canonical_ids.add(evidence_id.casefold())
+        for page in fact.get("supporting_physical_pages") or []:
+            if isinstance(page, int) and page > 0 and page not in pages:
+                pages.append(page)
+
+    metadata_requested = requested - canonical_ids
+
     def walk(value: Any) -> None:
         if isinstance(value, dict):
-            declared = [value.get("evidence_id")]
-            declared.extend(value.get("evidence_ids") or [])
-            declared.extend(
+            direct_declared = [value.get("evidence_id")]
+            direct_declared.extend(value.get("evidence_ids") or [])
+            direct_ids = {
+                str(item or "").strip().casefold()
+                for item in direct_declared
+                if str(item or "").strip()
+            }
+            span_declared = [
                 span.get("evidence_id")
                 for span in value.get("evidence_spans") or []
                 if isinstance(span, dict)
-            )
+            ]
             matches = {
                 str(item or "").strip().casefold()
-                for item in declared
+                for item in [*direct_declared, *span_declared]
                 if str(item or "").strip()
             }
-            if requested.intersection(matches):
+            requested_matches = metadata_requested.intersection(matches)
+            if requested_matches:
+                single_direct_id = (
+                    next(iter(direct_ids), "") if len(direct_ids) == 1 else ""
+                )
                 raw_pages = value.get("pages")
-                if isinstance(raw_pages, list):
+                composite_direct_ids_match = direct_ids == metadata_requested
+                if (
+                    single_direct_id in metadata_requested or composite_direct_ids_match
+                ) and isinstance(raw_pages, list):
                     for page in raw_pages:
                         if isinstance(page, int) and page > 0 and page not in pages:
                             pages.append(page)
                 page = value.get("page")
-                if isinstance(page, int) and page > 0 and page not in pages:
+                if (
+                    (
+                        single_direct_id in metadata_requested
+                        or composite_direct_ids_match
+                    )
+                    and isinstance(page, int)
+                    and page > 0
+                    and page not in pages
+                ):
                     pages.append(page)
                 for span in value.get("evidence_spans") or []:
                     if not isinstance(span, dict):
@@ -207,7 +239,13 @@ def _pages_for_evidence_ids(
                     span_id = str(span.get("evidence_id") or "").strip().casefold()
                     span_page = span.get("page")
                     if (
-                        span_id in requested
+                        span_id in metadata_requested
+                        and isinstance(span_page, int)
+                        and span_page > 0
+                        and span_page not in pages
+                    ) or (
+                        not span_id
+                        and single_direct_id in metadata_requested
                         and isinstance(span_page, int)
                         and span_page > 0
                         and span_page not in pages
@@ -216,9 +254,14 @@ def _pages_for_evidence_ids(
                 for span in value.get("source_spans") or []:
                     if not isinstance(span, dict):
                         continue
+                    span_id = str(span.get("evidence_id") or "").strip().casefold()
                     span_page = span.get("page")
                     if (
-                        isinstance(span_page, int)
+                        (
+                            span_id in metadata_requested
+                            or (not span_id and single_direct_id in metadata_requested)
+                        )
+                        and isinstance(span_page, int)
                         and span_page > 0
                         and span_page not in pages
                     ):
@@ -232,6 +275,21 @@ def _pages_for_evidence_ids(
 
     walk(artifacts)
     return pages
+
+
+def _evidence_ids_for_item(item: Dict[str, Any]) -> List[str]:
+    """Return an item's primary, composite, and explicitly spanned IDs."""
+
+    values: List[Any] = [item.get("evidence_id")]
+    values.extend(item.get("evidence_ids") or [])
+    values.extend(
+        span.get("evidence_id")
+        for span in item.get("evidence_spans") or []
+        if isinstance(span, dict)
+    )
+    return list(
+        dict.fromkeys(str(value).strip() for value in values if str(value).strip())
+    )
 
 
 def _issue_grounding(
@@ -250,9 +308,8 @@ def _issue_grounding(
         if source is None:
             return [], []
         insight = source[2]
-        evidence_id = str(insight.get("evidence_id") or "").strip()
-        pages = [page for page in (insight.get("pages") or []) if isinstance(page, int)]
-        return ([evidence_id] if evidence_id else []), pages
+        evidence_ids = _evidence_ids_for_item(insight)
+        return evidence_ids, _pages_for_evidence_ids(evidence_ids, artifacts)
     if resolved_entity_id:
         try:
             claims = soft_copy_claim_provenance_from_payload(
@@ -296,33 +353,18 @@ def _issue_grounding(
         evidence_id = str(summary_claim.get("evidence_id") or "").strip()
         if evidence_id and evidence_id not in summary_claim_evidence_ids:
             summary_claim_evidence_ids.append(evidence_id)
-        summary_claim_pages = list(
-            dict.fromkeys(
-                page
-                for page in summary_claim.get("pages") or []
-                if isinstance(page, int)
-            )
+        return summary_claim_evidence_ids, _pages_for_evidence_ids(
+            summary_claim_evidence_ids, artifacts
         )
-        return summary_claim_evidence_ids, summary_claim_pages
     if lower_section in {
         "tldr",
         "executive_summary",
         "claim_evidence_map",
     } or lower_section.startswith("summary"):
-        summary_evidence_ids: List[str] = []
-        summary_pages: List[int] = []
-        summary_value = artifacts.get("summary")
-        summary = summary_value if isinstance(summary_value, dict) else {}
-        for claim in summary.get("claim_evidence_map") or []:
-            if not isinstance(claim, dict):
-                continue
-            evidence_id = str(claim.get("evidence_id") or "").strip()
-            if evidence_id and evidence_id not in summary_evidence_ids:
-                summary_evidence_ids.append(evidence_id)
-            for page in claim.get("pages") or []:
-                if isinstance(page, int) and page not in summary_pages:
-                    summary_pages.append(page)
-        return summary_evidence_ids, summary_pages
+        # A broad summary path does not identify one retained claim.  Returning
+        # report-wide evidence here would let a repair bind to an unrelated
+        # claim, so the safe result is an abstention package.
+        return [], []
     if lower_section.startswith("insights"):
         insight_id = section.split(":", 1)[1].strip() if ":" in section else ""
         return _lookup_insight_grounding(insight_id, artifacts)
@@ -604,9 +646,10 @@ def _lookup_quote_grounding(
     quote_id: str,
     artifacts: Dict[str, Any],
 ) -> tuple[List[str], List[int]]:
-    evidence_ids: List[str] = []
-    pages: List[int] = []
+    if not quote_id:
+        return [], []
     quotes = artifacts.get("quotes_final") or []
+    matches: List[Dict[str, Any]] = []
     for idx, entry in enumerate(quotes):
         if not isinstance(entry, dict):
             continue
@@ -615,17 +658,19 @@ def _lookup_quote_grounding(
             str(entry.get("evidence_id") or "").strip(),
             str(idx + 1),
         }
-        if quote_id and quote_id not in candidate_ids:
+        if quote_id not in candidate_ids:
             continue
-        evidence_id = str(entry.get("evidence_id") or "").strip()
-        if evidence_id and evidence_id not in evidence_ids:
-            evidence_ids.append(evidence_id)
-        page = entry.get("page")
-        if isinstance(page, int) and page not in pages:
-            pages.append(page)
-        if quote_id:
-            break
-    return evidence_ids, pages
+        matches.append(entry)
+    if not matches:
+        return [], []
+    binding_keys = {
+        tuple(sorted(value.casefold() for value in _evidence_ids_for_item(entry)))
+        for entry in matches
+    }
+    if len(binding_keys) > 1:
+        return [], []
+    evidence_ids = _evidence_ids_for_item(matches[0])
+    return evidence_ids, _pages_for_evidence_ids(evidence_ids, artifacts)
 
 
 def _allowed_paths(
@@ -790,6 +835,8 @@ def _allowed_paths(
                 for field in ("evidence_id",)
                 if _has_scalar_leaf(item, field)
             )
+            if isinstance(item.get("evidence_ids"), list):
+                paths.add(f"{item_path}.evidence_ids")
     return sorted(paths)
 
 

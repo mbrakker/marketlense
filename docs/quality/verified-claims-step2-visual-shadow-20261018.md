@@ -11462,3 +11462,83 @@ no publication write occurred.
 engineering gates; PARTIAL / NO-GO for live Step 2 acceptance.** E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+### Multi-fact grounding, regeneration, and semantic-acceptance correction — 2026-11-08
+
+This slice was implemented against reviewed HEAD `a3a3ce1b721205af46217271d85c770ffc2ebc72`.
+It addresses confirmed cross-stage defects only; it adds no model stage,
+service, validator framework, publication mutation, or report-specific branch.
+
+Confirmed root causes and corrections:
+
+* `regeneration_plan.py` previously retained singular or broad page context for
+  composite insight, quote, summary, and figure failures. Exact item evidence
+  IDs now drive fact-specific page resolution; canonical verified-fact pages
+  take precedence, broad/unqualified summary and quote paths abstain, and
+  duplicate stable identities with conflicting bindings fail closed rather
+  than pooling unrelated facts. Composite pages remain available when the
+  requested IDs exactly match the retained composite binding.
+* `report_regeneration_generator.py` previously truncated the canonical
+  evidence matches after eight entries. Repair packages now resolve every
+  explicitly requested ID, deduplicate equivalent representations while
+  merging useful page/span lineage, and retain an exact `missing_evidence_ids`
+  list. A missing required fact cannot silently become optional context.
+* Multi-fact `REBIND_EVIDENCE` now authorizes the existing item’s
+  `evidence_ids` leaf when present, validates every proposed admitted fact,
+  rebuilds all spans/pages/text through the existing binder, and rejects
+  partial or sibling bindings. Verified-fact evidence packs are opt-in at the
+  direct-pack boundary; normal-mode projections remain unchanged.
+* The existing independent public-editorial review now has an optional v4
+  output field for one semantic assessment per immutable original essential
+  obligation. Deterministic checks reject omissions, duplicates, unknown
+  themes/items/evidence, unsupported coverage, and a report PASS with a
+  partial/uncovered essential obligation. Semantic merging into one genuinely
+  multi-theme insight remains allowed. Review cache identity is advanced to
+  validator `public-editorial-quality:v28`, schema `3.1`, output identity
+  `public_editorial_quality_review_v4`.
+
+The historical KPMG limitation failure was traced to the retained run, not
+reclassified as a current success: `ma-buyer-pipeline-outlook` had source
+qualifiers on physical page 15, the limitations family abstained, and the old
+editorial plan did not retain a `material_limitation_evidence_ids` binding;
+the old public review consequently reported `report_limitations_omitted`.
+Current code already falls back to verified-fact qualifiers in expert context,
+executive/rendered limitation projections, and the public-review scope, while
+the current plan prompt requests explicit material-limitation IDs. No further
+mechanical qualifier promotion was made without a current source/provider
+reproduction; publication remains fail-closed if the current handoff is not
+adequately covered.
+
+Verification on this worktree:
+
+* The focused cross-stage command covering multi-fact grounding, regeneration,
+  public-editorial obligations, evidence binding, finalization, historical
+  residuals, and prompt validation passed **185 tests**.
+* Full local pytest was run before the final isolated compatibility correction:
+  **8,627 passed, 2 skipped, 48 deselected, 5 failed**. Four failures were
+  caused by the two corrected compatibility issues above and then passed in an
+  isolated rerun (**3 passed**, including the parameterized full-chain cases).
+  The remaining failure is the pre-existing native CPython-3.12 wheelhouse
+  audit on this CPython 3.14.2 host.
+* Full-repository mypy passed for **786 source files with 0 tracked errors**;
+  changed-file Ruff and formatting passed; the public-review schema parses.
+  The prompt-fixture gate passed against the unchanged baseline and thresholds:
+  total **118,859 tokens / $0.025541** versus **118,469 / $0.025502**;
+  validation **13,254 / $0.002238** versus **12,864 / $0.002199**. The
+  measured delta is **+390 validation tokens / +$0.000039** (the new
+  obligation contract); no fixture content, pricing, threshold, or quality
+  requirement was weakened.
+* The provider-free replay is retained at
+  `out/verified_claims_step2_multifact_20261108/replay.json`. It covers all
+  **15 reference cases / 39 variants**, but all five exact source PDFs are
+  absent from this worktree and therefore all cases are
+  `skipped_provider_free`; it proves retained-input coverage only. No current
+  provider-backed report run, canonical promotion, readiness approval,
+  publication, or WordPress write occurred.
+
+The implementation therefore earns **PASS for the confirmed code-level
+multi-fact handoff and regression gates**, but the required live semantic and
+editorial cohort acceptance remains **PARTIAL / NO-GO**. Step 2 remains
+**PARTIAL / NO-GO**, E18 remains **Active/PARTIAL**, and Step 3 remains
+**unstarted/not ready**. The historical Capgemini, Activate, KPMG, and Adjust
+provider outcomes are not claimed as corrected by provider-free replay.

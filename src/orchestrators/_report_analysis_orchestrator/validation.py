@@ -70,6 +70,7 @@ from src.generators._artifact_generator.storage import (
     regeneration_dependent_roots,
 )
 from src.generators.artifact_normalization import (
+    _ordered_item_evidence_ids,
     artifact_evidence_span_index,
     bind_artifact_evidence_spans,
     page_bound_direct_evidence_packs,
@@ -168,9 +169,9 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v27"
-_PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.0"
-_PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v3"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v28"
+_PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.1"
+_PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v4"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
     "material_coverage",
     "analytical_depth",
@@ -385,6 +386,212 @@ def _public_editorial_review_issue(
     )
 
 
+def _validate_original_essential_obligation_assessments(
+    *,
+    payload: dict[str, Any],
+    items: list[dict[str, Any]],
+    report_scope: dict[str, Any],
+) -> list[str]:
+    """Validate semantic coverage of the immutable original plan obligations."""
+
+    if str(report_scope.get("authority") or "").strip() != ("canonical_verified_facts"):
+        return []
+    coverage = report_scope.get("original_editorial_plan_coverage")
+    obligations = (
+        coverage.get("original_essential_obligations")
+        if isinstance(coverage, dict)
+        else None
+    )
+    if not isinstance(obligations, list) or not obligations:
+        return []
+    assessments = payload.get("original_essential_obligation_assessments")
+    if not isinstance(assessments, list):
+        raise AppError(
+            code="public_editorial_quality_obligation_review_incomplete",
+            message=(
+                "Verified public review omitted original essential obligation "
+                "assessments"
+            ),
+            retryable=False,
+            context={"expected_obligation_count": len(obligations)},
+        )
+
+    expected: dict[str, dict[str, Any]] = {}
+    for obligation in obligations:
+        if not isinstance(obligation, dict):
+            raise AppError(
+                code="public_editorial_quality_obligation_contract_invalid",
+                message="Original essential obligation is malformed",
+                retryable=False,
+            )
+        theme = str(obligation.get("theme") or obligation.get("id") or "").strip()
+        if not theme or theme in expected:
+            raise AppError(
+                code="public_editorial_quality_obligation_contract_invalid",
+                message="Original essential obligations lack unique stable identities",
+                retryable=False,
+                context={"theme": theme},
+            )
+        expected[theme] = obligation
+
+    public_item_evidence: dict[str, set[str]] = {}
+    allowed_support_ids: set[str] = set()
+    for item in items:
+        item_id = str(item.get("public_item_id") or "").strip()
+        if not item_id:
+            continue
+        evidence_ids = {
+            str(value).strip()
+            for value in item.get("evidence_ids") or []
+            if str(value).strip()
+        }
+        aliases = {item_id}
+        parts = item_id.split(":")
+        if len(parts) >= 3 and parts[0] == "insight":
+            aliases.update({parts[1], f"insight:{parts[1]}"})
+        for alias in aliases:
+            allowed_support_ids.add(alias)
+            public_item_evidence[alias] = evidence_ids
+
+    if len(assessments) != len(expected):
+        raise AppError(
+            code="public_editorial_quality_obligation_review_incomplete",
+            message=(
+                "Verified public review did not assess every original essential "
+                "obligation"
+            ),
+            retryable=False,
+            context={
+                "expected_obligation_count": len(expected),
+                "actual_obligation_count": len(assessments),
+            },
+        )
+    seen: set[str] = set()
+    statuses: list[str] = []
+    for assessment in assessments:
+        if not isinstance(assessment, dict):
+            raise AppError(
+                code="public_editorial_quality_obligation_review_incomplete",
+                message="Original obligation assessment is malformed",
+                retryable=False,
+            )
+        theme = str(assessment.get("theme") or "").strip()
+        if theme not in expected or theme in seen:
+            raise AppError(
+                code="public_editorial_quality_obligation_review_mismatch",
+                message=(
+                    "Original obligation assessment has an unknown or duplicate theme"
+                ),
+                retryable=False,
+                context={"theme": theme},
+            )
+        seen.add(theme)
+        status = str(assessment.get("status") or "").strip()
+        if status not in {"covered", "partial", "uncovered"}:
+            raise AppError(
+                code="public_editorial_quality_obligation_review_mismatch",
+                message="Original obligation assessment has an invalid status",
+                retryable=False,
+                context={"theme": theme, "status": status},
+            )
+        explanation = str(assessment.get("explanation") or "").strip()
+        if not _substantive_public_review_reason(explanation):
+            raise AppError(
+                code="public_editorial_quality_obligation_review_reason_missing",
+                message="Original obligation assessment has no substantive explanation",
+                retryable=False,
+                context={"theme": theme},
+            )
+        obligation_evidence_ids = {
+            str(value).strip()
+            for value in expected[theme].get("evidence_ids") or []
+            if str(value).strip()
+        }
+        assessment_evidence_ids = [
+            str(value).strip()
+            for value in assessment.get("evidence_ids") or []
+            if str(value).strip()
+        ]
+        if len(set(assessment_evidence_ids)) != len(assessment_evidence_ids) or not set(
+            assessment_evidence_ids
+        ).issubset(obligation_evidence_ids):
+            raise AppError(
+                code="public_editorial_quality_obligation_review_evidence_mismatch",
+                message="Original obligation assessment cites unauthorized evidence",
+                retryable=False,
+                context={"theme": theme},
+            )
+        supporting_ids = [
+            str(value).strip()
+            for value in assessment.get("supporting_insight_ids") or []
+            if str(value).strip()
+        ]
+        if len(set(supporting_ids)) != len(supporting_ids) or not set(
+            supporting_ids
+        ).issubset(allowed_support_ids):
+            raise AppError(
+                code="public_editorial_quality_obligation_review_support_mismatch",
+                message=(
+                    "Original obligation assessment cites an unknown supporting item"
+                ),
+                retryable=False,
+                context={"theme": theme},
+            )
+        supported_evidence_ids = (
+            set().union(*(public_item_evidence[item_id] for item_id in supporting_ids))
+            if supporting_ids
+            else set()
+        )
+        if not set(assessment_evidence_ids).issubset(supported_evidence_ids):
+            raise AppError(
+                code="public_editorial_quality_obligation_review_support_mismatch",
+                message=(
+                    "Original obligation evidence is not bound to its supporting items"
+                ),
+                retryable=False,
+                context={"theme": theme},
+            )
+        if status == "covered" and (
+            set(assessment_evidence_ids) != obligation_evidence_ids
+            or not obligation_evidence_ids
+            or not supporting_ids
+        ):
+            raise AppError(
+                code="public_editorial_quality_obligation_review_incomplete",
+                message=(
+                    "Covered obligation assessment does not account for every "
+                    "authorized fact"
+                ),
+                retryable=False,
+                context={"theme": theme},
+            )
+        if status == "partial" and not assessment_evidence_ids:
+            raise AppError(
+                code="public_editorial_quality_obligation_review_incomplete",
+                message="Partial obligation assessment has no retained evidence",
+                retryable=False,
+                context={"theme": theme},
+            )
+        if status == "uncovered" and (assessment_evidence_ids or supporting_ids):
+            raise AppError(
+                code="public_editorial_quality_obligation_review_status_conflict",
+                message=(
+                    "Uncovered obligation assessment cannot claim supporting evidence"
+                ),
+                retryable=False,
+                context={"theme": theme},
+            )
+        statuses.append(status)
+    if seen != set(expected):
+        raise AppError(
+            code="public_editorial_quality_obligation_review_incomplete",
+            message="Verified public review omitted an original essential obligation",
+            retryable=False,
+            context={"missing_themes": sorted(set(expected) - seen)},
+        )
+    return statuses
+
+
 def _validate_public_editorial_review_payload(
     payload: object,
     items: list[dict[str, Any]],
@@ -583,6 +790,14 @@ def _validate_public_editorial_review_payload(
             },
         )
 
+    obligation_statuses: list[str] = []
+    if report_scope is not None:
+        obligation_statuses = _validate_original_essential_obligation_assessments(
+            payload=payload,
+            items=items,
+            report_scope=report_scope,
+        )
+
     report_verdict = payload["report_verdict"]
     if report_scope is None:
         return
@@ -698,6 +913,18 @@ def _validate_public_editorial_review_payload(
             message="A passing report verdict must pass every required dimension",
             retryable=False,
             context={"status_conflict_type": "report_pass_has_nonpassing_dimension"},
+        )
+    if report_status == "pass" and any(
+        status != "covered" for status in obligation_statuses
+    ):
+        raise AppError(
+            code="public_editorial_quality_obligation_review_status_conflict",
+            message=(
+                "A passing report verdict must cover every original essential "
+                "obligation"
+            ),
+            retryable=False,
+            context={"status_conflict_type": "report_pass_has_uncovered_obligation"},
         )
     if report_status in {"fail", "unresolved"} and all(
         status == "pass" for status in dimension_statuses
@@ -2260,7 +2487,9 @@ def _verified_deterministic_mutation_paths(
     if rebind_targets:
         if not isinstance(doc_map, dict) or not isinstance(evidence_packs, dict):
             return set()
-        direct_evidence_packs = page_bound_direct_evidence_packs(evidence_packs)
+        direct_evidence_packs = page_bound_direct_evidence_packs(
+            evidence_packs, include_verified_facts=True
+        )
         span_index = artifact_evidence_span_index(
             doc_map={}, evidence_packs=direct_evidence_packs
         )
@@ -2278,6 +2507,8 @@ def _verified_deterministic_mutation_paths(
                 path for path in requested if path.startswith(f"{path_prefix}.")
             }
             valid_paths = {
+                f"{path_prefix}.evidence_id",
+                f"{path_prefix}.evidence_ids",
                 f"{path_prefix}.evidence",
                 f"{path_prefix}.pages",
                 f"{path_prefix}.evidence_spans",
@@ -2316,7 +2547,7 @@ def _verified_deterministic_mutation_paths(
             ):
                 continue
             canonical = deepcopy(after_items[0])
-            evidence_id = str(canonical.get("evidence_id") or "").strip()
+            evidence_ids = _ordered_item_evidence_ids(canonical)
             target_allowed_paths = set(target.allowed_paths)
             target_decisions = [
                 decision
@@ -2340,11 +2571,30 @@ def _verified_deterministic_mutation_paths(
                     for value in target.selected_evidence_ids
                     if str(value).strip()
                 }
-            if (
-                not evidence_id
+            if not evidence_ids or any(
+                evidence_id.casefold() not in selected_evidence_ids
                 or not span_index.get(evidence_id.casefold())
-                or evidence_id.casefold() not in selected_evidence_ids
+                for evidence_id in evidence_ids
             ):
+                continue
+            canonical_ids: set[str] = set()
+            for evidence_id in evidence_ids:
+                eligible_spans = [
+                    span
+                    for span in span_index.get(evidence_id.casefold(), [])
+                    if span.get("source_pack")
+                    in {"findings", "quote_candidates", "verified_facts"}
+                    and isinstance(span.get("page"), int)
+                    and span["page"] > 0
+                    and str(span.get("text") or "").strip()
+                ]
+                if not eligible_spans:
+                    canonical_ids = set()
+                    break
+                canonical_ids.add(evidence_id.casefold())
+            if canonical_ids != {
+                evidence_id.casefold() for evidence_id in evidence_ids
+            }:
                 continue
             bind_artifact_evidence_spans(
                 summary={},
@@ -2354,13 +2604,30 @@ def _verified_deterministic_mutation_paths(
                 doc_map={},
                 evidence_packs=direct_evidence_packs,
             )
-            if not canonical.get("evidence_spans"):
+            canonical_span_ids = {
+                str(span.get("evidence_id") or "").strip().casefold()
+                for span in canonical.get("evidence_spans") or []
+                if isinstance(span, dict)
+            }
+            if not canonical.get("evidence_spans") or not all(
+                evidence_id.casefold() in canonical_span_ids
+                for evidence_id in evidence_ids
+            ):
                 continue
             changed_fields = {
                 field
                 for field in ("evidence", "pages", "evidence_spans")
                 if before_item.get(field) != after_item.get(field)
             }
+            if any(
+                before_item.get(field) != after_item.get(field)
+                for field in ("evidence_id", "evidence_ids")
+            ):
+                changed_fields.update(
+                    field
+                    for field in ("evidence_id", "evidence_ids")
+                    if f"{path_prefix}.{field}" in target_paths
+                )
             expected_paths = {f"{path_prefix}.{field}" for field in changed_fields}
             if target_paths != expected_paths:
                 continue

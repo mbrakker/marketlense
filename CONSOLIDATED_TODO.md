@@ -2274,3 +2274,24 @@ Capgemini, Activate, KPMG, and Adjust stopped on report-specific semantic or
 grounding validation failures. No current-SHA provider-backed report run or
 publication write was performed. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Evidence update — 2026-11-08 (multi-fact grounding and semantic-acceptance
+correction):** Exact composite evidence IDs now retain fact-specific physical
+pages; ambiguous duplicate item bindings abstain; regeneration packages no
+longer truncate explicitly requested evidence; multi-fact `REBIND_EVIDENCE`
+uses the existing authorized evidence-list path and canonical span binder; and
+the independent verified public review checks every immutable original
+essential obligation, including semantic merges, before allowing report PASS.
+The focused affected suite passed **185 tests**, full-repository mypy passed
+786 files with zero tracked errors, Ruff/format/schema checks passed, and the
+prompt-fixture gate passed against the unchanged baseline with the measured
+intentional validation delta of **+390 tokens / +$0.000039**. A full local run
+reported 8,627 passes and four change-related failures, all passing in isolated
+reruns after correction; the remaining failure is the existing CPython-3.12
+wheelhouse audit on the CPython-3.14 host. Provider-free replay covers 15/39
+reference cases but has no exact source PDFs, so no live semantic improvement
+is claimed. The historical KPMG limitation omission was traced to an abstained
+limitations pack plus an old plan/public-review handoff; current verified-fact
+qualifier fallback and public-scope checks are already present. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready** pending current-source/provider-backed acceptance.

@@ -28,7 +28,7 @@ from src.utils.quantity import (
     quantities_match,
 )
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
-from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
+from src.utils.verified_facts import PROTECTED_METRIC_FIELDS, canonical_fact_text
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.2"
 ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:32"
@@ -5416,9 +5416,12 @@ def page_bound_direct_evidence_packs(
     page_bound_source_packs = {"findings", "quote_candidates"}
     if include_verified_facts:
         page_bound_source_packs.add("verified_facts")
+    direct_pack_names = ["findings", "quote_candidates"]
+    if include_verified_facts:
+        direct_pack_names.append("verified_facts")
     direct_packs = {
         name: evidence_packs[name]
-        for name in ("findings", "quote_candidates")
+        for name in direct_pack_names
         if isinstance(evidence_packs.get(name), dict)
     }
     span_index = artifact_evidence_span_index(doc_map={}, evidence_packs=direct_packs)
@@ -5434,10 +5437,13 @@ def page_bound_direct_evidence_packs(
         )
     }
     filtered: Dict[str, Any] = {}
-    for name, root_key in (
+    output_pack_names = [
         ("findings", "findings"),
         ("quote_candidates", "quote_candidates"),
-    ):
+    ]
+    if include_verified_facts:
+        output_pack_names.append(("verified_facts", "verified_facts"))
+    for name, root_key in output_pack_names:
         payload = direct_packs.get(name)
         entries = payload.get(root_key) if isinstance(payload, dict) else None
         if isinstance(payload, dict) and isinstance(entries, list):
@@ -5447,7 +5453,16 @@ def page_bound_direct_evidence_packs(
                     entry
                     for entry in entries
                     if isinstance(entry, dict)
-                    and _s(entry.get("id") or entry.get("evidence_id"))
+                    and _s(
+                        entry.get("id")
+                        or entry.get("evidence_id")
+                        or (
+                            f"verified-fact:{_s(entry.get('fact_id')).strip()}"
+                            if name == "verified_facts"
+                            and _s(entry.get("fact_id")).strip()
+                            else ""
+                        )
+                    )
                     .strip()
                     .casefold()
                     in eligible_ids
@@ -5976,6 +5991,40 @@ def _build_evidence_span_index(
                     text=item.get("text"),
                     start_offset=item.get("start_offset"),
                     end_offset=item.get("end_offset"),
+                )
+        verified_facts_pack = evidence_packs.get("verified_facts")
+        if isinstance(verified_facts_pack, dict):
+            for fact in verified_facts_pack.get("verified_facts") or []:
+                if not isinstance(fact, dict):
+                    continue
+                fact_id = _s(fact.get("fact_id")).strip()
+                if not fact_id:
+                    continue
+                evidence_id = f"verified-fact:{fact_id}"
+                provenance = fact.get("provenance")
+                notes = (
+                    provenance.get("source_truth_notes_by_page")
+                    if isinstance(provenance, dict)
+                    else {}
+                )
+                pages = [
+                    page
+                    for page in fact.get("supporting_physical_pages") or []
+                    if isinstance(page, int) and page > 0
+                ]
+                excerpt = _pick_first_non_empty_text(
+                    *[
+                        notes.get(str(page))
+                        for page in pages
+                        if isinstance(notes, dict)
+                    ],
+                    canonical_fact_text(fact),
+                )
+                _register(
+                    evidence_id=evidence_id,
+                    source_pack="verified_facts",
+                    pages=pages,
+                    text=excerpt,
                 )
     if isinstance(doc_map, dict):
         for section in doc_map.get("sections") or []:
