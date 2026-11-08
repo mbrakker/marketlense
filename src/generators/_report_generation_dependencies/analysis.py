@@ -9,7 +9,12 @@ from src.contracts.context_category_fit import (
     ReportCategoryContext,
     ReportContextBuildRequest,
 )
-from src.contracts.files import ReadJsonRequest
+from src.contracts.files import (
+    DeleteFileRequest,
+    ReadBytesRequest,
+    ReadJsonRequest,
+    WriteBytesRequest,
+)
 from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextExtractResponse
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
@@ -82,6 +87,9 @@ class ReportAnalysisDependencies:
     ]
     run_validation: Callable[..., ValidationReport]
     analysis_pack_path: Callable[[AnalysisPackPathRequest, RunContext], Any]
+    read_bytes: Callable[[ReadBytesRequest, RunContext], Any]
+    write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
+    delete_file: Callable[[DeleteFileRequest, RunContext], Any]
     read_json: Callable[[ReadJsonRequest, RunContext], Any]
     analysis_store_pack: Callable[[AnalysisStorePackRequest, RunContext], Any]
     extract_pdf_text: Callable[
@@ -109,6 +117,9 @@ class ReportAnalysisDependencies:
             regenerate_artifacts=regenerate_artifacts,
             run_validation=run_validation,
             analysis_pack_path=report_analysis_store_service.pack_path,
+            read_bytes=file_service.read_bytes,
+            write_bytes=file_service.write_bytes,
+            delete_file=file_service.delete_file,
             read_json=file_service.read_json,
             analysis_store_pack=report_analysis_store_service.store_pack,
             extract_pdf_text=pdf_service.extract_pdf_text,

@@ -182,6 +182,37 @@ def test_verified_regeneration_falls_back_after_bad_admissions() -> None:
     )
 
 
+def test_verified_regeneration_cannot_use_candidate_admission_pool() -> None:
+    current, candidate = _valid_artifact_pair()
+    current["_cache"]["visual_authority_canary"]["admitted_candidates"] = [
+        None,
+        {},
+    ]
+    candidate["_cache"]["visual_authority_canary"]["admitted_candidates"] = [
+        *deepcopy(
+            _valid_artifact_pair()[0]["_cache"]["visual_authority_canary"][
+                "admitted_candidates"
+            ]
+        ),
+        {
+            "id": "invented-candidate",
+            "evidence_id": "verified-fact:f1",
+            "verified_fact_id": "f1",
+        },
+    ]
+    candidate["editorial_plan"]["themes"][0]["feasible_candidate_ids"] = [
+        "invented-candidate"
+    ]
+
+    issues = _verified_editorial_obligation_issues(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+    )
+
+    assert len(issues) == 1
+    assert issues[0].rule_id == "verified_editorial_obligations"
+
+
 def test_verified_facts_fail_closed_without_any_fact_projection():
     assert _verified_facts({}) == {}
 

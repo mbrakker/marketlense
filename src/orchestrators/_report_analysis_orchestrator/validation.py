@@ -17,7 +17,12 @@ from time import perf_counter
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.claim_validation import normalize_claim_classification
-from src.contracts.files import ReadJsonRequest
+from src.contracts.files import (
+    DeleteFileRequest,
+    ReadBytesRequest,
+    ReadJsonRequest,
+    WriteBytesRequest,
+)
 from src.contracts.pdf_text import PdfTextPage
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -172,6 +177,15 @@ _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
     "distinctness",
     "limitations",
 )
+
+
+@dataclass(frozen=True)
+class _PromotionFileSnapshot:
+    """Exact pre-promotion state for one canonical persistence path."""
+
+    path: str
+    existed: bool
+    content: bytes = b""
 
 
 @dataclass(frozen=True)
@@ -3109,6 +3123,138 @@ def _store_promoted_candidate_claim_validation(
         ) from exc
 
 
+def _promotion_pack_path(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    pack_name: str,
+    ctx,
+) -> str:
+    return dependencies.analysis_pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name=pack_name,
+            report_slug=runtime.report_name,
+        ),
+        ctx,
+    ).output_path
+
+
+def _capture_promotion_file_snapshots(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    current_artifacts_path: str,
+    attempt_index: int,
+    ctx,
+) -> dict[str, _PromotionFileSnapshot]:
+    """Capture presence and exact bytes before any canonical promotion write."""
+
+    paths = {
+        "artifacts": current_artifacts_path,
+        "claim": _promotion_pack_path(
+            runtime=runtime,
+            dependencies=dependencies,
+            pack_name="validation_retained_claim_validation_candidate",
+            ctx=ctx,
+        ),
+        "validation": _promotion_pack_path(
+            runtime=runtime,
+            dependencies=dependencies,
+            pack_name="validation",
+            ctx=ctx,
+        ),
+        "audit": _promotion_pack_path(
+            runtime=runtime,
+            dependencies=dependencies,
+            pack_name=f"regeneration_candidate_audit_{attempt_index}",
+            ctx=ctx,
+        ),
+    }
+    snapshots: dict[str, _PromotionFileSnapshot] = {}
+    for name, path in paths.items():
+        try:
+            response = dependencies.read_bytes(
+                ReadBytesRequest(schema_version="1.0", path=path),
+                ctx,
+            )
+        except AppError as exc:
+            if exc.code == "file_not_found":
+                snapshots[name] = _PromotionFileSnapshot(path=path, existed=False)
+                continue
+            raise AppError(
+                code="regeneration_promotion_snapshot_failed",
+                message="Canonical promotion state could not be snapshotted",
+                retryable=False,
+                context={"file_role": name, "cause_code": exc.code},
+                cause=exc,
+            ) from exc
+        content = getattr(response, "content", None)
+        if not isinstance(content, bytes):
+            raise AppError(
+                code="regeneration_promotion_snapshot_invalid",
+                message="Canonical promotion snapshot returned invalid file bytes",
+                retryable=False,
+                context={"file_role": name},
+            )
+        snapshots[name] = _PromotionFileSnapshot(
+            path=path,
+            existed=True,
+            content=content,
+        )
+    return snapshots
+
+
+def _restore_promotion_file_snapshots(
+    *,
+    dependencies: ReportAnalysisDependencies,
+    snapshots: dict[str, _PromotionFileSnapshot],
+    ctx,
+) -> None:
+    """Restore every captured path, including deletion of newly created files."""
+
+    errors: list[Exception] = []
+    for snapshot in snapshots.values():
+        try:
+            if snapshot.existed:
+                dependencies.write_bytes(
+                    WriteBytesRequest(
+                        schema_version="1.0",
+                        path=snapshot.path,
+                        content=snapshot.content,
+                    ),
+                    ctx,
+                )
+            else:
+                dependencies.delete_file(
+                    DeleteFileRequest(
+                        schema_version="1.0",
+                        path=snapshot.path,
+                        missing_ok=True,
+                    ),
+                    ctx,
+                )
+        except Exception as exc:  # pragma: no cover - exercised by fault tests
+            errors.append(exc)
+    if errors:
+        first = errors[0]
+        raise AppError(
+            code="regeneration_promotion_inconsistent",
+            message=(
+                "A promoted regeneration could not be rolled back after a "
+                "related artifact persistence failure."
+            ),
+            retryable=False,
+            context={
+                "rollback_error": type(first).__name__,
+                "rollback_error_count": len(errors),
+            },
+            cause=first,
+        ) from first
+
+
 def _validate_regeneration_baseline(
     *,
     runtime: ReportRuntimeState,
@@ -3365,13 +3511,12 @@ def _reconcile_candidate_key_figure_projections(
     candidate: Dict[str, Any],
     evidence_packs: Dict[str, Any],
 ) -> None:
-    """Canonicalize stale derived key figures before candidate validation.
+    """Verify projections already canonicalized before candidate persistence.
 
-    Candidate assembly runs before atomic family merging and can retain a
-    projection selected from transient repair state. If the candidate changed
-    a derived key-figure root, replace it only with the canonical builder
-    result computed from the candidate's finalized source roots. This keeps
-    the scope gate strict while making the repair path deterministic.
+    Candidate finalization owns rebuilding derived roots. This post-persistence
+    boundary is intentionally read-only: mutating the in-memory candidate here
+    would make validation and the persisted candidate refer to different
+    content hashes.
     """
 
     if "key_figures" not in candidate:
@@ -3383,14 +3528,18 @@ def _reconcile_candidate_key_figure_projections(
     )
     if not source_changed:
         # A soft-copy-only repair has no authority to alter key figures or
-        # their chart cards. Restore the promoted projections byte-for-byte.
-        candidate["key_figures"] = deepcopy(before.get("key_figures"))
-        if "chart_insight_cards" in candidate:
-            candidate["chart_insight_cards"] = deepcopy(
-                before.get("chart_insight_cards")
-            )
-        return
-    if candidate.get("key_figures") == before.get("key_figures"):
+        # their chart cards. Reject any mismatch instead of restoring it.
+        for root in ("key_figures", "chart_insight_cards"):
+            if root in candidate and candidate.get(root) != before.get(root):
+                raise AppError(
+                    code="regeneration_candidate_projection_mismatch",
+                    message=(
+                        "Persisted regeneration candidate changed an unrelated "
+                        f"derived projection: {root}."
+                    ),
+                    retryable=False,
+                    context={"root": root},
+                )
         return
     roots = {
         root for root in ("key_figures", "chart_insight_cards") if root in candidate
@@ -3402,9 +3551,17 @@ def _reconcile_candidate_key_figure_projections(
         evidence_packs=deepcopy(evidence_packs),
         roots=roots,
     )
-    for root in roots:
-        if candidate.get(root) != expected[root]:
-            candidate[root] = expected[root]
+    mismatched = sorted(root for root in roots if candidate.get(root) != expected[root])
+    if mismatched:
+        raise AppError(
+            code="regeneration_candidate_projection_mismatch",
+            message=(
+                "Persisted regeneration candidate does not match canonical "
+                "derived projections."
+            ),
+            retryable=False,
+            context={"roots": mismatched},
+        )
 
 
 def _run_validation_regeneration_loop(
@@ -4132,12 +4289,33 @@ def _run_validation_regeneration_loop(
         artifacts_path = regeneration_response.artifacts_path
         if candidate_enforced:
             if candidate_validation_report.status == "pass":
+                promotion_audit = _candidate_audit(
+                    runtime=runtime,
+                    attempt_index=attempt_index,
+                    transformation_scope=regeneration_response.regenerated_sections,
+                    current_artifacts=artifacts_before,
+                    candidate_artifacts=candidate_artifacts,
+                    current_artifacts_path=candidate_parent_path,
+                    candidate_artifacts_path=candidate_artifacts_path,
+                    candidate_result=candidate_result,
+                    validation_report=candidate_validation_report,
+                    promotion_outcome="promoted",
+                    plan=plan,
+                    repair_delta=repair_delta,
+                    strategy_fingerprint=strategy_fingerprint,
+                    regeneration_response=regeneration_response,
+                    latency_ms=max(
+                        0,
+                        int((perf_counter() - attempt_started) * 1000),
+                    ),
+                )
                 try:
                     (
                         artifacts_path,
                         canonical_validation_path,
                         retained_claim_candidate_path,
                         retained_claim_candidate,
+                        promotion_audit_path,
                     ) = _promote_validated_regeneration_candidate(
                         runtime=runtime,
                         dependencies=dependencies,
@@ -4153,6 +4331,7 @@ def _run_validation_regeneration_loop(
                         expected_source_id=validation_source_identity,
                         expected_source_md5=str(runtime.md5 or ""),
                         require_execution_identity=verified_mode,
+                        promotion_audit=promotion_audit,
                         ctx=attempt_ctx,
                     )
                 except Exception:
@@ -4217,6 +4396,7 @@ def _run_validation_regeneration_loop(
                 evidence_paths["validation_retained_claim_validation_candidate"] = (
                     retained_claim_candidate_path
                 )
+                candidate_audit_path = promotion_audit_path
                 promoted_payload_overrides = payload_overrides
             else:
                 promotion_outcome = "rolled_back"
@@ -4241,28 +4421,30 @@ def _run_validation_regeneration_loop(
                 # Deterministic identity corrections are candidate-scoped: a
                 # rolled-back candidate leaves the promoted identity untouched.
                 promoted_payload_overrides = {}
-            candidate_audit_path = _store_regeneration_candidate_audit(
-                runtime=runtime,
-                dependencies=dependencies,
-                audit=_candidate_audit(
+                candidate_audit_path = _store_regeneration_candidate_audit(
                     runtime=runtime,
-                    attempt_index=attempt_index,
-                    transformation_scope=regeneration_response.regenerated_sections,
-                    current_artifacts=artifacts_before,
-                    candidate_artifacts=candidate_artifacts,
-                    current_artifacts_path=candidate_parent_path,
-                    candidate_artifacts_path=candidate_artifacts_path,
-                    candidate_result=candidate_result,
-                    validation_report=candidate_validation_report,
-                    promotion_outcome=promotion_outcome,
-                    plan=plan,
-                    repair_delta=repair_delta,
-                    strategy_fingerprint=strategy_fingerprint,
-                    regeneration_response=regeneration_response,
-                    latency_ms=max(0, int((perf_counter() - attempt_started) * 1000)),
-                ),
-                ctx=attempt_ctx,
-            )
+                    dependencies=dependencies,
+                    audit=_candidate_audit(
+                        runtime=runtime,
+                        attempt_index=attempt_index,
+                        transformation_scope=regeneration_response.regenerated_sections,
+                        current_artifacts=artifacts_before,
+                        candidate_artifacts=candidate_artifacts,
+                        current_artifacts_path=candidate_parent_path,
+                        candidate_artifacts_path=candidate_artifacts_path,
+                        candidate_result=candidate_result,
+                        validation_report=candidate_validation_report,
+                        promotion_outcome=promotion_outcome,
+                        plan=plan,
+                        repair_delta=repair_delta,
+                        strategy_fingerprint=strategy_fingerprint,
+                        regeneration_response=regeneration_response,
+                        latency_ms=max(
+                            0, int((perf_counter() - attempt_started) * 1000)
+                        ),
+                    ),
+                    ctx=attempt_ctx,
+                )
         else:
             # Legacy dependency doubles predate candidate promotion. Production
             # regeneration always supplies candidate_artifacts_path above.
@@ -4514,8 +4696,9 @@ def _promote_validated_regeneration_candidate(
     expected_source_id: str = "",
     expected_source_md5: str = "",
     require_execution_identity: bool = False,
+    promotion_audit: RegenerationCandidateAudit | None = None,
     ctx,
-) -> tuple[str, str, str, Dict[str, Any]]:
+) -> tuple[str, str, str, Dict[str, Any], str]:
     """Promote artifacts, retained grounding, and validation as one contract.
 
     Every write is marked before invocation because the canonical file service
@@ -4533,28 +4716,37 @@ def _promote_validated_regeneration_candidate(
         require_execution_identity=require_execution_identity,
         ctx=ctx,
     )
-    artifact_attempted = False
-    claim_attempted = False
-    validation_attempted = False
+    if promotion_audit is None:
+        raise AppError(
+            code="regeneration_promotion_audit_missing",
+            message="Validated regeneration promotion requires a final audit",
+            retryable=False,
+            context={"report_id": runtime.file.file_id},
+        )
+    snapshots = _capture_promotion_file_snapshots(
+        runtime=runtime,
+        dependencies=dependencies,
+        current_artifacts_path=current_artifacts_path,
+        attempt_index=promotion_audit.attempt_index,
+        ctx=ctx,
+    )
     artifacts_path = current_artifacts_path
     retained_claim_path = ""
     validation_path = ""
+    audit_path = ""
     try:
-        artifact_attempted = True
         artifacts_path = _promote_regeneration_candidate(
             runtime=runtime,
             dependencies=dependencies,
             candidate_artifacts=candidate_artifacts,
             ctx=ctx,
         )
-        claim_attempted = True
         retained_claim_path = _store_promoted_candidate_claim_validation(
             runtime=runtime,
             dependencies=dependencies,
             candidate_package=retained_claim_candidate,
             ctx=ctx,
         )
-        validation_attempted = True
         validation_path = _store_validation_snapshot(
             runtime=runtime,
             dependencies=dependencies,
@@ -4562,35 +4754,32 @@ def _promote_validated_regeneration_candidate(
             pack_name="validation",
             ctx=ctx,
         )
+        audit_path = _store_regeneration_candidate_audit(
+            runtime=runtime,
+            dependencies=dependencies,
+            audit=promotion_audit,
+            ctx=ctx,
+        )
     except Exception as promotion_error:
-        rollback_error = None
         try:
-            if artifact_attempted:
-                _promote_regeneration_candidate(
-                    runtime=runtime,
-                    dependencies=dependencies,
-                    candidate_artifacts=promoted_artifacts,
-                    ctx=ctx,
-                )
-                artifacts_path = current_artifacts_path
-            if claim_attempted and promoted_claim_validation_package is not None:
-                _store_promoted_candidate_claim_validation(
-                    runtime=runtime,
-                    dependencies=dependencies,
-                    candidate_package=promoted_claim_validation_package,
-                    ctx=ctx,
-                )
-            if validation_attempted:
-                _store_validation_snapshot(
-                    runtime=runtime,
-                    dependencies=dependencies,
-                    report=promoted_validation_report,
-                    pack_name="validation",
-                    ctx=ctx,
-                )
-        except Exception as restore_error:
-            rollback_error = restore_error
-        if rollback_error is not None:
+            _restore_promotion_file_snapshots(
+                dependencies=dependencies,
+                snapshots=snapshots,
+                ctx=ctx,
+            )
+        except Exception as rollback_error:
+            if isinstance(rollback_error, AppError):
+                raise AppError(
+                    code="regeneration_promotion_inconsistent",
+                    message=rollback_error.message,
+                    retryable=False,
+                    context={
+                        "report_id": runtime.file.file_id,
+                        "promotion_error": type(promotion_error).__name__,
+                        "rollback_error": type(rollback_error).__name__,
+                    },
+                    cause=rollback_error,
+                ) from rollback_error
             raise AppError(
                 code="regeneration_promotion_inconsistent",
                 message=(
@@ -4611,4 +4800,5 @@ def _promote_validated_regeneration_candidate(
         validation_path,
         retained_claim_path,
         retained_claim_candidate,
+        audit_path,
     )

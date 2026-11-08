@@ -2246,3 +2246,19 @@ WordPress staging REST check was skipped by policy. This validates the
 committed engineering/release gates only. It does not provide a fresh
 provider-backed current-SHA report run or change E18's **Active/PARTIAL**,
 Step 2's **PARTIAL/NO-GO**, or Step 3's **unstarted/not ready** status.
+
+**Evidence update — 2026-11-08 (cross-stage handoff and transactional repair):**
+The confirmed multi-fact grounding handoff, exact candidate persistence,
+complete promotion rollback, final-audit atomicity, trusted editorial
+admission, and rejected/no-op public-review false-PASS defects are corrected
+with focused regressions. The affected suite passed 536 tests; the supported
+Python 3.12 full suite passed 8,621 tests with 2 skips, 48 deselections, and
+24 subtests. Ruff, formatting, mypy, architecture/policy/schema/documentation
+gates, and isolated mutation partitions passed (partition 0 retained the
+existing taxonomy 75% baseline; partition 1 was 100%). The provider-free
+reference replay found 15 cases/39 variants but no source PDF bytes in the
+active worktree, so it is not live editorial evidence. No current-SHA report
+run, canonical promotion, readiness approval, or publication was performed.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. Keep this outcome open pending current-SHA
+real-report acceptance.

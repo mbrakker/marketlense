@@ -9,12 +9,14 @@ import pytest
 
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.report_analysis import AnalysisPackPathResponse
+from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.public_editorial_quality_generator import (
     public_editorial_report_review_scope,
     public_editorial_semantic_review_items,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _evaluate_and_store_public_editorial_quality,
+    _merge_public_editorial_quality,
     _public_editorial_review_input_identity,
     _public_editorial_semantic_review,
     _validate_public_editorial_review_payload,
@@ -248,9 +250,11 @@ def test_report_level_repair_cannot_target_a_passing_item(tmp_path):
     runtime = _runtime(tmp_path)
     artifacts = _artifacts()
     items = public_editorial_semantic_review_items(artifacts)
-    payload = _SemanticPassClient(items).openai_chat_json(
-        SimpleNamespace(model="test"), runtime.ctx
-    ).parsed_json
+    payload = (
+        _SemanticPassClient(items)
+        .openai_chat_json(SimpleNamespace(model="test"), runtime.ctx)
+        .parsed_json
+    )
     target = next(item for item in items if item["artifact"] == "expert_comment")
     payload["report_verdict"].update(
         {
@@ -520,6 +524,38 @@ def test_public_editorial_review_reuse_is_invalidated_by_evidence_context_change
     )
 
     assert client.calls == 2
+
+
+def test_after_review_cannot_replace_rejected_noop_editorial_failure() -> None:
+    rejected = ValidationReport(
+        schema_version="1.1",
+        status="fail",
+        severity="error",
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message="The rejected candidate did not repair analytical depth.",
+                severity="error",
+                affected_section="insights_bundle",
+                rule_id="public_editorial_quality.semantic_generic_copy",
+            )
+        ],
+    )
+    after_review = ValidationReport(
+        schema_version="1.1", status="pass", severity="pass", issues=[]
+    )
+
+    merged = _merge_public_editorial_quality(
+        rejected,
+        after_review,
+        replace_existing=False,
+    )
+
+    assert merged.status == "fail"
+    assert any(
+        issue.rule_id == "public_editorial_quality.semantic_generic_copy"
+        for issue in merged.issues
+    )
 
 
 def test_public_editorial_review_identity_includes_source_fact_and_review_policy() -> (

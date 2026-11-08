@@ -16,6 +16,7 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
     _attempt_strategy_fingerprint,
     _candidate_audit,
     _load_promoted_claim_validation_for_reuse,
+    _promote_validated_regeneration_candidate,
     _run_validation_regeneration_loop,
 )
 from src.services import file_service, report_analysis_store_service
@@ -31,6 +32,7 @@ from ._shared import *  # noqa: F401,F403
         "canonical_artifacts",
         "promoted_claim_validation",
         "canonical_validation",
+        "final_promotion_audit",
     ],
 )
 def test_promotion_persistence_failures_do_not_authorize_partial_state(
@@ -68,6 +70,10 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
     stored: dict[str, dict] = {}
     writes: list[str] = []
     injected = False
+    (tmp_path / "packs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "packs" / "artifacts.json").write_text(
+        json.dumps(original, sort_keys=True), encoding="utf-8"
+    )
 
     def _analysis_pack_path(request, _ctx):
         return SimpleNamespace(
@@ -79,12 +85,9 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
             request.path
         ):
             return SimpleNamespace(payload=candidate_package)
-        canonical = stored.get("validation_retained_claim_validation_candidate")
-        if (
-            canonical is not None
-            and "validation_retained_claim_validation_candidate" in (request.path)
-        ):
-            return SimpleNamespace(payload=canonical)
+        path = Path(request.path)
+        if path.exists():
+            return SimpleNamespace(payload=json.loads(path.read_text(encoding="utf-8")))
         raise AppError(
             code="file_not_found",
             message="No prior promoted claim package is retained in this test.",
@@ -94,6 +97,9 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
         nonlocal injected
         writes.append(request.pack_name)
         stored[request.pack_name] = request.payload
+        path = tmp_path / "packs" / f"{request.pack_name}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(request.payload, sort_keys=True), encoding="utf-8")
         should_fail = not injected and (
             failure_stage == "candidate_audit"
             and request.pack_name == "regeneration_candidate_audit_1"
@@ -105,6 +111,9 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
             or failure_stage == "canonical_validation"
             and request.pack_name == "validation"
             and request.payload.get("status") == "pass"
+            or failure_stage == "final_promotion_audit"
+            and request.pack_name == "regeneration_candidate_audit_1"
+            and request.payload.get("promotion_outcome") == "promoted"
         )
         if should_fail:
             injected = True
@@ -211,10 +220,21 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
     if failure_stage == "candidate_audit":
         assert "artifacts" not in writes
     else:
-        assert stored["artifacts"] == original
-        assert writes.count("artifacts") >= 2
+        assert (
+            json.loads(
+                (tmp_path / "packs" / "artifacts.json").read_text(encoding="utf-8")
+            )
+            == original
+        )
     if failure_stage == "canonical_validation":
-        assert stored["validation"]["status"] == "fail"
+        assert not (tmp_path / "packs" / "validation.json").exists()
+    if failure_stage == "final_promotion_audit":
+        audit = json.loads(
+            (tmp_path / "packs" / "regeneration_candidate_audit_1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert audit["promotion_outcome"] == "rolled_back"
     if failure_stage in {"promoted_claim_validation", "canonical_validation"}:
         # A partially written candidate package is not allowed to authorize
         # reuse against the restored artifact hash.
@@ -323,6 +343,158 @@ def test_promoted_claim_reuse_is_restart_safe_for_partial_promotion(tmp_path) ->
         )
         is None
     )
+
+
+@pytest.mark.parametrize("previous_package_kind", ["valid", "non_reusable"])
+def test_promotion_rollback_restores_existing_claim_package_exactly(
+    tmp_path, previous_package_kind: str
+) -> None:
+    """Rollback restores prior bytes even when the old package cannot be reused."""
+
+    runtime = _runtime(tmp_path)
+    original = _artifacts_without_retained_claims(
+        summary={
+            "tldr": "Original summary.",
+            "card_tldr_compact": "Original card.",
+            "executive_summary": "Original executive summary.",
+            "claim_evidence_map": [],
+        }
+    )
+    candidate = deepcopy(original)
+    candidate["summary"]["tldr"] = "Repaired summary."
+    validation = ValidationReport(
+        schema_version="1.1", status="pass", severity="pass", issues=[]
+    )
+    previous_claim = {
+        "schema_version": "1.4",
+        "artifact_hash": sha256_json(original),
+        "package_hash": "",
+        "results": [],
+        "readiness_status": "awaiting_review",
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "deterministic_pass_count": 0,
+        "semantic_validation_count": 0,
+        "semantic_execution_identities": [],
+        "validation_identity": None,
+        "lineage": None,
+    }
+    if previous_package_kind == "non_reusable":
+        previous_claim["artifact_hash"] = "f" * 64
+    previous_claim["package_hash"] = claim_validation_package_hash(previous_claim)
+    previous_validation = ValidationReport(
+        schema_version="1.1",
+        status="fail",
+        severity="error",
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message="Prior failure",
+                severity="error",
+                affected_section="summary",
+                rule_id="prior_failure",
+            )
+        ],
+    ).to_dict()
+    previous_audit = {
+        "schema_version": "1.0",
+        "attempt_index": 1,
+        "transformation_scope": ["summary"],
+        "before_sha256": sha256_json(original),
+        "after_sha256": sha256_json(candidate),
+        "current_artifacts_path": "prior-artifacts.json",
+        "candidate_artifacts_path": "prior-candidate.json",
+        "validation_status": "fail",
+        "promotion_outcome": "rolled_back",
+        "validation_issues": ["prior_failure"],
+        "evidence_lineage": [],
+    }
+
+    def _store_pack(pack_name: str, payload: dict) -> str:
+        return report_analysis_store_service.store_pack(
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=runtime.file.file_id,
+                pack_name=pack_name,
+                payload=payload,
+                report_slug=runtime.report_name,
+            ),
+            runtime.ctx,
+        ).output_path
+
+    artifacts_path = _store_pack("artifacts", original)
+    claim_path = _store_pack(
+        "validation_retained_claim_validation_candidate", previous_claim
+    )
+    validation_path = _store_pack("validation", previous_validation)
+    audit_path = _store_pack("regeneration_candidate_audit_1", previous_audit)
+    prior_bytes = {
+        path: Path(path).read_bytes()
+        for path in (artifacts_path, claim_path, validation_path, audit_path)
+    }
+
+    base_dependencies = _deps()
+    injected = False
+
+    def _store_with_failure(request, ctx):
+        nonlocal injected
+        result = base_dependencies.analysis_store_pack(request, ctx)
+        if request.pack_name == "validation" and not injected:
+            injected = True
+            raise AppError(
+                code="injected_after_validation_write",
+                message="Injected failure after validation replacement.",
+                retryable=False,
+            )
+        return result
+
+    dependencies = _deps(analysis_store_pack=_store_with_failure)
+    candidate_package = dict(previous_claim)
+    candidate_package["artifact_hash"] = sha256_json(candidate)
+    candidate_package["package_hash"] = claim_validation_package_hash(candidate_package)
+    _store_pack(
+        "validation_regen_candidate_1_retained_claim_validation_candidate",
+        candidate_package,
+    )
+    promotion_audit = _candidate_audit(
+        runtime=runtime,
+        attempt_index=1,
+        transformation_scope=["summary"],
+        current_artifacts=original,
+        candidate_artifacts=candidate,
+        current_artifacts_path=artifacts_path,
+        candidate_artifacts_path=str(tmp_path / "candidate.json"),
+        candidate_result=CandidateIntegrityResult(issues=[], evidence_lineage=[]),
+        validation_report=validation,
+        promotion_outcome="promoted",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        _promote_validated_regeneration_candidate(
+            runtime=runtime,
+            dependencies=dependencies,
+            candidate_artifacts=candidate,
+            candidate_validation_report=validation,
+            candidate_validation_pack_name="validation_regen_candidate_1",
+            promoted_artifacts=original,
+            promoted_validation_report=ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                severity="error",
+                issues=[],
+            ),
+            promoted_claim_validation_package=previous_claim,
+            current_artifacts_path=artifacts_path,
+            expected_source_id="",
+            expected_source_md5="md5",
+            promotion_audit=promotion_audit,
+            ctx=runtime.ctx,
+        )
+
+    assert exc_info.value.code == "injected_after_validation_write"
+    assert injected is True
+    assert {path: Path(path).read_bytes() for path in prior_bytes} == prior_bytes
 
 
 @pytest.mark.parametrize(
@@ -507,5 +679,6 @@ def test_executed_decision_metadata_overrides_planner_response_fields(tmp_path) 
 __all__ = [
     "test_promotion_persistence_failures_do_not_authorize_partial_state",
     "test_promoted_claim_reuse_is_restart_safe_for_partial_promotion",
+    "test_promotion_rollback_restores_existing_claim_package_exactly",
     "test_candidate_audit_records_executed_evidence_without_planner_fallback",
 ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from pathlib import Path
 
@@ -11,6 +12,10 @@ from src.contracts.regeneration import (
     RegenerationPlan,
     RegenerationTarget,
 )
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _reconcile_candidate_key_figure_projections,
+)
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from tests._test_report_regeneration_generator import (
     _split_support_test_report_regeneration_generator as regeneration_support,
@@ -26,6 +31,26 @@ _regeneration_evidence_packs = regeneration_support._evidence_packs
 _regeneration_settings = regeneration_support._settings
 _regeneration_ctx = regeneration_support._ctx
 _test_regenerate_artifacts = regeneration_support.regenerate_artifacts
+
+
+def test_projection_mismatch_is_rejected_without_mutating_persisted_candidate():
+    before = {
+        "insights_final": [{"id": "insight-1", "text": "Source insight"}],
+        "key_figures": [{"label": "Reach", "value": 10}],
+        "chart_insight_cards": [{"insight_id": "insight-1", "value": 10}],
+    }
+    candidate = deepcopy(before)
+    candidate["key_figures"][0]["value"] = 99
+
+    with pytest.raises(AppError, match="derived projection") as exc_info:
+        _reconcile_candidate_key_figure_projections(
+            before=before,
+            candidate=candidate,
+            evidence_packs={},
+        )
+
+    assert exc_info.value.code == "regeneration_candidate_projection_mismatch"
+    assert candidate["key_figures"][0]["value"] == 99
 
 
 def _visual_regeneration_request(
@@ -123,9 +148,7 @@ def test_scoped_regeneration_preserves_visual_authority_pool(tmp_path):
     }
     assert final_ids <= {item["id"] for item in admitted}
     assert candidate_ids <= {item["id"] for item in admitted}
-    untouched_before = next(
-        item for item in admitted if item["id"] == "insight-2"
-    )
+    untouched_before = next(item for item in admitted if item["id"] == "insight-2")
     untouched_after = next(
         item
         for item in response.updated_artifacts["insights_final"]
@@ -136,6 +159,36 @@ def test_scoped_regeneration_preserves_visual_authority_pool(tmp_path):
         response.updated_artifacts["_cache"]["visual_authority_canary"]["digest"]
         == "e" * 64
     )
+
+
+def test_persisted_regeneration_candidate_matches_validated_candidate(tmp_path):
+    current = _current_artifacts()
+    admitted = deepcopy(current["insights_final"][:2])
+    visual_admission = _verified_admission(admitted, digest="h" * 64)
+    current["insights_candidates"] = deepcopy(admitted)
+    current["verified_facts"] = deepcopy(visual_admission.verified_facts)
+    current["_cache"]["visual_authority_canary"] = {
+        "enabled": True,
+        "digest": "h" * 64,
+        "verified_fact_digest": "h" * 64,
+        "verified_facts": deepcopy(visual_admission.verified_facts),
+        "verified_evidence_packs": deepcopy(visual_admission.verified_evidence_packs),
+        "admitted_candidates": deepcopy(visual_admission.admitted_candidates),
+        "audit": {"admitted_count": 2},
+    }
+    evidence = _regeneration_evidence_packs()
+
+    response = _test_regenerate_artifacts(
+        _visual_regeneration_request(current, evidence, tmp_path),
+        openai_client=_FakeOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    persisted = json.loads(
+        Path(response.candidate_artifacts_path).read_text(encoding="utf-8")
+    )
+    assert persisted == response.updated_artifacts
+    assert sha256_json(persisted) == sha256_json(response.updated_artifacts)
 
 
 def test_verified_expert_comment_repair_preserves_unrelated_source_roots(tmp_path):

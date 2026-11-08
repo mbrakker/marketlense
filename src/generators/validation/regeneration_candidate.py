@@ -447,11 +447,14 @@ def _verified_editorial_obligation_issues(
             )
         ]
 
-    facts = _verified_facts(candidate_artifacts)
+    # The proposed artifact is untrusted.  Its fact snapshot and admission
+    # metadata may only be checked against the retained/promoted authority;
+    # they must not enlarge the set of candidates authorized for replanning.
+    facts = _verified_facts(current_artifacts)
     canonical_evidence_ids = {
         f"verified-fact:{fact_id}" for fact_id in facts if fact_id
     }
-    admitted_candidates = _visual_authority_canary(candidate_artifacts).get(
+    admitted_candidates = _visual_authority_canary(current_artifacts).get(
         "admitted_candidates", []
     )
     admitted_candidate_ids: set[str] = set()
@@ -478,11 +481,50 @@ def _verified_editorial_obligation_issues(
             normalize_for_lookup(value) for value in evidence_ids if value
         }
     if not admitted_candidate_ids:
-        admitted_candidate_ids = {
-            str(insight.get("id") or "").strip()
-            for insight in candidate_artifacts.get("insights_candidates") or []
-            if isinstance(insight, dict) and str(insight.get("id") or "").strip()
-        }
+        # Some retained snapshots legitimately omit the canary's projected
+        # admission list.  Reconstruct only from the trusted promoted
+        # insight roster, never from candidate-supplied content.
+        for root in ("insights_candidates", "insights_final"):
+            for insight in current_artifacts.get(root) or []:
+                if not isinstance(insight, dict):
+                    continue
+                candidate_id = str(insight.get("id") or "").strip()
+                if not candidate_id or candidate_id in admitted_candidate_ids:
+                    continue
+                evidence_ids = {
+                    str(insight.get("evidence_id") or "").strip(),
+                    *{
+                        str(value).strip()
+                        for value in insight.get("evidence_ids") or []
+                        if str(value).strip()
+                    },
+                }
+                fact_id = str(insight.get("verified_fact_id") or "").strip()
+                if fact_id:
+                    evidence_ids.add(f"verified-fact:{fact_id}")
+                normalized_evidence_ids = {
+                    normalize_for_lookup(value) for value in evidence_ids if value
+                }
+                if not normalized_evidence_ids.intersection(
+                    normalize_for_lookup(value) for value in canonical_evidence_ids
+                ):
+                    continue
+                admitted_candidate_ids.add(candidate_id)
+                admitted_candidate_evidence_ids[candidate_id] = normalized_evidence_ids
+    if not admitted_candidate_ids:
+        # Do not fall back to the proposed candidate's own roster.  A missing
+        # retained admission pool is an authority defect and must fail closed.
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified regeneration candidate has no trusted admitted "
+                    "candidate pool for editorial replanning."
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
     admitted_limitation_evidence_ids = {
         f"verified-fact:{fact_id}"
         for fact_id, fact in facts.items()

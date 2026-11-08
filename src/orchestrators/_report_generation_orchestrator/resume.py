@@ -1700,12 +1700,25 @@ def _resume_prompt_family_repair(
                 retryable=False,
                 context={"file_id": runtime.file.file_id},
             )
+        promotion_audit = _candidate_audit(
+            runtime=runtime,
+            attempt_index=1,
+            transformation_scope=regeneration.regenerated_sections,
+            current_artifacts=current_artifacts,
+            candidate_artifacts=candidate_artifacts,
+            current_artifacts_path=current_artifacts_path,
+            candidate_artifacts_path=candidate_artifacts_path,
+            candidate_result=candidate_result,
+            validation_report=validation,
+            promotion_outcome="promoted",
+        )
         try:
             (
                 artifacts_path,
                 validation_path,
                 retained_claim_path,
                 _retained_claim_candidate,
+                promotion_audit_path,
             ) = _promote_validated_regeneration_candidate(
                 runtime=runtime,
                 dependencies=dependencies.analysis,
@@ -1719,6 +1732,7 @@ def _resume_prompt_family_repair(
                 expected_source_id=factual_source_identity,
                 expected_source_md5=str(runtime.md5 or ""),
                 require_execution_identity=authority_context is not None,
+                promotion_audit=promotion_audit,
                 ctx=repair_ctx,
             )
         except Exception:
@@ -1741,23 +1755,7 @@ def _resume_prompt_family_repair(
             )
             raise
         validation = replace(validation, source_path=validation_path)
-        candidate_audit_path = _store_regeneration_candidate_audit(
-            runtime=runtime,
-            dependencies=dependencies.analysis,
-            audit=_candidate_audit(
-                runtime=runtime,
-                attempt_index=1,
-                transformation_scope=regeneration.regenerated_sections,
-                current_artifacts=current_artifacts,
-                candidate_artifacts=candidate_artifacts,
-                current_artifacts_path=current_artifacts_path,
-                candidate_artifacts_path=candidate_artifacts_path,
-                candidate_result=candidate_result,
-                validation_report=validation,
-                promotion_outcome="promoted",
-            ),
-            ctx=repair_ctx,
-        )
+        candidate_audit_path = promotion_audit_path
     evidence_paths = dict(analysis.evidence_paths)
     evidence_paths["artifacts"] = artifacts_path
     if regeneration.artifacts_snapshot_path:

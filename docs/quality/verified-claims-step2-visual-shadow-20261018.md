@@ -11367,3 +11367,78 @@ tests/coverage job, both mutation partitions, and `release_evidence`. The
 configured WordPress staging REST check was skipped by policy. This confirms
 the committed engineering and release gates; it does not change the live
 provider/E2E limitations or the Step 2/Step 3 verdict above.
+
+### End-to-end integrity and transactional-repair correction — 2026-11-08
+
+This correction is based on reviewed HEAD `27a4da3f` and is limited to
+confirmed cross-stage defects. It does not add a validator, service, LLM
+stage, or report-specific branch.
+
+Confirmed root causes and fixes:
+
+* `regeneration_plan.py` previously reduced a multi-fact validator issue to
+  singular `evidence_id` data and could broaden an unidentified item to
+  report-wide evidence. Validator-supplied IDs are now authoritative; all
+  exact IDs and their physical pages/spans are retained, and unresolved item
+  identity abstains instead of guessing. The existing evidence structures are
+  reused, including `source_spans` page lineage for soft-copy failures.
+* `validation.py` previously reconciled derived projections after candidate
+  persistence, so the saved candidate could differ from the candidate that
+  was validated. Reconciliation is now read-only and rejects a precise
+  `regeneration_candidate_projection_mismatch`; the existing finalizer remains
+  the only projection builder.
+* Promotion now snapshots presence and exact bytes for artifacts, retained
+  claim validation, validation, and the final candidate audit before the first
+  write. Any later write failure restores every prior file or removes newly
+  created files. Rollback failure emits the existing
+  `regeneration_promotion_inconsistent` terminal error.
+* The final promotion audit is written inside that same boundary. A promoted
+  attempt is returned only after artifacts, claim package, validation, and
+  audit all exist; an audit failure is rolled back and is not reported as a
+  promoted attempt.
+* `regeneration_candidate.py` now derives verified editorial admission only
+  from trusted retained/promoted artifacts. A proposed candidate cannot create
+  its own admission pool; sparse trusted projections are reconstructed only
+  when their evidence intersects canonical verified facts, otherwise the
+  candidate fails closed.
+* `report_analysis_orchestrator.py` lets the existing independent public
+  editorial review replace the prior review only after an actual candidate
+  promotion. A rejected, rolled-back, skipped, or no-op repair cannot turn an
+  unchanged failure into a false PASS. No prompt or review stage was added;
+  the existing material-coverage and limitations dimensions remain the
+  semantic thematic-coverage authority.
+
+Focused cross-stage verification passed **536 tests in 34.91s**. The full
+supported Python 3.12 repository suite passed **8,621 tests, 2 skipped, 48
+deselected, and 24 subtests in 977.76s**. It includes exact candidate hash
+checks, multi-fact grounding handoff, trusted admission, projection mismatch,
+all canonical-write fault points, post-write rollback, final-audit failure,
+checkpoint/re-entry, cache/reuse, readiness, and legacy paths. Ruff,
+formatting, full-repository mypy (786 source files, 0 tracked errors),
+architecture/I/O/service-boundary, policy, schema, documentation, hygiene,
+quality-ledger, and backlog-source gates passed. Mutation partition 0 passed
+sequentially with the existing taxonomy baseline at 3/4 (75%); partition 1
+passed 38/38 (100%). A concurrent first attempt at partition 0 reported the
+existing harness error `pytest collected 1 tests; expected 24`; it produced no
+mutation result and did not recur in the isolated rerun.
+
+The provider-free replay command completed the frozen Step 0 reference corpus
+at **15 cases / 39 variants**, but the active worktree has no retained source
+PDF bytes: all five source records reported `exists=false` and all 15 cases
+were `skipped_provider_free`. The committed retained artifact pack exists
+under the reliability-cohort evidence directory, but the replay resolver does
+not substitute those derived images for full source PDFs. This is therefore a
+coverage/abstention check only, not fresh model-quality or source-hash
+evidence. The retained provider-backed Adjust run remains historical
+`eb8a923a` evidence and is not current-SHA evidence for this correction.
+
+No provider call, canonical publication mutation, readiness approval, or
+WordPress write was made by this correction. The final local evidence proves
+the handoff, persistence, rollback, and false-PASS fixes; it does not close
+the known live Capgemini semantic-coverage failure, Activate pre-editorial
+stall, or the absence of a current-SHA frozen-five report run.
+
+**Verdict: PASS for the confirmed code-level integrity corrections and local
+engineering gates; PARTIAL / NO-GO for live Step 2 acceptance.** E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

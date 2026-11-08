@@ -91,6 +91,10 @@ def _lookup_insight_grounding(
     artifacts: Dict[str, Any],
 ) -> tuple[List[str], List[int]]:
     insight_id = str(insight_id or "").split(".", 1)[0].strip()
+    # An unqualified insights issue has no safe retained item identity.  Do
+    # not turn it into a report-wide evidence package by walking every item.
+    if not insight_id:
+        return [], []
     evidence_ids: List[str] = []
     pages: List[int] = []
     for key in ("insights_final", "insights_candidates"):
@@ -98,16 +102,28 @@ def _lookup_insight_grounding(
             if not isinstance(entry, dict):
                 continue
             entry_id = insight_entity_id(entry)
-            if insight_id and entry_id != insight_id:
+            if entry_id != insight_id:
                 continue
-            evidence_id = str(entry.get("evidence_id") or "").strip()
-            if evidence_id and evidence_id not in evidence_ids:
-                evidence_ids.append(evidence_id)
+            declared_ids = [entry.get("evidence_id")]
+            declared_ids.extend(entry.get("evidence_ids") or [])
+            declared_ids.extend(
+                span.get("evidence_id")
+                for span in entry.get("evidence_spans") or []
+                if isinstance(span, dict)
+            )
+            for raw_evidence_id in declared_ids:
+                evidence_id = str(raw_evidence_id or "").strip()
+                if evidence_id and evidence_id not in evidence_ids:
+                    evidence_ids.append(evidence_id)
             for page in entry.get("pages") or []:
                 if isinstance(page, int) and page not in pages:
                     pages.append(page)
-            if insight_id:
-                break
+            for span in entry.get("evidence_spans") or []:
+                if not isinstance(span, dict):
+                    continue
+                page = span.get("page")
+                if isinstance(page, int) and page not in pages:
+                    pages.append(page)
     return evidence_ids, pages
 
 
@@ -148,6 +164,74 @@ def _lookup_topic_grounding(
         if resolved_index >= 0:
             break
     return evidence_ids, pages
+
+
+def _pages_for_evidence_ids(
+    evidence_ids: List[str], artifacts: Dict[str, Any]
+) -> List[int]:
+    """Return pages attached to the exact retained evidence identities."""
+
+    requested = {
+        str(value).strip().casefold() for value in evidence_ids if str(value).strip()
+    }
+    if not requested:
+        return []
+    pages: List[int] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            declared = [value.get("evidence_id")]
+            declared.extend(value.get("evidence_ids") or [])
+            declared.extend(
+                span.get("evidence_id")
+                for span in value.get("evidence_spans") or []
+                if isinstance(span, dict)
+            )
+            matches = {
+                str(item or "").strip().casefold()
+                for item in declared
+                if str(item or "").strip()
+            }
+            if requested.intersection(matches):
+                raw_pages = value.get("pages")
+                if isinstance(raw_pages, list):
+                    for page in raw_pages:
+                        if isinstance(page, int) and page > 0 and page not in pages:
+                            pages.append(page)
+                page = value.get("page")
+                if isinstance(page, int) and page > 0 and page not in pages:
+                    pages.append(page)
+                for span in value.get("evidence_spans") or []:
+                    if not isinstance(span, dict):
+                        continue
+                    span_id = str(span.get("evidence_id") or "").strip().casefold()
+                    span_page = span.get("page")
+                    if (
+                        span_id in requested
+                        and isinstance(span_page, int)
+                        and span_page > 0
+                        and span_page not in pages
+                    ):
+                        pages.append(span_page)
+                for span in value.get("source_spans") or []:
+                    if not isinstance(span, dict):
+                        continue
+                    span_page = span.get("page")
+                    if (
+                        isinstance(span_page, int)
+                        and span_page > 0
+                        and span_page not in pages
+                    ):
+                        pages.append(span_page)
+            for child in value.values():
+                if isinstance(child, (dict, list)):
+                    walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+
+    walk(artifacts)
+    return pages
 
 
 def _issue_grounding(
@@ -362,12 +446,16 @@ def _normalize_regeneration_issue(
     derived_evidence_ids, pages = _issue_grounding(
         issue.affected_section, artifacts, issue.entity_id
     )
-    rule_id = str(issue.rule_id or "").strip().lower()
-    evidence_ids = (
-        list(issue.evidence_ids)
-        if rule_id.startswith(("retained_claim.", "public_editorial_quality."))
-        else derived_evidence_ids or list(issue.evidence_ids)
-    )
+    supplied_evidence_ids = [
+        str(value).strip() for value in issue.evidence_ids if str(value).strip()
+    ]
+    # Validator evidence is already the canonical binding for the failed
+    # claim.  Derived artifact lookup is only a recovery path when the
+    # validator could not attach an ID; it must never replace a multi-fact
+    # binding with an earlier singular projection.
+    evidence_ids = supplied_evidence_ids or derived_evidence_ids
+    if supplied_evidence_ids:
+        pages = _pages_for_evidence_ids(supplied_evidence_ids, artifacts)
     excluded_evidence_ids = (
         list(evidence_ids) if _quarantines_failed_evidence(issue) else []
     )
