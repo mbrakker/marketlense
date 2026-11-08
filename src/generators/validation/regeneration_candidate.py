@@ -493,10 +493,23 @@ def _verified_editorial_obligation_issues(
         if isinstance(fact.get("qualifiers"), list)
         and any(str(value).strip() for value in fact["qualifiers"])
     }
+    candidate_editorial_plan = candidate_artifacts.get("editorial_plan")
+    if not isinstance(candidate_editorial_plan, dict):
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified regeneration candidate is missing a structured "
+                    "editorial plan."
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
     try:
         validate_verified_editorial_plan_revision(
             original_plan,
-            candidate_artifacts.get("editorial_plan"),
+            candidate_editorial_plan,
             canonical_evidence_ids=canonical_evidence_ids,
             admitted_candidate_ids=admitted_candidate_ids,
             admitted_limitation_evidence_ids=admitted_limitation_evidence_ids,
@@ -513,7 +526,7 @@ def _verified_editorial_obligation_issues(
                 for insight in candidate_artifacts.get("insights_candidates") or []
                 if isinstance(insight, dict)
             ],
-            editorial_plan=candidate_artifacts.get("editorial_plan"),
+            editorial_plan=candidate_editorial_plan,
         )
     except AppError as exc:
         return [
