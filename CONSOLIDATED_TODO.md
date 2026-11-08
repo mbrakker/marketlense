@@ -305,6 +305,8 @@ E18 remains Active.
 
 **Final documentation-tip CI — 2026-11-06:** The follow-up ledger commit `111bdfac` passed hosted run [42303832188](https://github.com/mbrakker/marketlense/actions/runs/42303832188), including tests/coverage, both mutation partitions, and `release_evidence`; the optional WordPress staging REST gate was skipped by configuration. The release bundle is [retained here](https://github.com/mbrakker/marketlense/actions/runs/42303832188/artifacts/13545018973). This does not change the incomplete provider-backed frozen-five result or E18's **Active/PARTIAL** status.
 
+**Evidence update — 2026-11-08 (verified editorial lifecycle and Adjust checkpoint handoff):** Current commit `bef48fab` (handoff fix `e621e6bb`) fixes the demonstrated analytics-projection re-entry defect where render-checkpoint `source`/`selection` siblings were read from the nested `analysis` object. The focused checkpoint/queue/projection regression set passed 51; a provider-free replay of the retained dead-letter succeeded after requeue in an isolated queue-state copy and projected the existing Adjust report. The corrected provider-backed Adjust run at `eb8a923a` passed validation/readiness and produced inspected HTML, with 10/10 verified facts, 0 quarantined, 0 unsupported/unresolved retained claims, and no publication write; the original run's dead-letter/remediation row was intentionally not rewritten. The provider-free frozen-five pack remains 29/29 IDs and theme slots, while the live visual shadow ledger is 28/29 verified and 1 fail-closed. No fresh current-SHA full provider run has exercised the final handoff correction, so E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full evidence is in [the Step 2 report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
+
 #### R1. Publish release-evidence reviews where reviewers work
 
 [Full R1 specification](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work).
@@ -2222,3 +2224,16 @@ This verifies engineering/release gates only; no provider-backed report,
 retained-PDF replay, canonical promotion, readiness approval, publication, or
 WordPress write occurred. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Final local verification — 2026-11-08:** The affected lifecycle/checkpoint/
+grounding/regeneration set passed **172 tests**. Mypy passed for 786 source
+files; Ruff lint/format, coverage thresholds, mutation, quality regression,
+prompt-fixture regression, backlog, documentation, and hygiene gates passed.
+The last complete full-suite run recorded 8,606 passed, 2 skipped, 48
+deselected, and one unchanged CPython-3.12-only wheelhouse failure on the
+CPython 3.14.2 host; the final focused obligation tests passed afterward. The
+retained provider-backed Adjust run and provider-free frozen-five replay are
+unchanged evidence, not a fresh current-SHA provider run. No canonical
+promotion, publication, or WordPress write occurred. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

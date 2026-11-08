@@ -11222,3 +11222,140 @@ the latest live limitations.
 **Hosted verdict: PASS for engineering/release gates; PARTIAL / NO-GO for live
 Step 2 quality.** E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+### Verified editorial lifecycle correction and retained Adjust acceptance — 2026-11-08
+
+The current correction is `bef48fab` (with the handoff fix in
+`e621e6bb6e24e79a3d2d17ae9fd5ac5de8250d10`), building on the verified
+lifecycle commits `d8a05b02`, `f15347bb`, and `eb8a923a`.
+The final root cause found in the current Adjust run was a cross-stage
+checkpoint handoff defect: a render checkpoint serializes `source` and
+`selection` beside `analysis`, but the analytics-projection re-entry looked for
+them inside `analysis`. The correction reads those existing sibling fields; it
+does not add a validator, provider call, schema, or new recovery path. A
+regression writes a verified render checkpoint and proves that re-entry accepts
+the canonical authority and returns the retained readiness-passing outcome.
+
+The exact Step 0 frozen-five retained pack was replayed provider-free: **5/5
+source hashes**, **29/29 selected IDs**, **29/29 theme slots**, **15 reference
+cases / 39 variants**, and unchanged evidence IDs, physical pages, spans,
+protected fields, metric-spine/key-figure counts, final wording, and fallback
+availability. This is a retained-artifact comparison, not fresh candidate
+generation evidence.
+
+The retained visual shadow evaluation covered all **29 real shortlisted
+insights**: **27 verified first pass, 1 verified after retry, 28 verified, 1
+failed verification, 0 unresolved, 0 skipped**. The per-report ledger was:
+
+| Report | First pass | After retry | Failed | Terminal result |
+| --- | ---: | ---: | ---: | --- |
+| Capgemini | 4 | 0 | 1 | 4 verified; the digital-assistants row failed closed on a physical section-divider page |
+| Activate | 6 | 1 | 0 | 7 verified |
+| KPMG | 5 | 0 | 0 | 5 verified |
+| Reuters Institute | 6 | 0 | 0 | 6 verified |
+| Adjust | 6 | 0 | 0 | 6 verified |
+
+The two isolated live visual runs used **62 provider calls**, **1,736,711 input
+tokens**, **77,528 output tokens**, **1,814,239 total tokens**, estimated cost
+**$0.212438**, and summed wall time **1,044.385 seconds**. The corrected
+provider-backed Adjust report run (`eb8a923a`) completed ingestion through HTML
+and readiness with **182 calls**, **1,706,014 input tokens**, **278,762 output
+tokens**, **$0.321413**, and **1,973.118 seconds**. It admitted **10/10
+verified facts**, quarantined **0**, validated **38 newly and 28 by reuse**,
+avoided **3 grounding calls**, executed **3 targeted automatic repairs** and
+**6 structured-output recovery calls**, used **0 operator intervention**, and
+ended `awaiting_review` with validation/readiness **pass**. No canonical
+promotion, approval, publication, or WordPress write occurred.
+
+The live Adjust HTML and retained artifacts were independently inspected against
+the 41-page PDF with SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`. The
+10 verified facts resolve to physical pages 9, 11, 13, 19, 21, 29, 34, 36,
+38, and 40; the final three insights retain their evidence IDs and pages. The
+HTML contains no internal verified-fact/source identifiers, preserves the
+source caveat, and its public-quality and publish-readiness artifacts both pass.
+The retained HTML is
+`C:\\ml-cross-current-e2e-20261108-3\\out\\e2e-adjust-20261108-3\\frozen-reliability-hf1fxlur\\members\\cohort-b638414df0b1fccea1cd\\ias-first-attempt-xga69gq6\\output\\mobile-app-trends-2026-pdf.html`;
+the authoritative artifact snapshot is the adjacent
+`report_analysis\\artifacts.json`.
+
+The corrected report run still recorded one historical `analytics_projection`
+dead-letter with `report_pipeline_checkpoint_invalid` / “Checkpoint source
+state must be an object”. That original workflow database and its
+`operator_action_required` remediation row were not rewritten. Instead, the
+dead-letter job was requeued in an isolated copy of the retained queue state;
+the corrected code completed it successfully on attempt 2, projected the
+Adjust report, and left only its existing claim-embedding/signal/briefing
+downstream jobs pending. This proves the handoff correction without another
+provider-backed report generation, but it does not claim that the original
+historical run self-healed or that a fresh current-SHA full E2E has been rerun.
+
+The first two current-SHA Adjust attempts also remain material evidence: the
+first stopped on stale `editorial_theme_coverage` checkpoint identity; the
+second stopped on a 4,096-token theme-coverage response truncation. The former
+was fixed by aligning the stored contract identity; the latter by the existing
+theme-coverage policy’s `4096` → `8192` output headroom. The third run completed
+the report gates, but normal provider variability means its lower/higher cost
+cannot be attributed solely to either correction.
+
+Focused lifecycle/checkpoint/queue/projection tests passed **51**, including the
+new verified render-reentry regression. Changed-file Ruff and `git diff --check`
+passed. Full local/hosted release-gate results and a current-SHA full rerun are
+not yet available in this entry; the local CPython 3.14 wheelhouse limitation
+and the existing protected ZIP modification remain unchanged.
+
+**Verdict: PARTIAL / NO-GO.** The report-level Adjust acceptance, retained
+visual evidence, and the demonstrated checkpoint fix pass, but the historical
+queue dead-letter was not repaired in place, no fresh current-SHA provider run
+has exercised the final correction, and fresh Step 1 selection effectiveness and
+independent human editorial acceptance remain unproven. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.
+
+### Final local verification after lifecycle contract regressions — 2026-11-08
+
+The final affected-set command covered the changed lifecycle, grounding,
+checkpoint, regeneration, and editorial-contract paths:
+`python -m pytest -q tests/test_verified_editorial_obligation_contract.py
+tests/test_report_checkpoint_verified_reentry.py
+tests/test_verified_grounding_contract_corrections.py tests/test_pre_e2e_integrity.py
+tests/test_report_checkpoint_lineage_validation.py
+tests/test_adaptive_verified_editorial_contracts.py` — **172 passed in 16.83s**.
+The newly isolated obligation/re-entry regressions are included in that count;
+they cover preservation of the original plan and essential obligations, sparse
+verified-fact projection, malformed admissions, missing plan metadata, and the
+verified render checkpoint's sibling `source`/`selection` handoff.
+
+The final local gates were also run after the last test and formatting changes:
+
+* `run_type_check.py`: **786 source files, 0 tracked errors**.
+* `check_coverage.py`: global **85.55%**, contracts **97.99%**, orchestrators
+  **86.20%**, generators **87.18%**, services **84.36%**, and control-plane
+  **90.60%**; all thresholds passed.
+* `run_mutation_gate.py`: passed; all partitions matched their baselines,
+  including the existing taxonomy partition at **75%**.
+* `check_quality_regression.py`: passed (global 85.5483 vs 83.3816 baseline;
+  generators 87.1826 vs 87.1763; orchestrators 86.1968 vs 84.8022; services
+  84.3594 vs 82.5763).
+* Prompt fixture regression: passed with **118,469 tokens / $0.025502**, equal
+  to the regenerated baseline; the validation family is **12,864 tokens /
+  $0.002199**.
+* Backlog organization/source, documentation, repository hygiene, Ruff, and
+  `git diff --check`: passed.
+
+The last complete full-suite run before the final five focused obligation tests
+reported **8,606 passed, 2 skipped, 48 deselected, 1 failure**. The sole failure
+was the unchanged
+`test_build_hash_locked_wheelhouse.py::test_existing_wheelhouse_reports_missing_active_artifact`,
+which requires native CPython 3.12 and was run on CPython 3.14.2. The final
+focused set passed after those additional tests; this does not convert the
+environment-specific full-suite failure into a pass. No release threshold,
+fixture content, pricing, or validation requirement was weakened.
+
+The provider-backed evidence remains the retained `eb8a923a` Adjust run and
+provider-free frozen-five replay described above. There is still no fresh
+current-SHA provider-backed full E2E after the final handoff correction, and the
+historical queue dead-letter was only proven in an isolated copied database.
+Therefore the implementation remains **PARTIAL / NO-GO** for broader Step 2
+acceptance; E18 remains **Active/PARTIAL**, and Step 3 remains
+**unstarted/not ready**. No canonical promotion or WordPress write occurred.

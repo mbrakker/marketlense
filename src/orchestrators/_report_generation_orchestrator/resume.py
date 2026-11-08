@@ -1309,9 +1309,7 @@ _PROMPT_FAMILY_REPAIR_TARGETS = {
     "report_vs/artifacts/linkedin_post": "linkedin_post",
 }
 _PROMPT_FAMILY_REPAIR_NAMESPACES = {
-    "report_vs/artifacts/summary": (
-        "report_vs/artifacts/regenerate/summary",
-    ),
+    "report_vs/artifacts/summary": ("report_vs/artifacts/regenerate/summary",),
     "report_vs/artifacts/insights_candidates": (
         "report_vs/artifacts/regenerate/insights_candidates",
         "report_vs/artifacts/regenerate/insights_final",
@@ -1321,9 +1319,7 @@ _PROMPT_FAMILY_REPAIR_NAMESPACES = {
         "report_vs/artifacts/regenerate/insights_final",
     ),
     "report_vs/artifacts/quotes": ("report_vs/artifacts/regenerate/quotes",),
-    "report_vs/artifacts/cover_semantics": (
-        "report_vs/artifacts/cover_semantics",
-    ),
+    "report_vs/artifacts/cover_semantics": ("report_vs/artifacts/cover_semantics",),
     "report_vs/artifacts/expert_comment": (
         "report_vs/artifacts/regenerate/expert_comment",
     ),
@@ -1387,9 +1383,7 @@ def _resume_prompt_family_repair(
                     namespace
                     for family in requested
                     if _PROMPT_FAMILY_REPAIR_TARGETS.get(family) == target
-                    for namespace in _PROMPT_FAMILY_REPAIR_NAMESPACES.get(
-                        family, ()
-                    )
+                    for namespace in _PROMPT_FAMILY_REPAIR_NAMESPACES.get(family, ())
                 )
             ),
             issues=[],

@@ -352,9 +352,7 @@ def remap_editorial_plan_to_verified_facts(
         normalize_for_lookup(evidence_id) for evidence_id in fact_evidence_ids
     }
     plan_evidence_ids = [
-        evidence_id
-        for theme in plan["themes"]
-        for evidence_id in theme["evidence_ids"]
+        evidence_id for theme in plan["themes"] for evidence_id in theme["evidence_ids"]
     ]
     plan_evidence_ids.extend(plan.get("material_limitation_evidence_ids", []))
     if all(

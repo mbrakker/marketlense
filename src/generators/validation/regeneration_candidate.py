@@ -389,9 +389,7 @@ def _verified_editorial_obligation_issues(
 
     original_plan = current_coverage["original_editorial_plan"]
     original_identity = str(current_coverage["original_plan_identity"] or "").strip()
-    candidate_identity = str(
-        candidate_coverage["original_plan_identity"] or ""
-    ).strip()
+    candidate_identity = str(candidate_coverage["original_plan_identity"] or "").strip()
     obligations = current_coverage["original_essential_obligations"]
     if (
         original_plan != candidate_coverage["original_editorial_plan"]
@@ -451,9 +449,7 @@ def _verified_editorial_obligation_issues(
 
     facts = _verified_facts(candidate_artifacts)
     canonical_evidence_ids = {
-        f"verified-fact:{fact_id}"
-        for fact_id in facts
-        if fact_id
+        f"verified-fact:{fact_id}" for fact_id in facts if fact_id
     }
     admitted_candidates = _visual_authority_canary(candidate_artifacts).get(
         "admitted_candidates", []
@@ -533,8 +529,7 @@ def _verified_editorial_obligation_issues(
             issue(
                 rule_id="verified_editorial_obligations",
                 message=(
-                    "Verified editorial obligations are not preserved: "
-                    f"{exc.message}"
+                    f"Verified editorial obligations are not preserved: {exc.message}"
                 ),
                 severity="error",
                 section="editorial_plan",

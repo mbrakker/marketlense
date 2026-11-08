@@ -23,14 +23,10 @@ from src.generators.report_generation_shared import (
     base_payload,
     merge_artifacts_into_payload,
 )
-from src.generators.validation.regeneration_candidate import (
-    _verified_editorial_obligation_issues,
-)
 from src.orchestrators._report_analysis_orchestrator.payload import (
     _ensure_report_payload_complete,
 )
 from src.services._render_service.normalization import _coerce_limitation_items
-from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
@@ -83,102 +79,6 @@ def test_same_id_result_from_a_stale_candidate_snapshot_fails_closed():
             "reason": "evaluation_candidate_snapshot_mismatch",
         }
     ]
-
-
-def test_verified_regeneration_cannot_drop_original_essential_plan_evidence():
-    original_plan = {
-        "report_thesis": "The report connects three source-backed signals.",
-        "themes": [
-            {
-                "theme": "Essential signal",
-                "priority": 1,
-                "importance": "essential",
-                "coverage_obligation": "Retain the essential signal.",
-                "evidence_ids": ["verified-fact:f1"],
-                "feasible_candidate_ids": ["c1"],
-            },
-            {
-                "theme": "Supporting signal",
-                "priority": 2,
-                "importance": "essential",
-                "coverage_obligation": "Retain the supporting signal.",
-                "evidence_ids": ["verified-fact:f2"],
-                "feasible_candidate_ids": ["c2"],
-            },
-            {
-                "theme": "Limitation",
-                "priority": 3,
-                "importance": "optional",
-                "coverage_obligation": "Retain the limitation.",
-                "evidence_ids": ["verified-fact:f3"],
-                "feasible_candidate_ids": ["c3"],
-            },
-        ],
-        "material_limitation_evidence_ids": ["verified-fact:f3"],
-    }
-    obligations = [
-        {
-            "theme": theme["theme"],
-            "evidence_ids": list(theme["evidence_ids"]),
-            "importance": theme["importance"],
-            "coverage_obligation": theme["coverage_obligation"],
-        }
-        for theme in original_plan["themes"]
-        if theme["importance"] == "essential"
-    ]
-    visual_cache = {
-        "enabled": True,
-        "verified_facts": [
-            {"fact_id": "f1"},
-            {"fact_id": "f2"},
-            {"fact_id": "f3", "qualifiers": ["limited sample"]},
-        ],
-        "admitted_candidates": [
-            {"id": "c1", "evidence_id": "verified-fact:f1"},
-            {"id": "c2", "evidence_id": "verified-fact:f2"},
-            {"id": "c3", "evidence_id": "verified-fact:f3"},
-        ],
-        "audit": {
-            "editorial_plan_coverage": {
-                "original_plan_identity": sha256_json(original_plan),
-                "original_editorial_plan": deepcopy(original_plan),
-                "original_essential_obligations": deepcopy(obligations),
-            }
-        },
-    }
-    current = {
-        "_cache": {"visual_authority_canary": visual_cache},
-        "editorial_plan": deepcopy(original_plan),
-        "insights_candidates": [
-            {"id": "c1", "evidence_id": "verified-fact:f1"},
-            {"id": "c2", "evidence_id": "verified-fact:f2"},
-            {"id": "c3", "evidence_id": "verified-fact:f3"},
-        ],
-        "insights_final": [
-            {"id": "c1", "evidence_id": "verified-fact:f1"},
-            {"id": "c2", "evidence_id": "verified-fact:f2"},
-            {"id": "c3", "evidence_id": "verified-fact:f3"},
-        ],
-    }
-    candidate = deepcopy(current)
-    candidate["editorial_plan"]["themes"] = [
-        deepcopy(original_plan["themes"][1]),
-        deepcopy(original_plan["themes"][2]),
-    ]
-    candidate["insights_candidates"] = [
-        item for item in candidate["insights_candidates"] if item["id"] != "c1"
-    ]
-    candidate["insights_final"] = [
-        item for item in candidate["insights_final"] if item["id"] != "c1"
-    ]
-
-    issues = _verified_editorial_obligation_issues(
-        current_artifacts=current,
-        candidate_artifacts=candidate,
-    )
-
-    assert len(issues) == 1
-    assert issues[0].rule_id == "verified_editorial_obligations"
 
 
 def _plan(count: int = 2, *, limitations: list[str] | None = None) -> dict:

@@ -281,14 +281,14 @@ def test_report_editorial_quality_failure_without_evidence_is_valid():
         "verdicts": [
             {
                 "item_id": item["public_item_id"],
-                "status": "pass",
+                "status": "fail",
                 "classification": "analyst_interpretation",
-                "severity": "info",
-                "rule_id": "",
-                "hard_fail_class": "",
+                "severity": "error",
+                "rule_id": "public_editorial_quality.semantic_generic_copy",
+                "hard_fail_class": "editorial_quality",
                 "reason": "The item is factually harmless but needs stronger analysis.",
                 "evidence_ids": [],
-                "repair_target": "",
+                "repair_target": "expert_comment",
             }
         ],
         "report_verdict": {

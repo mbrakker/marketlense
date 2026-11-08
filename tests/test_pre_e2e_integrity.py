@@ -307,14 +307,20 @@ def test_report_review_accepts_selective_material_coverage_with_targeted_failure
     item_verdicts = [
         {
             "item_id": str(value["public_item_id"]),
-            "status": "pass",
+            "status": "fail" if value is item else "pass",
             "classification": "factual_claim",
-            "severity": "info",
-            "rule_id": "",
-            "hard_fail_class": "",
-            "reason": "The item remains source-grounded and materially useful.",
+            "severity": "error" if value is item else "info",
+            "rule_id": (
+                "public_editorial_quality.semantic_integrity" if value is item else ""
+            ),
+            "hard_fail_class": "factual_error" if value is item else "",
+            "reason": (
+                "The targeted item needs a scoped editorial correction."
+                if value is item
+                else "The item remains source-grounded and materially useful."
+            ),
             "evidence_ids": list(value.get("evidence_ids") or []),
-            "repair_target": "",
+            "repair_target": str(value["repair_target"]) if value is item else "",
         }
         for value in items
     ]
@@ -562,17 +568,15 @@ def test_verified_render_uses_authoritative_packs_for_factual_editorial_cards() 
     authoritative = deepcopy(
         artifacts["_cache"]["visual_authority_canary"]["verified_evidence_packs"]
     )
-    authoritative["findings"]["findings"][0]["statement"] = (
-        "CANONICAL VERIFIED FINDING"
-    )
+    authoritative["findings"]["findings"][0]["statement"] = "CANONICAL VERIFIED FINDING"
     discovery = {
         "findings": {
-                "findings": [
-                    {
-                        "id": "discovery-finding",
-                        "statement": "CONTRADICTORY DISCOVERY FINDING",
-                    }
-                ]
+            "findings": [
+                {
+                    "id": "discovery-finding",
+                    "statement": "CONTRADICTORY DISCOVERY FINDING",
+                }
+            ]
         },
         "doc_map": {"title": "Discovery navigation title"},
     }
