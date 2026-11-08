@@ -11438,6 +11438,26 @@ the handoff, persistence, rollback, and false-PASS fixes; it does not close
 the known live Capgemini semantic-coverage failure, Activate pre-editorial
 stall, or the absence of a current-SHA frozen-five report run.
 
+The retained frozen-five result at producer `d02897a9` was also reviewed
+report by report: Reuters Institute was the one retained validation/readiness
+pass; Capgemini stopped on semantic review of the verified-fact claim
+`switch-uncommunicated-reduction`, Activate stopped on an unlocalized
+grounding failure, KPMG stopped on the omitted-limitations review for
+`ma-buyer-pipeline-outlook`, and Adjust stopped on semantic review of the
+`global-ecommerce-finance-install-session-divergence` claim. Those are
+historical diagnostics, not evidence that the current code has re-run or
+fixed those reports.
+
+Hosted run
+[`42494045204`](https://github.com/mbrakker/marketlense/actions/runs/42494045204)
+for commit `849c3e15994a3801c9a7d37d748cd1fca8f5e5b6` passed `ci_start`,
+tests/coverage, mutation partitions 0 and 1, and `release_evidence`. Job
+durations were 7m56s, 7m19s, 7m35s, and 1m16s respectively. The retained
+release bundle is
+[`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42494045204/artifacts/13622673956).
+The WordPress staging check remained disabled by the existing safety policy;
+no publication write occurred.
+
 **Verdict: PASS for the confirmed code-level integrity corrections and local
 engineering gates; PARTIAL / NO-GO for live Step 2 acceptance.** E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains

@@ -2262,3 +2262,15 @@ run, canonical promotion, readiness approval, or publication was performed.
 E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**. Keep this outcome open pending current-SHA
 real-report acceptance.
+
+**Hosted verification — 2026-11-08:** Run
+[42494045204](https://github.com/mbrakker/marketlense/actions/runs/42494045204)
+for `849c3e15994a3801c9a7d37d748cd1fca8f5e5b6` passed tests/coverage, both
+mutation partitions, and `release_evidence`; the release bundle is retained at
+https://github.com/mbrakker/marketlense/actions/runs/42494045204/artifacts/13622673956.
+This confirms the engineering and release gates only. Historical frozen-five
+diagnostics remain unchanged: Reuters was the retained passing report, while
+Capgemini, Activate, KPMG, and Adjust stopped on report-specific semantic or
+grounding validation failures. No current-SHA provider-backed report run or
+publication write was performed. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
