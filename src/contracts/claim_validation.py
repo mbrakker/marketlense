@@ -44,6 +44,15 @@ _BLOCKING_EDITORIAL_VIOLATIONS = {
     "unsupported_factual_claim",
     "unsupported_certainty",
 }
+_NON_ASSERTIVE_FACT_VALUES = frozenset(
+    {
+        "not available",
+        "not identified",
+        "not specified",
+        "not stated",
+        "unknown",
+    }
+)
 
 
 def normalize_claim_classification(value: object) -> str:
@@ -110,7 +119,8 @@ def semantic_claim_disposition(
     # normative recommendations with no protected fact values remain eligible
     # for the existing editorial path.
     if protected_facts is not None and any(
-        dimension.status == "unknown" and bool(str(dimension.claim_value or "").strip())
+        dimension.status == "unknown"
+        and _is_material_claim_value(dimension.claim_value)
         for dimension in protected_facts.dimensions.values()
     ):
         return "unresolved"
@@ -130,6 +140,18 @@ def semantic_claim_disposition(
     ):
         return "not_applicable"
     return "unresolved"
+
+
+def _is_material_claim_value(value: str | None) -> bool:
+    """Return whether a protected value is an asserted semantic premise.
+
+    The grounding contract uses explicit absence markers when a model cannot
+    establish a dimension.  Those markers must not be treated as an added
+    factual assertion, while any other non-empty value remains fail-closed.
+    """
+
+    normalized = " ".join(str(value or "").strip().casefold().split())
+    return bool(normalized) and normalized not in _NON_ASSERTIVE_FACT_VALUES
 
 
 @dataclass(frozen=True)

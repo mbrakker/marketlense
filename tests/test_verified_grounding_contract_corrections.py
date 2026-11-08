@@ -171,6 +171,61 @@ def test_editorial_disposition_allows_source_only_unknown_value():
     )
 
 
+def test_factual_disposition_allows_explicit_absence_marker_for_unknown_dimension():
+    dimensions = {
+        dimension: {
+            "claim_value": "same",
+            "evidence_value": "same",
+            "status": "compatible",
+        }
+        for dimension in PROTECTED_FACT_DIMENSIONS
+    }
+    dimensions["attribution"] = {
+        "claim_value": "Not specified",
+        "evidence_value": "Not specified",
+        "status": "unknown",
+    }
+    comparison = ProtectedFactComparison.from_payload(
+        dimensions, proposition_status="compatible"
+    )
+
+    assert (
+        semantic_claim_disposition(
+            classification="factual_claim",
+            outcome="entailed",
+            protected_facts=comparison,
+        )
+        == "supported"
+    )
+
+
+def test_factual_disposition_still_fails_closed_for_material_unknown_dimension():
+    dimensions = {
+        dimension: {
+            "claim_value": "same",
+            "evidence_value": "same",
+            "status": "compatible",
+        }
+        for dimension in PROTECTED_FACT_DIMENSIONS
+    }
+    dimensions["attribution"] = {
+        "claim_value": "Acme Research",
+        "evidence_value": None,
+        "status": "unknown",
+    }
+    comparison = ProtectedFactComparison.from_payload(
+        dimensions, proposition_status="compatible"
+    )
+
+    assert (
+        semantic_claim_disposition(
+            classification="factual_claim",
+            outcome="entailed",
+            protected_facts=comparison,
+        )
+        == "unresolved"
+    )
+
 def test_unbound_editorial_quality_failure_is_valid_negative_verdict():
     item = {
         "public_item_id": "soft_copy:expert_comment:generic",
