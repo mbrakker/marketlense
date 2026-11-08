@@ -86,6 +86,7 @@ from src.generators.public_editorial_quality_generator import (
 from src.generators.report_generation_dependencies import ReportAnalysisDependencies
 from src.generators.report_generation_shared import merge_artifacts_into_payload
 from src.generators.report_regeneration_generator import (
+    _build_grounding_package,
     retained_grounding_evidence_ids_for_target,
     retained_soft_copy_claim_grounding_for_target,
 )
@@ -403,7 +404,14 @@ def _validate_original_essential_obligation_assessments(
         else None
     )
     if not isinstance(obligations, list) or not obligations:
-        return []
+        raise AppError(
+            code="public_editorial_quality_obligation_contract_missing",
+            message=(
+                "Verified public review lacks immutable original essential "
+                "obligation metadata"
+            ),
+            retryable=False,
+        )
     assessments = payload.get("original_essential_obligation_assessments")
     if not isinstance(assessments, list):
         raise AppError(
@@ -445,10 +453,25 @@ def _validate_original_essential_obligation_assessments(
             for value in item.get("evidence_ids") or []
             if str(value).strip()
         }
+        if item.get("artifact") != "insights_final":
+            continue
+        item_field = str(item.get("field") or "").strip()
+        if item_field not in {
+            "text",
+            "so_what",
+            "now_what",
+        } and not item_field.startswith("insights:"):
+            continue
         aliases = {item_id}
         parts = item_id.split(":")
-        if len(parts) >= 3 and parts[0] == "insight":
-            aliases.update({parts[1], f"insight:{parts[1]}"})
+        if len(parts) >= 3 and parts[0] in {"insight", "insights"}:
+            aliases.update(
+                {
+                    parts[1],
+                    f"insight:{parts[1]}",
+                    f"insights:{parts[1]}",
+                }
+            )
         for alias in aliases:
             allowed_support_ids.add(alias)
             public_item_evidence[alias] = evidence_ids
@@ -3708,7 +3731,100 @@ def _preflight_empty_grounding_strategies(
             current_plan = replace(current_plan, targets=split_targets)
             continue
         newly_rejected = False
+        missing_target_ids: set[int] = set()
         for target in current_plan.targets:
+            if target.repair_action == "ABSTAIN":
+                continue
+            if (
+                target.repair_action == "REMOVE_CLAIM"
+                and target.quarantined_evidence_ids
+                and any(issue.rule_id == "grounding" for issue in target.issues)
+            ):
+                continue
+            specialized_evidence_recovery = target.target_section in {
+                "expert_comment",
+                "linkedin_post",
+            }
+            navigation_context_target = target.target_section in {
+                "topics",
+                "report_identity",
+            }
+            if specialized_evidence_recovery or navigation_context_target:
+                # Topic and report-identity section IDs are navigation/context
+                # bindings, not canonical source evidence. They must not be
+                # treated as missing factual evidence by this preflight.
+                continue
+            grounding_package = _build_grounding_package(
+                target=target,
+                prepared=None,
+                artifacts=artifacts,
+                evidence_packs=evidence_packs,
+                doc_map=doc_map or evidence_packs.get("doc_map", {}),
+            )
+            missing_evidence_ids = grounding_package.get("missing_evidence_ids") or []
+            required_evidence_ids = [
+                evidence_id
+                for issue in target.issues
+                for evidence_id in issue.evidence_ids
+                if str(evidence_id or "").strip()
+            ]
+            grounding_unavailable = (
+                bool(missing_evidence_ids)
+                or bool(
+                    required_evidence_ids and not grounding_package.get("evidence_ids")
+                )
+                or bool(
+                    target.quarantined_evidence_ids
+                    and not grounding_package.get("evidence_ids")
+                )
+            )
+            if grounding_unavailable and target.repair_action != "REBIND_EVIDENCE":
+                strategy_key = repair_strategy_fingerprint(
+                    [issue.failure_fingerprint for issue in target.issues],
+                    target.repair_strategy,
+                    target.selected_evidence_ids,
+                )
+                required_strategy_key = repair_strategy_fingerprint(
+                    [issue.failure_fingerprint for issue in target.issues],
+                    target.repair_strategy,
+                    required_evidence_ids,
+                )
+                stable_strategy_keys = {
+                    _stable_target_strategy_fingerprint(
+                        target.target_section,
+                        target.repair_strategy,
+                        evidence_ids,
+                        target.allowed_paths,
+                    )
+                    for evidence_ids in (
+                        target.selected_evidence_ids,
+                        required_evidence_ids,
+                    )
+                }
+                grounding_strategy_key = repair_strategy_fingerprint(
+                    [f"target:{target.target_section}"],
+                    target.repair_strategy,
+                    required_evidence_ids,
+                )
+                if (
+                    strategy_key not in rejected_strategy_keys
+                    and required_strategy_key not in rejected_strategy_keys
+                    and grounding_strategy_key not in rejected_strategy_keys
+                    and not stable_strategy_keys.intersection(rejected_strategy_keys)
+                ):
+                    rejected_strategy_keys.update(
+                        {
+                            strategy_key,
+                            required_strategy_key,
+                            grounding_strategy_key,
+                            *stable_strategy_keys,
+                        }
+                    )
+                    skipped.append((target.target_section, target.repair_strategy))
+                    newly_rejected = True
+                else:
+                    missing_target_ids.add(id(target))
+                continue
             is_summary_claim_map_target = (
                 target.target_section == "summary"
                 and bool(target.issues)
@@ -3761,6 +3877,19 @@ def _preflight_empty_grounding_strategies(
             skipped.append((target.target_section, target.repair_strategy))
             newly_rejected = True
         if not newly_rejected:
+            if missing_target_ids:
+                remaining_targets = [
+                    target
+                    for target in current_plan.targets
+                    if id(target) not in missing_target_ids
+                ]
+                current_plan = replace(
+                    current_plan,
+                    mode="targeted" if remaining_targets else "skip",
+                    targets=remaining_targets,
+                    broad_retry_allowed=bool(remaining_targets)
+                    and current_plan.broad_retry_allowed,
+                )
             break
         current_plan = _build_regeneration_plan(
             issues=issues,

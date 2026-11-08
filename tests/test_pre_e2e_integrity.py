@@ -28,6 +28,7 @@ from src.services._render_service.view import _build_render_view
 from src.utils.errors import AppError
 from src.utils.verified_facts import build_verified_authority_context
 from tests._test_pre_e2e_integrity.cases_01_public_surfaces_and_status import (
+    _add_valid_obligation_contract,
     _report_review_verdict,
     _valid_report_review_payload,
     test_public_item_status_contract_is_fail_closed,
@@ -280,6 +281,7 @@ def test_unlocalized_report_quality_failure_cannot_request_broad_repair() -> Non
             status="fail", evidence_ids=["verified-fact:fact-1"], coverage_status="fail"
         ),
     }
+    _add_valid_obligation_contract(items, scope, payload)
 
     _validate_public_editorial_review_payload(payload, items, _ctx(), scope)
     issue = _public_editorial_review_issue(
@@ -334,6 +336,7 @@ def test_report_review_accepts_selective_material_coverage_with_targeted_failure
             coverage_status="fail",
         ),
     }
+    _add_valid_obligation_contract(items, scope, payload)
 
     _validate_public_editorial_review_payload(payload, items, _ctx(), scope)
     issue = _public_editorial_review_issue(

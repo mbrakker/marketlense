@@ -28,7 +28,7 @@ from src.utils.quantity import (
     quantities_match,
 )
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
-from src.utils.verified_facts import PROTECTED_METRIC_FIELDS, canonical_fact_text
+from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.2"
 ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:32"
@@ -5780,6 +5780,9 @@ def _normalize_evidence_spans(
             "evidence_id": span_evidence_id,
             "source_pack": _s(raw_span.get("source_pack")),
         }
+        source_identity = _s(raw_span.get("source_identity")).strip()
+        if source_identity:
+            normalized_span["source_identity"] = source_identity
         if isinstance(raw_span.get("section_id"), str) and _s(
             raw_span.get("section_id")
         ):
@@ -5800,6 +5803,7 @@ def _normalize_evidence_spans(
         dedupe_key = (
             normalized_span.get("evidence_id"),
             normalized_span.get("source_pack"),
+            normalized_span.get("source_identity"),
             normalized_span.get("section_id"),
             normalized_span.get("page"),
             normalized_span.get("start_offset"),
@@ -5826,6 +5830,7 @@ def _build_evidence_span_index(
         source_pack: str,
         pages: List[int] | None = None,
         text: Any = "",
+        source_identity: Any = "",
         section_id: Any = "",
         start_offset: Any = None,
         end_offset: Any = None,
@@ -5834,6 +5839,7 @@ def _build_evidence_span_index(
         if not normalized_evidence_id:
             return
         normalized_text = _s(text).strip()
+        normalized_source_identity = _s(source_identity).strip()
         normalized_section_id = _s(section_id).strip()
         normalized_pages = [
             page for page in (pages or []) if isinstance(page, int) and page > 0
@@ -5846,6 +5852,8 @@ def _build_evidence_span_index(
                     "source_pack": source_pack,
                     "page": page,
                 }
+                if normalized_source_identity:
+                    span["source_identity"] = normalized_source_identity
                 if normalized_section_id:
                     span["section_id"] = normalized_section_id
                 if normalized_text:
@@ -5860,6 +5868,8 @@ def _build_evidence_span_index(
                 "evidence_id": normalized_evidence_id,
                 "source_pack": source_pack,
             }
+            if normalized_source_identity:
+                span["source_identity"] = normalized_source_identity
             if normalized_section_id:
                 span["section_id"] = normalized_section_id
             if normalized_text:
@@ -5938,6 +5948,53 @@ def _build_evidence_span_index(
                 if not isinstance(item, dict):
                     continue
                 finding_id = _s(item.get("id") or item.get("evidence_id")).strip()
+                if finding_source_pack == "verified_facts":
+                    verified_facts_pack = evidence_packs.get("verified_facts")
+                    canonical_fact_present = isinstance(
+                        verified_facts_pack, dict
+                    ) and any(
+                        isinstance(fact, dict)
+                        and (
+                            _s(fact.get("fact_id")).strip().casefold()
+                            == finding_id.casefold().removeprefix("verified-fact:")
+                            or f"verified-fact:{_s(fact.get('fact_id')).strip()}".casefold()
+                            == finding_id.casefold()
+                        )
+                        for fact in verified_facts_pack.get("verified_facts") or []
+                    )
+                    if canonical_fact_present:
+                        # The canonical fact pack is authoritative for a
+                        # verified-fact ID, including its retained page notes.
+                        # Do not allow a parallel finding projection to
+                        # replace those source-bound spans.
+                        continue
+                item_spans = _normalize_evidence_spans(
+                    item.get("evidence_spans"), evidence_id=finding_id
+                )
+                page_specific_spans = [
+                    span
+                    for span in item_spans
+                    if isinstance(span.get("page"), int)
+                    and span["page"] > 0
+                    and _s(span.get("text")).strip()
+                ]
+                if finding_source_pack == "verified_facts" and page_specific_spans:
+                    for span in page_specific_spans:
+                        _register(
+                            evidence_id=finding_id,
+                            source_pack="verified_facts",
+                            pages=[span["page"]],
+                            text=span.get("text"),
+                            source_identity=span.get("source_identity")
+                            or item.get("source_identity"),
+                            section_id=span.get("section_id"),
+                            start_offset=span.get("start_offset"),
+                            end_offset=span.get("end_offset"),
+                        )
+                    # Verified facts already carry authoritative, page-bound
+                    # source spans. Do not reintroduce the serialized fact or
+                    # its statement as a synthetic span for every page.
+                    continue
                 pages = _coerce_span_pages(item)
                 excerpt = _pick_first_non_empty_text(
                     item.get("evidence"), item.get("excerpt")
@@ -6012,20 +6069,18 @@ def _build_evidence_span_index(
                     for page in fact.get("supporting_physical_pages") or []
                     if isinstance(page, int) and page > 0
                 ]
-                excerpt = _pick_first_non_empty_text(
-                    *[
-                        notes.get(str(page))
-                        for page in pages
-                        if isinstance(notes, dict)
-                    ],
-                    canonical_fact_text(fact),
-                )
-                _register(
-                    evidence_id=evidence_id,
-                    source_pack="verified_facts",
-                    pages=pages,
-                    text=excerpt,
-                )
+                source_identity = fact.get("source_identity")
+                for page in pages:
+                    page_note = notes.get(str(page)) if isinstance(notes, dict) else ""
+                    if not _s(page_note).strip():
+                        continue
+                    _register(
+                        evidence_id=evidence_id,
+                        source_pack="verified_facts",
+                        pages=[page],
+                        text=page_note,
+                        source_identity=source_identity,
+                    )
     if isinstance(doc_map, dict):
         for section in doc_map.get("sections") or []:
             if not isinstance(section, dict):

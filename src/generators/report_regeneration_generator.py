@@ -347,16 +347,50 @@ def regenerate_artifacts(
         )
         handler = _resolve_regeneration_handler(target.target_section)
         repair_decision_count = len(state.repair_decisions)
-        handler.handle(
-            _RegenerationHandlerExecution(
-                handler=handler,
-                runtime=runtime,
-                state=state,
-                target=target,
-                target_ctx=target_ctx,
-                grounding_package=grounding_package,
-            )
+        execution = _RegenerationHandlerExecution(
+            handler=handler,
+            runtime=runtime,
+            state=state,
+            target=target,
+            target_ctx=target_ctx,
+            grounding_package=grounding_package,
         )
+        specialized_evidence_recovery = (
+            target.target_section
+            in {
+                "expert_comment",
+                "linkedin_post",
+            }
+            or target.repair_action == "REBIND_EVIDENCE"
+        )
+        grounding_preflight_abstained = bool(
+            grounding_package.get("missing_evidence_ids")
+            and target.repair_action not in {"REMOVE_CLAIM", "ABSTAIN"}
+            and not specialized_evidence_recovery
+        )
+        if grounding_preflight_abstained:
+            _record_claim_execution(
+                execution,
+                target=target,
+                action="ABSTAIN",
+                strategy="required_evidence_unavailable",
+            )
+            logger.info(
+                log_event(
+                    target_ctx,
+                    role="generator",
+                    event="artifact_regeneration_grounding_unavailable",
+                    module=logger.name,
+                    fields={
+                        "target_section": target.target_section,
+                        "missing_evidence_ids": list(
+                            grounding_package.get("missing_evidence_ids") or []
+                        ),
+                    },
+                )
+            )
+        else:
+            handler.handle(execution)
         # The attempt fingerprint must describe the evidence actually used,
         # not the planned evidence, so a failed strategy cannot be repeated
         # under another nominal label.
@@ -855,7 +889,7 @@ def _build_grounding_package(
     )
     evidence_windows = (
         []
-        if quarantined_ids
+        if quarantined_ids or prepared is None
         else retrieve_evidence_windows(search_text, prepared.evidence_windows)
     )
     return {

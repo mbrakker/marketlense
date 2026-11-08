@@ -59,6 +59,43 @@ def _report_review_verdict(
     }
 
 
+def _add_valid_obligation_contract(
+    items: list[dict], scope: dict, payload: dict
+) -> None:
+    insight_items = [
+        item
+        for item in items
+        if item.get("artifact") == "insights_final"
+        and (
+            item.get("field") in {"text", "so_what", "now_what"}
+            or str(item.get("field") or "").startswith("insights:")
+        )
+    ]
+    scope["original_editorial_plan_coverage"] = {
+        "original_plan_identity": "test-plan",
+        "original_essential_obligations": [
+            {
+                "theme": "Verified essential theme",
+                "evidence_ids": ["verified-fact:fact-1"],
+                "importance": "essential",
+                "coverage_obligation": "Retain the verified analytical theme.",
+            }
+        ],
+    }
+    payload["original_essential_obligation_assessments"] = [
+        {
+            "theme": "Verified essential theme",
+            "evidence_ids": ["verified-fact:fact-1"],
+            "status": "covered",
+            "supporting_insight_ids": [str(insight_items[0]["public_item_id"])],
+            "explanation": (
+                "The retained final insight develops the verified essential "
+                "theme with the authorized fact."
+            ),
+        }
+    ]
+
+
 def _valid_report_review_payload() -> tuple[list[dict], dict, dict]:
     artifacts = _authority_artifacts()
     items = public_editorial_semantic_review_items(artifacts)
@@ -80,6 +117,7 @@ def _valid_report_review_payload() -> tuple[list[dict], dict, dict]:
         ],
         "report_verdict": _report_review_verdict(evidence_ids=["verified-fact:fact-1"]),
     }
+    _add_valid_obligation_contract(items, scope, payload)
     return items, scope, payload
 
 

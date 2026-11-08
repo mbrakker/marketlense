@@ -932,8 +932,9 @@ def test_byte_identical_expert_and_linkedin_text_reuses_canonical_provenance() -
         ]
 
 
-def test_verified_regeneration_does_not_repopulate_unselected_authority_candidates(
-) -> None:
+def test_verified_regeneration_does_not_repopulate_unselected_authority_candidates() -> (
+    None
+):
     authority_a = {
         "id": "fact-a",
         "text": "Retained candidate A.",

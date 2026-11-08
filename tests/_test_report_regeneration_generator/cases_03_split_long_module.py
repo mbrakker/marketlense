@@ -13,6 +13,57 @@ __file__ = str(
 from ._split_support_test_report_regeneration_generator import *  # noqa: F401,F403
 
 
+def test_missing_required_evidence_abstains_without_provider_call(
+    tmp_path: Path,
+) -> None:
+    current = _current_artifacts()
+    evidence_packs = _evidence_packs()
+    issue = RegenerationIssue(
+        rule_id="grounding",
+        affected_section="summary.tldr",
+        message="The retained summary requires a missing source fact.",
+        severity="error",
+        evidence_ids=["f1", "missing-fact"],
+    )
+    target = RegenerationTarget(
+        target_section="summary",
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        issues=[issue],
+        allowed_paths=["summary.tldr[claim_index=0]"],
+        selected_evidence_ids=["f1", "missing-fact"],
+    )
+    client = _FakeOpenAIClient()
+
+    response = _regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert client.calls == []
+    assert response.repair_decisions[0].repair_action == "ABSTAIN"
+    assert (
+        "required_evidence_unavailable" in response.repair_decisions[0].repair_strategy
+    )
+
+
 @pytest.mark.parametrize(
     ("artifact_family", "issue_rule_id", "repair_action", "repair_strategy"),
     [
