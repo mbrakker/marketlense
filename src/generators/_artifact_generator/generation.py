@@ -943,7 +943,11 @@ def generate_artifacts(
             seed=settings.openai_seed,
             timeout_seconds=settings.openai_timeout_seconds,
             output_contract_schema_version=(
-                f"{response_contract_name}:1.0"
+                (
+                    "editorial_theme_coverage_output:1.1"
+                    if response_contract_name == "editorial_theme_coverage_output"
+                    else f"{response_contract_name}:1.0"
+                )
                 if response_contract_name
                 else "artifact_json:1.0"
             ),

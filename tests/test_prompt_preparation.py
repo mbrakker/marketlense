@@ -160,3 +160,55 @@ def test_gpt6_artifact_checkpoint_identity_matches_producing_prompt() -> None:
     assert bundle.effective_temperature is None
     assert bundle.effective_seed is None
     assert produced == current
+
+
+def test_editorial_theme_coverage_identity_uses_checkpoint_contract_version() -> None:
+    prompt_client = RecordingPromptClient()
+    namespace = "report_vs/artifacts/editorial_theme_coverage"
+    settings = SimpleNamespace(
+        openai_model="gpt-6-luna",
+        openai_models={},
+        llm_routing={},
+        llm_execution_policies={
+            namespace: {
+                "provider": "openai",
+                "model": "gpt-6-luna",
+                "reasoning_effort": "medium",
+                "max_output_tokens": 1024,
+                "retrieval_mode": "chat_json",
+            }
+        },
+        temperature=1.0,
+        openai_seed=7,
+        openai_timeout_seconds=600.0,
+    )
+    bundle = prepare_prompt_bundle(
+        namespace=namespace,
+        settings=settings,
+        ctx=_ctx(),
+        prompt_client=prompt_client,
+        system_variables={"topic": "market"},
+        user_variables={"audience": "analyst"},
+        retrieval_mode="chat_json",
+        output_contract_schema_version="editorial_theme_coverage_output:1.1",
+        validator_version="editorial_theme_coverage_output:v2",
+    )
+
+    produced = artifact_prompt_identity(
+        prepared=bundle,
+        relevant_input_hash="input-hash",
+        validator_version="editorial_theme_coverage_output:v2",
+    )
+    current = current_artifact_prompt_identity(
+        namespace=namespace,
+        prompt_set=bundle.prompt_set,
+        settings=settings,
+        retrieval_mode="chat_json",
+        relevant_input_hash="input-hash",
+    )
+
+    assert produced == current
+    assert (
+        bundle.execution_identity.output_contract_schema_version
+        == "editorial_theme_coverage_output:1.1"
+    )
