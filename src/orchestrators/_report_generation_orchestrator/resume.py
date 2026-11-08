@@ -2087,9 +2087,15 @@ def _resume_from_render_checkpoint(
                 retryable=False,
                 context={"file_id": runtime.file.file_id},
             )
-        source = _source_state_from_checkpoint(runtime, analysis_payload.get("source"))
+        # Render checkpoints keep source and selection alongside the serialized
+        # analysis state.  The projection worker re-enters through this
+        # checkpoint, so read the sibling handoff fields from the checkpoint
+        # payload rather than looking for them inside ``analysis``.
+        source = _source_state_from_checkpoint(
+            runtime, checkpoint.payload.get("source")
+        )
         selection = _selection_state_from_checkpoint(
-            runtime, source, analysis_payload.get("selection")
+            runtime, source, checkpoint.payload.get("selection")
         )
         analysis = _analysis_state_from_checkpoint(
             runtime, source, selection, analysis_payload
