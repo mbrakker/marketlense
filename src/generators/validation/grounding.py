@@ -25,7 +25,10 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyMaterializationRequest,
     PromptFamilyReuseRequest,
 )
-from src.contracts.protected_facts import ProtectedFactComparison
+from src.contracts.protected_facts import (
+    PROTECTED_FACT_DIMENSIONS,
+    ProtectedFactComparison,
+)
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
@@ -92,8 +95,8 @@ from .verified_facts import (
 )
 
 RULE_ID = "grounding"
-GROUNDING_FAMILY_SCHEMA_VERSION = "1.5"
-GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v4"
+GROUNDING_FAMILY_SCHEMA_VERSION = "1.6"
+GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v5"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 GROUNDING_MAX_CLAIMS_PER_CALL = 4
 GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 8
@@ -842,7 +845,7 @@ def run_grounding_check(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
-                    processing_version="validation_rule_v5",
+                    processing_version="validation_rule_v6",
                     prompt_content_hash=prompt_bundle.prompt_content_hash,
                     execution_identity=prompt_bundle.execution_identity.execution_identity,
                     model_provider=str(prompt_bundle.execution_policy.policy.provider),
@@ -1262,7 +1265,7 @@ def run_grounding_check(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
-                    processing_version="validation_rule_v5",
+                    processing_version="validation_rule_v6",
                     output_payload=response_payload,
                     system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
                     user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
@@ -1863,6 +1866,35 @@ def _grounding_coverage_diagnostics(
     return context
 
 
+def _grounding_check_has_complete_semantic_fields(
+    entry: Mapping[str, Any],
+    *,
+    valid_classifications: set[str],
+    valid_outcomes: set[str],
+) -> bool:
+    """Return whether one model check has the complete semantic contract."""
+
+    if (
+        s(entry.get("classification")) not in valid_classifications
+        or s(entry.get("entailment_outcome")) not in valid_outcomes
+        or s(entry.get("proposition_status"))
+        not in {"compatible", "incompatible", "unknown"}
+        or not _grounding_reason_is_substantive(entry.get("reason"))
+    ):
+        return False
+    protected_facts = entry.get("protected_facts")
+    if not isinstance(protected_facts, Mapping):
+        return False
+    return all(
+        isinstance(dimension, Mapping)
+        and "claim_value" in dimension
+        and "evidence_value" in dimension
+        and s(dimension.get("status")) in {"compatible", "incompatible", "unknown"}
+        for name in PROTECTED_FACT_DIMENSIONS
+        for dimension in [protected_facts.get(name)]
+    )
+
+
 def _validate_grounding_check_coverage(
     payload: object,
     semantic_inputs: Sequence[ClaimSemanticInput],
@@ -1935,6 +1967,33 @@ def _validate_grounding_check_coverage(
             **details,
         )
 
+    def raise_coverage(
+        category: str,
+        item_ids: Sequence[str] = (),
+        *,
+        public: bool = False,
+        message: str = "Verified grounding response does not satisfy its contract",
+        **details: object,
+    ) -> None:
+        normalized_item_ids = [s(item_id) for item_id in item_ids if s(item_id)]
+        if normalized_item_ids:
+            details.setdefault("item_ids", normalized_item_ids)
+            details.setdefault("incomplete_verdict_ids", normalized_item_ids)
+            if public:
+                details.setdefault(
+                    "missing_or_ambiguous_public_item_ids", normalized_item_ids
+                )
+                details.setdefault(
+                    "missing_or_ambiguous_public_item_count",
+                    len(normalized_item_ids),
+                )
+        raise AppError(
+            code="grounding_claim_check_coverage_invalid",
+            message=message,
+            retryable=False,
+            context=diagnostics(category, **details),
+        )
+
     allowed_item_ids = set(expected)
     allowed_item_ids.update(expected_public)
     allowed_item_ids.update(
@@ -1957,14 +2016,11 @@ def _validate_grounding_check_coverage(
     if require_public_coverage and any(
         not s(entry.get("item_id")) for entry in response_entries
     ):
-        raise AppError(
-            code="grounding_claim_check_coverage_invalid",
+        raise_coverage(
+            "missing_verdict",
+            ["<missing>"],
+            public=True,
             message="Verified grounding responses require stable item identifiers",
-            retryable=False,
-            context=diagnostics(
-                "missing_item_identifier",
-                incomplete_verdict_ids=["<missing>"],
-            ),
         )
     unknown_item_ids = {
         s(entry.get("item_id"))
@@ -1972,32 +2028,54 @@ def _validate_grounding_check_coverage(
         if s(entry.get("item_id")) and s(entry.get("item_id")) not in allowed_item_ids
     }
     if require_public_coverage and unknown_item_ids:
-        raise AppError(
-            code="grounding_claim_check_coverage_invalid",
+        raise_coverage(
+            "unknown_item_id",
+            sorted(unknown_item_ids),
+            public=True,
             message="Grounding response contains an unknown item identifier",
-            retryable=False,
-            context=diagnostics(
-                "unknown_item_identifier",
-                unknown_item_ids=sorted(unknown_item_ids),
-            ),
+            unknown_item_ids=sorted(unknown_item_ids),
+        )
+    duplicate_item_ids = sorted(
+        {item_id for item_id, entries in checks_by_id.items() if len(entries) > 1}
+        | {
+            item_id
+            for item_id, entries in unsupported_by_id.items()
+            if len(entries) > 1
+        }
+    )
+    if duplicate_item_ids:
+        raise_coverage(
+            "duplicate_verdict",
+            duplicate_item_ids,
+            public=any(item_id in expected_public for item_id in duplicate_item_ids),
+            message="Grounding responses must contain one verdict per item per list",
         )
     if expected:
-        missing_claim_ids = []
+        missing_claim_ids: list[str] = []
+        retained_text_mismatch_ids: list[str] = []
+        retained_incomplete_ids: list[str] = []
+        retained_pair_mismatch_ids: list[str] = []
+        retained_fact_conflict_ids: list[str] = []
         for claim_id, text in expected.items():
             matching_checks = checks_by_id.get(claim_id, [])
             matching_unsupported = unsupported_by_id.get(claim_id, [])
-            if len(matching_checks) != 1 or len(matching_unsupported) > 1:
+            if len(matching_checks) != 1:
                 missing_claim_ids.append(claim_id)
                 continue
             verdict = matching_checks[0]
-            if (
-                not _grounding_text_matches(text, s(verdict.get("text")))
-                or s(verdict.get("classification")) not in valid_classifications
-                or s(verdict.get("entailment_outcome")) not in valid_outcomes
-            ):
+            if not _grounding_text_matches(text, s(verdict.get("text"))):
+                retained_text_mismatch_ids.append(claim_id)
                 missing_claim_ids.append(claim_id)
                 continue
-            if matching_checks and matching_unsupported:
+            if not _grounding_check_has_complete_semantic_fields(
+                verdict,
+                valid_classifications=valid_classifications,
+                valid_outcomes=valid_outcomes,
+            ):
+                retained_incomplete_ids.append(claim_id)
+                missing_claim_ids.append(claim_id)
+                continue
+            if matching_unsupported:
                 unsupported_entry = matching_unsupported[0]
                 if (
                     s(verdict.get("entailment_outcome")) == "entailed"
@@ -2011,22 +2089,77 @@ def _validate_grounding_check_coverage(
                     or s(unsupported_entry.get("entailment_outcome"))
                     != s(verdict.get("entailment_outcome"))
                 ):
+                    retained_pair_mismatch_ids.append(claim_id)
                     missing_claim_ids.append(claim_id)
+                    continue
+            comparison = ProtectedFactComparison.from_payload(
+                verdict.get("protected_facts"),
+                proposition_status=s(verdict.get("proposition_status")),
+            )
+            disposition = semantic_claim_disposition(
+                classification=s(verdict.get("classification")),
+                outcome=s(verdict.get("entailment_outcome")),
+                violation_type=normalize_violation_type(
+                    s(verdict.get("violation_type") or verdict.get("failure_type"))
+                ),
+                protected_facts=comparison,
+            )
+            if s(
+                verdict.get("entailment_outcome")
+            ) == "entailed" and disposition not in {"supported", "not_applicable"}:
+                retained_fact_conflict_ids.append(claim_id)
+                missing_claim_ids.append(claim_id)
         if missing_claim_ids:
-            raise AppError(
-                code="grounding_claim_check_coverage_invalid",
+            if retained_text_mismatch_ids:
+                raise_coverage(
+                    "text_identity_mismatch",
+                    retained_text_mismatch_ids,
+                    message=(
+                        "Grounding retained-claim verdict text must match the "
+                        "authoritative item text"
+                    ),
+                    missing_claim_ids=missing_claim_ids,
+                    missing_claim_count=len(missing_claim_ids),
+                )
+            if retained_pair_mismatch_ids:
+                raise_coverage(
+                    "unsupported_pair_mismatch",
+                    retained_pair_mismatch_ids,
+                    message=(
+                        "Grounding retained-claim unsupported entries must pair "
+                        "with their semantic verdict"
+                    ),
+                    missing_claim_ids=missing_claim_ids,
+                    missing_claim_count=len(missing_claim_ids),
+                )
+            if retained_fact_conflict_ids:
+                raise_coverage(
+                    "entailed_protected_fact_conflict",
+                    retained_fact_conflict_ids,
+                    message=(
+                        "An entailed retained claim conflicts with protected "
+                        "factual dimensions"
+                    ),
+                    missing_claim_ids=missing_claim_ids,
+                    missing_claim_count=len(missing_claim_ids),
+                )
+            if retained_incomplete_ids:
+                raise_coverage(
+                    "incomplete_semantic_fields",
+                    retained_incomplete_ids,
+                    message="Retained grounding verdicts are semantically incomplete",
+                    missing_claim_ids=missing_claim_ids,
+                    missing_claim_count=len(missing_claim_ids),
+                )
+            raise_coverage(
+                "missing_verdict",
+                missing_claim_ids,
                 message=(
                     "Grounding must return exactly one identity-matching semantic "
                     "verdict for each retained claim"
                 ),
-                retryable=False,
-                context={
-                    **diagnostics(
-                        "retained_claim_coverage",
-                        missing_claim_ids=missing_claim_ids,
-                        missing_claim_count=len(missing_claim_ids),
-                    ),
-                },
+                missing_claim_ids=missing_claim_ids,
+                missing_claim_count=len(missing_claim_ids),
             )
     if not require_public_coverage or not expected_public:
         return
@@ -2036,24 +2169,23 @@ def _validate_grounding_check_coverage(
                 s(entry.get("item_id")) or "<missing>"
                 for entry in checks
                 if isinstance(entry, dict)
-                and (
-                    s(entry.get("classification")) not in valid_classifications
-                    or s(entry.get("entailment_outcome")) not in valid_outcomes
-                    or not _grounding_reason_is_substantive(entry.get("reason"))
+                and not _grounding_check_has_complete_semantic_fields(
+                    entry,
+                    valid_classifications=valid_classifications,
+                    valid_outcomes=valid_outcomes,
                 )
             ]
             if isinstance(checks, list)
             else []
         )
         if malformed_checks:
-            raise AppError(
-                code="grounding_claim_check_coverage_invalid",
-                message="Verified grounding checks require a substantive reason",
-                retryable=False,
-                context=diagnostics(
-                    "incomplete_check_reason",
-                    item_ids=malformed_checks,
-                    incomplete_verdict_ids=malformed_checks,
+            raise_coverage(
+                "incomplete_semantic_fields",
+                malformed_checks,
+                public=True,
+                message=(
+                    "Verified grounding checks require complete semantic fields "
+                    "and a substantive reason"
                 ),
             )
         non_entailing_checks = []
@@ -2078,17 +2210,13 @@ def _validate_grounding_check_coverage(
                 ):
                     non_entailing_checks.append(item_id or "<missing>")
         if non_entailing_checks:
-            raise AppError(
-                code="grounding_claim_check_coverage_invalid",
+            raise_coverage(
+                "unsupported_pair_mismatch",
+                non_entailing_checks,
+                public=True,
                 message=(
                     "Non-entailed grounding verdicts must be represented as "
                     "model-owned unsupported entries"
-                ),
-                retryable=False,
-                context=diagnostics(
-                    "non_entailing_check",
-                    item_ids=non_entailing_checks,
-                    incomplete_verdict_ids=non_entailing_checks,
                 ),
             )
         malformed_unsupported = (
@@ -2110,35 +2238,33 @@ def _validate_grounding_check_coverage(
             else []
         )
         if malformed_unsupported:
-            raise AppError(
-                code="grounding_claim_check_coverage_invalid",
+            raise_coverage(
+                "incomplete_semantic_fields",
+                malformed_unsupported,
+                public=True,
                 message="Verified unsupported grounding verdicts are incomplete",
-                retryable=False,
-                context=diagnostics(
-                    "incomplete_unsupported_verdict",
-                    item_ids=malformed_unsupported,
-                    incomplete_verdict_ids=malformed_unsupported,
-                ),
             )
-    public_coverage_errors: list[str] = []
+    public_missing_ids: list[str] = []
+    public_text_mismatch_ids: list[str] = []
+    public_pair_mismatch_ids: list[str] = []
+    public_incomplete_ids: list[str] = []
+    public_fact_conflict_ids: list[str] = []
     for item_id, text in expected_public.items():
         matching_checks = checks_by_id.get(item_id, [])
         matching_unsupported = unsupported_by_id.get(item_id, [])
-        if len(matching_checks) > 1 or len(matching_unsupported) > 1:
-            public_coverage_errors.append(item_id)
-            continue
         if matching_checks:
             check = matching_checks[0]
             if not _grounding_text_matches(text, s(check.get("text"))):
-                public_coverage_errors.append(item_id)
+                public_text_mismatch_ids.append(item_id)
                 continue
             classification = s(check.get("classification"))
             outcome = s(check.get("entailment_outcome"))
-            if (
-                classification not in valid_classifications
-                or outcome not in valid_outcomes
+            if not _grounding_check_has_complete_semantic_fields(
+                check,
+                valid_classifications=valid_classifications,
+                valid_outcomes=valid_outcomes,
             ):
-                public_coverage_errors.append(item_id)
+                public_incomplete_ids.append(item_id)
                 continue
             if matching_unsupported:
                 unsupported_entry = matching_unsupported[0]
@@ -2150,7 +2276,7 @@ def _validate_grounding_check_coverage(
                     or s(unsupported_entry.get("classification")) != classification
                     or s(unsupported_entry.get("entailment_outcome")) != outcome
                 ):
-                    public_coverage_errors.append(item_id)
+                    public_pair_mismatch_ids.append(item_id)
                     continue
             comparison = ProtectedFactComparison.from_payload(
                 check.get("protected_facts"),
@@ -2167,13 +2293,13 @@ def _validate_grounding_check_coverage(
             if outcome == "entailed" and (
                 disposition not in {"supported", "not_applicable"}
             ):
-                public_coverage_errors.append(item_id)
+                public_fact_conflict_ids.append(item_id)
         elif matching_unsupported:
             unsupported_entry = matching_unsupported[0]
-            if (
-                not _grounding_text_matches(text, s(unsupported_entry.get("text")))
-                or s(unsupported_entry.get("classification"))
-                not in valid_classifications
+            if not _grounding_text_matches(text, s(unsupported_entry.get("text"))):
+                public_text_mismatch_ids.append(item_id)
+            elif (
+                s(unsupported_entry.get("classification")) not in valid_classifications
                 or s(unsupported_entry.get("entailment_outcome"))
                 not in {"contradicted", "not_established"}
                 or not normalize_violation_type(
@@ -2184,24 +2310,51 @@ def _validate_grounding_check_coverage(
                 )
                 or not _grounding_reason_is_substantive(unsupported_entry.get("reason"))
             ):
-                public_coverage_errors.append(item_id)
+                public_incomplete_ids.append(item_id)
         else:
-            public_coverage_errors.append(item_id)
-    if public_coverage_errors:
-        raise AppError(
-            code="grounding_claim_check_coverage_invalid",
+            public_missing_ids.append(item_id)
+    if public_text_mismatch_ids:
+        raise_coverage(
+            "text_identity_mismatch",
+            public_text_mismatch_ids,
+            public=True,
+            message="Grounding verdict text must match the authoritative item text",
+        )
+    if public_pair_mismatch_ids:
+        raise_coverage(
+            "unsupported_pair_mismatch",
+            public_pair_mismatch_ids,
+            public=True,
+            message=(
+                "Grounding checks and unsupported entries must form one matching pair"
+            ),
+        )
+    if public_fact_conflict_ids:
+        raise_coverage(
+            "entailed_protected_fact_conflict",
+            public_fact_conflict_ids,
+            public=True,
+            message=(
+                "An entailed grounding check conflicts with protected "
+                "factual dimensions"
+            ),
+        )
+    if public_incomplete_ids:
+        raise_coverage(
+            "incomplete_semantic_fields",
+            public_incomplete_ids,
+            public=True,
+            message="Grounding public-item verdicts are semantically incomplete",
+        )
+    if public_missing_ids:
+        raise_coverage(
+            "missing_verdict",
+            public_missing_ids,
+            public=True,
             message=(
                 "Verified grounding must return one identity-matching verdict "
                 "for every public item"
             ),
-            retryable=False,
-            context={
-                **diagnostics(
-                    "public_item_coverage",
-                    missing_or_ambiguous_public_item_ids=public_coverage_errors,
-                    missing_or_ambiguous_public_item_count=len(public_coverage_errors),
-                ),
-            },
         )
 
 

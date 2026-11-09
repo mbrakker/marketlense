@@ -447,6 +447,76 @@ def _verified_editorial_obligation_issues(
             )
         ]
 
+    candidate_editorial_plan = candidate_artifacts.get("editorial_plan")
+    if not isinstance(candidate_editorial_plan, dict):
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    "Verified regeneration candidate is missing a structured "
+                    "editorial plan."
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
+    try:
+        normalized_candidate_editorial_plan = (
+            canonical_verified_editorial_plan_revision(
+                current_artifacts=current_artifacts,
+                candidate_artifacts=candidate_artifacts,
+                original_plan=original_plan,
+                candidate_editorial_plan=candidate_editorial_plan,
+            )
+        )
+        validate_final_insight_editorial_coverage(
+            final_insights=[
+                insight
+                for insight in candidate_artifacts.get("insights_final") or []
+                if isinstance(insight, dict)
+            ],
+            candidate_insights=[
+                insight
+                for insight in candidate_artifacts.get("insights_candidates") or []
+                if isinstance(insight, dict)
+            ],
+            editorial_plan=normalized_candidate_editorial_plan,
+        )
+        if candidate_editorial_plan != normalized_candidate_editorial_plan:
+            return [
+                issue(
+                    rule_id="verified_editorial_plan_not_canonicalized",
+                    message=(
+                        "Verified regeneration candidate editorial plan is not "
+                        "canonicalized before validation."
+                    ),
+                    severity="error",
+                    section="editorial_plan",
+                )
+            ]
+    except AppError as exc:
+        return [
+            issue(
+                rule_id="verified_editorial_obligations",
+                message=(
+                    f"Verified editorial obligations are not preserved: {exc.message}"
+                ),
+                severity="error",
+                section="editorial_plan",
+            )
+        ]
+    return []
+
+
+def canonical_verified_editorial_plan_revision(
+    *,
+    current_artifacts: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+    original_plan: dict[str, Any],
+    candidate_editorial_plan: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the trusted canonical plan without mutating candidate artifacts."""
+
     # The proposed artifact is untrusted.  Its fact snapshot and admission
     # metadata may only be checked against the retained/promoted authority;
     # they must not enlarge the set of candidates authorized for replanning.
@@ -514,72 +584,28 @@ def _verified_editorial_obligation_issues(
     if not admitted_candidate_ids:
         # Do not fall back to the proposed candidate's own roster.  A missing
         # retained admission pool is an authority defect and must fail closed.
-        return [
-            issue(
-                rule_id="verified_editorial_obligations",
-                message=(
-                    "Verified regeneration candidate has no trusted admitted "
-                    "candidate pool for editorial replanning."
-                ),
-                severity="error",
-                section="editorial_plan",
-            )
-        ]
+        raise AppError(
+            code="verified_editorial_plan_admission_pool_missing",
+            message=(
+                "Verified regeneration candidate has no trusted admitted "
+                "candidate pool for editorial replanning."
+            ),
+            retryable=False,
+        )
     admitted_limitation_evidence_ids = {
         f"verified-fact:{fact_id}"
         for fact_id, fact in facts.items()
         if isinstance(fact.get("qualifiers"), list)
         and any(str(value).strip() for value in fact["qualifiers"])
     }
-    candidate_editorial_plan = candidate_artifacts.get("editorial_plan")
-    if not isinstance(candidate_editorial_plan, dict):
-        return [
-            issue(
-                rule_id="verified_editorial_obligations",
-                message=(
-                    "Verified regeneration candidate is missing a structured "
-                    "editorial plan."
-                ),
-                severity="error",
-                section="editorial_plan",
-            )
-        ]
-    try:
-        normalized_candidate_editorial_plan = validate_verified_editorial_plan_revision(
-            original_plan,
-            candidate_editorial_plan,
-            canonical_evidence_ids=canonical_evidence_ids,
-            admitted_candidate_ids=admitted_candidate_ids,
-            admitted_limitation_evidence_ids=admitted_limitation_evidence_ids,
-            admitted_candidate_evidence_ids=admitted_candidate_evidence_ids,
-        )
-        validate_final_insight_editorial_coverage(
-            final_insights=[
-                insight
-                for insight in candidate_artifacts.get("insights_final") or []
-                if isinstance(insight, dict)
-            ],
-            candidate_insights=[
-                insight
-                for insight in candidate_artifacts.get("insights_candidates") or []
-                if isinstance(insight, dict)
-            ],
-            editorial_plan=normalized_candidate_editorial_plan,
-        )
-        candidate_editorial_plan.clear()
-        candidate_editorial_plan.update(normalized_candidate_editorial_plan)
-    except AppError as exc:
-        return [
-            issue(
-                rule_id="verified_editorial_obligations",
-                message=(
-                    f"Verified editorial obligations are not preserved: {exc.message}"
-                ),
-                severity="error",
-                section="editorial_plan",
-            )
-        ]
-    return []
+    return validate_verified_editorial_plan_revision(
+        original_plan,
+        candidate_editorial_plan,
+        canonical_evidence_ids=canonical_evidence_ids,
+        admitted_candidate_ids=admitted_candidate_ids,
+        admitted_limitation_evidence_ids=admitted_limitation_evidence_ids,
+        admitted_candidate_evidence_ids=admitted_candidate_evidence_ids,
+    )
 
 
 def _visual_authority_canary(artifacts: dict[str, Any]) -> dict[str, Any]:

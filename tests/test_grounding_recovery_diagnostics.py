@@ -109,6 +109,9 @@ def test_verified_grounding_recovery_passes_missing_public_item_id_to_model(
             if entry["item_id"] != public_item["item_id"]
         ],
     }
+    missing_id_check = check(public_item)
+    missing_id_check.pop("item_id")
+    incomplete["checks"].append(missing_id_check)
 
     class RecordingPromptClient(FakePromptClient):
         def __init__(self):
@@ -150,7 +153,8 @@ def test_verified_grounding_recovery_passes_missing_public_item_id_to_model(
         if path == "report_vs/structured_output/repair/system"
     ]
     assert len(repair_variables) == 1
-    assert public_item["item_id"] in repair_variables[0]["schema_errors"]
+    assert "item_id" in repair_variables[0]["schema_errors"]
+    assert "schema_missing_required" in repair_variables[0]["schema_errors"]
     assert len(openai_client.requests) == 2
 
 
@@ -494,7 +498,7 @@ def test_verified_grounding_rejects_non_substantive_verdict_reason() -> None:
         )
 
     assert exc_info.value.context["coverage_failure_category"] == (
-        "incomplete_check_reason"
+        "incomplete_semantic_fields"
     )
 
 
@@ -527,3 +531,153 @@ def test_verified_grounding_rejection_retains_missing_retained_claim_id():
         )
 
     assert claim_id in exc_info.value.context["missing_claim_ids"]
+
+
+@pytest.mark.parametrize(
+    ("payload_factory", "expected_category", "expected_id"),
+    [
+        (
+            lambda check: {
+                "checks": [check, dict(check)],
+                "unsupported": [],
+            },
+            "duplicate_verdict",
+            "public-item",
+        ),
+        (
+            lambda check: {
+                "checks": [
+                    {**check, "text": "A different claim."},
+                ],
+                "unsupported": [],
+            },
+            "text_identity_mismatch",
+            "public-item",
+        ),
+        (
+            lambda check: {
+                "checks": [],
+                "unsupported": [],
+            },
+            "missing_verdict",
+            "public-item",
+        ),
+        (
+            lambda check: {
+                "checks": [
+                    {**check, "item_id": "unknown-item"},
+                ],
+                "unsupported": [],
+            },
+            "unknown_item_id",
+            "unknown-item",
+        ),
+        (
+            lambda check: {
+                "checks": [
+                    {**check, "entailment_outcome": "not_established"},
+                ],
+                "unsupported": [
+                    {
+                        "item_id": check["item_id"],
+                        "text": check["text"],
+                        "classification": check["classification"],
+                        "entailment_outcome": "contradicted",
+                        "violation_type": "contradicted",
+                        "reason": "The source contradicts this proposition.",
+                    }
+                ],
+            },
+            "unsupported_pair_mismatch",
+            "public-item",
+        ),
+        (
+            lambda check: {
+                "checks": [
+                    {
+                        **check,
+                        "protected_facts": {
+                            **check["protected_facts"],
+                            "value": {
+                                "claim_value": "10",
+                                "evidence_value": "8",
+                                "status": "incompatible",
+                            },
+                        },
+                    }
+                ],
+                "unsupported": [],
+            },
+            "entailed_protected_fact_conflict",
+            "public-item",
+        ),
+        (
+            lambda check: {
+                "checks": [
+                    {**check, "reason": "supported"},
+                ],
+                "unsupported": [],
+            },
+            "incomplete_semantic_fields",
+            "public-item",
+        ),
+    ],
+)
+def test_verified_grounding_contract_failure_has_actionable_category(
+    payload_factory, expected_category, expected_id
+):
+    check = _grounding_check("public-item", "A supported claim.", "entailed")
+    payload = payload_factory(check)
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_grounding_check_coverage(
+            payload,
+            [],
+            {},
+            expected_public_items=[
+                {
+                    "item_id": "public-item",
+                    "section": "insights:fact-1.text",
+                    "text": "A supported claim.",
+                }
+            ],
+            require_public_coverage=True,
+        )
+
+    assert exc_info.value.context["coverage_failure_category"] == expected_category
+    assert expected_id in (
+        exc_info.value.context.get("item_ids")
+        or exc_info.value.context.get("unknown_item_ids")
+        or exc_info.value.context.get("missing_or_ambiguous_public_item_ids")
+        or ["public-item"]
+    )
+
+
+def test_verified_grounding_accepts_observed_activate_and_adjust_item_id_shapes():
+    public_items = [
+        {
+            "item_id": "soft_copy:expert_comment:8f99ed4197a3ac39",
+            "section": "expert_comment",
+            "text": "The source-backed expert comment remains decision-relevant.",
+        },
+        {
+            "item_id": "insight:insight-09:now_what",
+            "section": "insights:insight-09.now_what",
+            "text": "Teams should prioritize the supported commercial implication.",
+        },
+    ]
+    payload = {
+        "checks": [
+            _grounding_check(item["item_id"], item["text"], "entailed")
+            for item in public_items
+        ],
+        "unsupported": [],
+    }
+
+    _validate_grounding_check_coverage(
+        payload,
+        [],
+        {},
+        expected_public_items=public_items,
+        require_public_coverage=True,
+    )

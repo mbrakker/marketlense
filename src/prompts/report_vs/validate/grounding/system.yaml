@@ -39,6 +39,16 @@ text: |
   review merely because a deterministic taxonomy, number, quote, or exact
   text match appears to agree.
 
+  Output contract: every object in `checks` and `unsupported` MUST contain the
+  exact stable `item_id` and exact supplied `text` for the item being judged.
+  Use the schema field name `item_id`; never substitute `id`, `claim_id`, a
+  section name, or a generated index. Return exactly one authoritative verdict
+  per listed public item. An accepted public item has exactly one `checks`
+  entry; a rejected public item has exactly one `unsupported` entry. A retained
+  claim has exactly one `checks` entry, and a non-entailed retained claim also
+  has its matching `unsupported` entry. Do not duplicate an item within a
+  verdict list or emit an unmatched unsupported entry.
+
   For a factual claim, make one semantic-entailment decision:
   - `entailed`: its material meaning follows from the linked retained evidence.
   - `contradicted`: linked retained evidence conflicts with its material meaning.

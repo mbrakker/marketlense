@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import re
+from contextlib import suppress
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field, replace
 from difflib import SequenceMatcher
@@ -83,6 +84,9 @@ from src.generators.report_generation_shared import resolve_doc_map_metadata
 from src.generators.report_title_resolution_generator import source_backed_title
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
+from src.generators.validation.regeneration_candidate import (
+    canonical_verified_editorial_plan_revision,
+)
 from src.generators.verified_claims_canary import project_verified_facts_as_insights
 from src.services import prompt_service, report_analysis_store_service
 from src.utils.analysis_family import family_is_abstained
@@ -635,6 +639,23 @@ def regenerate_artifacts(
             key: state.soft_copy_evidence_selections[key]
             for key in sorted(state.soft_copy_evidence_selections)
         }
+    if state.visual_authority_digest:
+        original_plan = request.current_artifacts.get("editorial_plan")
+        candidate_editorial_plan = updated_artifacts.get("editorial_plan")
+        if isinstance(original_plan, dict) and isinstance(
+            candidate_editorial_plan, dict
+        ):
+            with suppress(AppError):
+                updated_artifacts["editorial_plan"] = (
+                    canonical_verified_editorial_plan_revision(
+                        current_artifacts=request.current_artifacts,
+                        candidate_artifacts=updated_artifacts,
+                        original_plan=original_plan,
+                        candidate_editorial_plan=candidate_editorial_plan,
+                    )
+                )
+                # Candidate validation remains the authoritative issue
+                # boundary; invalid plans are preserved for rejection.
     candidate_artifacts_path = store_artifacts_payload(
         analysis_store=analysis_store,
         output_dir=request.settings.output_dir,

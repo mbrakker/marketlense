@@ -9,7 +9,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["section", "text", "classification", "entailment_outcome", "violation_type", "reason"],
+        "required": ["item_id", "section", "text", "classification", "entailment_outcome", "violation_type", "reason"],
         "properties": {
           "item_id": {"type": "string", "minLength": 1},
           "section": {"type": "string"},
@@ -26,7 +26,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["section", "text", "classification", "entailment_outcome", "proposition_status", "protected_facts", "reason"],
+        "required": ["item_id", "section", "text", "classification", "entailment_outcome", "proposition_status", "protected_facts", "reason"],
         "properties": {
           "item_id": {"type": "string", "minLength": 1},
           "section": {"type": "string"},

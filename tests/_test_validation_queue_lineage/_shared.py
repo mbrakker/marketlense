@@ -399,7 +399,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
     # observable payload. Keep both schema identities available to the shared
     # queue fake so tests exercise the current provider boundary.
     responses["context_category_fit_v2"] = responses["context_category_fit_v1"]
-    responses["grounding_validation_output_v4"] = responses[
+    responses["grounding_validation_output_v5"] = responses[
         "grounding_validation_output_v3"
     ]
     if schema_name in {
@@ -553,7 +553,7 @@ def _full_chain_response_factory(
         if schema_name in {
             "grounding_validation_output_v2",
             "grounding_validation_output_v3",
-            "grounding_validation_output_v4",
+            "grounding_validation_output_v5",
         }:
             if detected_unsupported_claims is not None:
                 detected_unsupported_claims.extend(
@@ -873,7 +873,7 @@ def _full_chain_chat_response_factory(
             if schema_name in {
                 "grounding_validation_output_v2",
                 "grounding_validation_output_v3",
-                "grounding_validation_output_v4",
+                "grounding_validation_output_v5",
             }:
                 if detected_unsupported_claims is not None:
                     detected_unsupported_claims.extend(

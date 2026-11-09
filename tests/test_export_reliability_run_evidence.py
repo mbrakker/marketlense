@@ -625,6 +625,60 @@ def test_frozen_outcome_export_projects_only_authoritative_cohort_results(
     assert audit_findings["publish_ready"] == 1
 
 
+def test_frozen_outcome_export_keeps_typed_failure_without_attempt_row(
+    tmp_path: Path,
+) -> None:
+    """The cohort result remains authoritative when per-run attempts are absent."""
+
+    cohort_result = tmp_path / "cohort_result.json"
+    cohort_result.write_text(
+        json.dumps(
+            {
+                "cohort_size": 1,
+                "reports": [
+                    {
+                        "report_id": "adjust",
+                        "final_state": "failed",
+                        "terminal_failure_code": "validation_failed",
+                        "publication_readiness": "fail",
+                        "failure_diagnostic": {
+                            "stage": "grounding_validation",
+                            "outer_code": "validation_failed",
+                            "validator_rule": "grounding",
+                        },
+                    }
+                ],
+                "summary": {"failure_code_pareto": {"validation_failed": 1}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "evidence"
+    export_reliability_run_evidence.export_frozen_cohort_outcome_views(
+        cohort_result_path=cohort_result,
+        output_dir=output_dir,
+    )
+
+    with output_dir.joinpath("terminal_outcomes.csv").open(
+        newline="", encoding="utf-8"
+    ) as handle:
+        assert list(csv.DictReader(handle)) == [
+            {
+                "report_id": "adjust",
+                "terminal_outcome": "failed",
+                "terminal_stage": "grounding_validation",
+                "failure_code": "validation_failed",
+            }
+        ]
+    failure_details = json.loads(
+        output_dir.joinpath("failure_details.json").read_text(encoding="utf-8")
+    )
+    assert failure_details["terminal_failures"][0]["failure_code"] == (
+        "validation_failed"
+    )
+
+
 def test_frozen_outcome_export_rejects_missing_members_and_inconsistent_pareto(
     tmp_path: Path,
 ) -> None:

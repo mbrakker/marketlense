@@ -209,8 +209,11 @@ def test_verified_regeneration_derives_binding_from_retained_admission_pool() ->
         candidate_artifacts=candidate,
     )
 
-    assert issues == []
-    assert candidate["editorial_plan"]["themes"][0]["feasible_candidate_ids"] == ["c1"]
+    assert len(issues) == 1
+    assert issues[0].rule_id == "verified_editorial_plan_not_canonicalized"
+    assert candidate["editorial_plan"]["themes"][0]["feasible_candidate_ids"] == [
+        "invented-candidate"
+    ]
 
 
 def test_verified_facts_fail_closed_without_any_fact_projection():
