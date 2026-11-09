@@ -253,13 +253,10 @@ def _failure_diagnostic(raw: object, *, failure_code: str) -> dict[str, Any]:
         bounded_context = _bounded_failure_context(context)
         diagnostic["error_context"] = {
             key: (
-                value
-                if isinstance(value, dict)
-                else _bounded_diagnostic_token(value)
+                value if isinstance(value, dict) else _bounded_diagnostic_token(value)
             )
             for key, value in sorted(bounded_context.items())
-            if key in _FAILURE_CONTEXT_FIELDS
-            or key == "coverage_diagnostics"
+            if key in _FAILURE_CONTEXT_FIELDS or key == "coverage_diagnostics"
             if isinstance(value, dict) or _bounded_diagnostic_token(value)
         }
     else:
@@ -407,19 +404,20 @@ def _authoritative_frozen_cohort_projection(
         if publication_readiness not in {"pass", "fail"}:
             raise ValueError("cohort_result report has no publication readiness")
         publication_ready_count += publication_readiness == "pass"
+        diagnostic = (
+            _failure_diagnostic(
+                report.get("failure_diagnostic"), failure_code=failure_code
+            )
+            if failure_code
+            else {}
+        )
         terminal_rows.append(
             {
                 "report_id": report_id,
                 "terminal_outcome": terminal_outcome,
-                "terminal_stage": "",
+                "terminal_stage": str(diagnostic.get("stage") or ""),
                 "failure_code": failure_code,
-                **(
-                    _failure_diagnostic(
-                        report.get("failure_diagnostic"), failure_code=failure_code
-                    )
-                    if failure_code
-                    else {}
-                ),
+                **diagnostic,
             }
         )
     if len({row["report_id"] for row in terminal_rows}) != len(terminal_rows):

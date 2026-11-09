@@ -831,5 +831,11 @@ def test_frozen_outcome_export_retains_bounded_actionable_failure_diagnostics(
         "selected_candidate_ids": ["insight:1"],
         "stage": "initial_selection",
     }
+    with output_dir.joinpath("terminal_outcomes.csv").open(
+        newline="", encoding="utf-8"
+    ) as handle:
+        terminal_rows = {row["report_id"]: row for row in csv.DictReader(handle)}
+    assert terminal_rows["contentstack"]["terminal_stage"] == "artifact_generation"
+    assert terminal_rows["similarweb"]["terminal_stage"] == "semantic_validation"
     assert "raw prompt" not in json.dumps(failures).lower()
     assert "provider response" not in json.dumps(failures).lower()

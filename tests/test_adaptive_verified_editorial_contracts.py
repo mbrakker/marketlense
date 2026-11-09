@@ -313,16 +313,17 @@ def test_verified_plan_revision_preserves_all_original_essential_bindings() -> N
         ],
         "material_limitation_evidence_ids": [],
     }
-    assert (
-        validate_verified_editorial_plan_revision(
-            original,
-            revised,
-            canonical_evidence_ids={"verified-fact:f1", "verified-fact:f2"},
-            admitted_candidate_ids={"candidate-1", "candidate-2"},
-            admitted_limitation_evidence_ids=set(),
-        )
-        is None
+    normalized = validate_verified_editorial_plan_revision(
+        original,
+        revised,
+        canonical_evidence_ids={"verified-fact:f1", "verified-fact:f2"},
+        admitted_candidate_ids={"candidate-1", "candidate-2"},
+        admitted_limitation_evidence_ids=set(),
     )
+    assert normalized["themes"][0]["feasible_candidate_ids"] == [
+        "candidate-1",
+        "candidate-2",
+    ]
 
     dropped = {
         **revised,

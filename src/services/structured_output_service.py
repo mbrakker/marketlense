@@ -890,6 +890,9 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "missing_item_ids",
     "unexpected_item_ids",
     "invalid_item_ids",
+    "missing_fields",
+    "unknown_candidate_ids",
+    "unknown_evidence_ids",
 )
 _ACTIONABLE_CONTEXT_SCALAR_KEYS = (
     "item_id",

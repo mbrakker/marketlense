@@ -159,6 +159,18 @@ __all__ = [
 ]
 
 
+def _validation_repair_disposition(
+    validation_outcome: str, regeneration_attempt_count: int
+) -> str:
+    """Classify whether validation needed repair or had no safe repair target."""
+
+    if regeneration_attempt_count > 0:
+        return "targeted_repair"
+    if validation_outcome == "failed":
+        return "no_actionable_repair"
+    return "not_required"
+
+
 def _analysis_source_identity_id(ctx: Any) -> str:
     """Return only the immutable source identity admitted by the ingest cohort."""
     return canonical_source_identity_id(ctx)
@@ -1327,6 +1339,9 @@ def run_report_analysis(
     validation_failure = (
         "" if validation_outcome == "succeeded" else "validation_failed"
     )
+    validation_repair_disposition = _validation_repair_disposition(
+        validation_outcome, len(regeneration_attempts)
+    )
     for stage in ("grounding_validation", "semantic_validation"):
         record_validation_analysis_stage(
             settings=runtime.settings,
@@ -1337,9 +1352,7 @@ def run_report_analysis(
             output_artifact_ids=(mode_evidence_paths.get("validation", ""),),
             terminal_outcome=validation_outcome,
             failure_code=validation_failure,
-            repair_disposition=(
-                "targeted_repair" if regeneration_attempts else "not_required"
-            ),
+            repair_disposition=validation_repair_disposition,
         )
     if regeneration_attempts:
         record_validation_analysis_stage(
@@ -1364,7 +1377,7 @@ def run_report_analysis(
             input_artifact_ids=(mode_evidence_paths.get("artifacts", ""),),
             output_artifact_ids=(mode_evidence_paths.get("validation", ""),),
             terminal_outcome="skipped",
-            repair_disposition="not_required",
+            repair_disposition=validation_repair_disposition,
         )
 
     promoted_regeneration = any(

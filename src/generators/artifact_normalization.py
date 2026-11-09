@@ -30,7 +30,7 @@ from src.utils.quantity import (
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
-EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.2"
+EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.3"
 ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:32"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
@@ -687,6 +687,8 @@ def validate_editorial_plan_evidence_ids(
             message="Editorial plan references non-canonical evidence IDs",
             retryable=False,
             context={
+                "rule_id": "verified_editorial_plan.evidence_vocabulary",
+                "field": "evidence_ids",
                 "unknown_evidence_ids": unknown,
                 "canonical_evidence_id_count": len(allowed),
             },
@@ -731,26 +733,38 @@ def validate_verified_editorial_plan(
                 "evidence ID array"
             ),
             retryable=False,
-            context={"planning_contract_failure": True},
+            context={
+                "planning_contract_failure": True,
+                "rule_id": "verified_editorial_plan.material_limitation_contract",
+                "field": "material_limitation_evidence_ids",
+            },
         )
     if not any(_theme_importance(theme) == "essential" for theme in plan["themes"]):
         raise AppError(
             code="editorial_plan_invalid",
             message="Verified editorial plans require at least one essential theme",
             retryable=False,
-            context={"planning_contract_failure": True},
+            context={
+                "planning_contract_failure": True,
+                "rule_id": "verified_editorial_plan.essential_theme_required",
+                "field": "importance",
+            },
         )
 
-    normalized_candidate_bindings = {
-        normalize_for_lookup(candidate_id): {
+    candidate_binding_authority = admitted_candidate_evidence_ids is not None
+    normalized_candidate_bindings: dict[str, set[str]] = {}
+    candidate_binding_records: list[tuple[str, set[str]]] = []
+    for candidate_id, evidence_ids in (admitted_candidate_evidence_ids or {}).items():
+        candidate_key = normalize_for_lookup(candidate_id)
+        if not candidate_key or candidate_key not in admitted_keys:
+            continue
+        evidence_keys = {
             normalize_for_lookup(evidence_id)
             for evidence_id in evidence_ids
             if normalize_for_lookup(evidence_id)
         }
-        for candidate_id, evidence_ids in (
-            admitted_candidate_evidence_ids or {}
-        ).items()
-    }
+        normalized_candidate_bindings[candidate_key] = evidence_keys
+        candidate_binding_records.append((_s(candidate_id).strip(), evidence_keys))
     for theme in plan["themes"]:
         theme_name = theme["theme"]
         raw_theme = next(
@@ -760,28 +774,73 @@ def validate_verified_editorial_plan(
             and normalize_for_lookup(raw.get("theme"))
             == normalize_for_lookup(theme_name)
         )
-        required_fields = (
-            "importance",
-            "coverage_obligation",
-            "feasible_candidate_ids",
-        )
+        required_fields: tuple[str, ...] = ("importance", "coverage_obligation")
+        if not candidate_binding_authority:
+            required_fields += ("feasible_candidate_ids",)
         if any(field not in raw_theme for field in required_fields):
+            missing_fields = [
+                field for field in required_fields if field not in raw_theme
+            ]
             raise AppError(
                 code="editorial_plan_invalid",
                 message=(
                     "Verified editorial themes require explicit importance, "
-                    "coverage obligation, and feasible candidate IDs"
+                    "coverage obligation"
+                    + (
+                        ", and feasible candidate IDs"
+                        if not candidate_binding_authority
+                        else ""
+                    )
                 ),
                 retryable=False,
-                context={"theme": theme_name, "planning_contract_failure": True},
+                context={
+                    "theme": theme_name,
+                    "planning_contract_failure": True,
+                    "rule_id": "verified_editorial_plan.theme_contract",
+                    "field": missing_fields[0] if missing_fields else "theme",
+                    "missing_fields": missing_fields,
+                },
             )
         theme_keys = {
             normalize_for_lookup(evidence_id) for evidence_id in theme["evidence_ids"]
         }
-        feasible_ids = {
-            normalize_for_lookup(candidate_id)
+        theme_evidence_ids = [
+            _s(evidence_id).strip()
+            for evidence_id in theme["evidence_ids"]
+            if _s(evidence_id).strip()
+        ]
+        if candidate_binding_authority:
+            derived_candidate_ids = [
+                candidate_id
+                for candidate_id, evidence_keys in candidate_binding_records
+                if evidence_keys & theme_keys
+            ]
+            if not derived_candidate_ids:
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message=(
+                        "Every verified editorial theme requires an exact admitted "
+                        "candidate evidence binding"
+                    ),
+                    retryable=False,
+                    context={
+                        "theme": theme_name,
+                        "rule_id": "verified_editorial_plan.candidate_evidence_binding",
+                        "field": "evidence_ids",
+                        "missing_evidence_ids": sorted(
+                            theme_evidence_ids, key=str.casefold
+                        ),
+                        "planning_contract_failure": True,
+                    },
+                )
+            theme["feasible_candidate_ids"] = derived_candidate_ids
+        raw_feasible_ids = [
+            _s(candidate_id).strip()
             for candidate_id in theme.get("feasible_candidate_ids") or []
-            if normalize_for_lookup(candidate_id)
+            if _s(candidate_id).strip()
+        ]
+        feasible_ids = {
+            normalize_for_lookup(candidate_id) for candidate_id in raw_feasible_ids
         }
         if not feasible_ids.issubset(admitted_keys):
             raise AppError(
@@ -790,7 +849,16 @@ def validate_verified_editorial_plan(
                 retryable=False,
                 context={
                     "theme": theme_name,
-                    "unknown_candidate_ids": sorted(feasible_ids - admitted_keys),
+                    "rule_id": "verified_editorial_plan.candidate_binding",
+                    "field": "feasible_candidate_ids",
+                    "unknown_candidate_ids": sorted(
+                        {
+                            candidate_id
+                            for candidate_id in raw_feasible_ids
+                            if normalize_for_lookup(candidate_id) not in admitted_keys
+                        },
+                        key=str.casefold,
+                    ),
                 },
             )
         if _theme_importance(theme) == "essential":
@@ -810,13 +878,22 @@ def validate_verified_editorial_plan(
                         "admitted candidate anchor"
                     ),
                     retryable=False,
-                    context={"theme": theme_name},
+                    context={
+                        "theme": theme_name,
+                        "rule_id": "verified_editorial_plan.essential_candidate_anchor",
+                        "field": "feasible_candidate_ids",
+                    },
                 )
     selected_limitations = {
         normalize_for_lookup(evidence_id)
         for evidence_id in plan.get("material_limitation_evidence_ids", [])
         if normalize_for_lookup(evidence_id)
     }
+    raw_selected_limitations = [
+        _s(evidence_id).strip()
+        for evidence_id in plan.get("material_limitation_evidence_ids", [])
+        if _s(evidence_id).strip()
+    ]
     if not selected_limitations.issubset(limitation_keys):
         raise AppError(
             code="editorial_plan_invalid",
@@ -826,9 +903,24 @@ def validate_verified_editorial_plan(
             ),
             retryable=False,
             context={
+                "rule_id": "verified_editorial_plan.limitation_evidence_binding",
+                "field": "material_limitation_evidence_ids",
+                "unknown_evidence_ids": sorted(
+                    {
+                        evidence_id
+                        for evidence_id in raw_selected_limitations
+                        if normalize_for_lookup(evidence_id) not in limitation_keys
+                    },
+                    key=str.casefold,
+                ),
                 "unknown_limitation_evidence_ids": sorted(
-                    selected_limitations - limitation_keys
-                )
+                    {
+                        evidence_id
+                        for evidence_id in raw_selected_limitations
+                        if normalize_for_lookup(evidence_id) not in limitation_keys
+                    },
+                    key=str.casefold,
+                ),
             },
         )
     return plan
@@ -842,7 +934,7 @@ def validate_verified_editorial_plan_revision(
     admitted_candidate_ids: set[str],
     admitted_limitation_evidence_ids: set[str],
     admitted_candidate_evidence_ids: Dict[str, set[str]] | None = None,
-) -> None:
+) -> Dict[str, Any]:
     """Ensure one verified replan preserves every essential source obligation."""
 
     original = validate_verified_editorial_plan(
@@ -899,6 +991,7 @@ def validate_verified_editorial_plan_revision(
                 )
             },
         )
+    return revised
 
 
 def stabilize_broad_artifact_editorial_plan(
@@ -5957,8 +6050,10 @@ def _build_evidence_span_index(
                         and (
                             _s(fact.get("fact_id")).strip().casefold()
                             == finding_id.casefold().removeprefix("verified-fact:")
-                            or f"verified-fact:{_s(fact.get('fact_id')).strip()}".casefold()
-                            == finding_id.casefold()
+                            or (
+                                f"verified-fact:{_s(fact.get('fact_id')).strip()}".casefold()
+                                == finding_id.casefold()
+                            )
                         )
                         for fact in verified_facts_pack.get("verified_facts") or []
                     )

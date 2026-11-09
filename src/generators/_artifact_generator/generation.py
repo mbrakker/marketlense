@@ -771,7 +771,7 @@ def generate_artifacts(
                 and _s(fact.get("fact_id")).strip()
                 and any(_s(value).strip() for value in fact.get("qualifiers") or [])
             }
-            validate_verified_editorial_plan(
+            normalized_verified_plan = validate_verified_editorial_plan(
                 payload.get("editorial_plan"),
                 canonical_evidence_ids=plan_evidence_ids,
                 admitted_candidate_ids={
@@ -782,6 +782,7 @@ def generate_artifacts(
                 admitted_limitation_evidence_ids=limitation_ids,
                 admitted_candidate_evidence_ids=candidate_evidence_by_id,
             )
+            payload["editorial_plan"] = normalized_verified_plan
         validate_required_evidence_references(payload, task_ctx)
 
     has_density_input = isinstance(source_status, dict) and (
@@ -2205,7 +2206,7 @@ def generate_artifacts(
                 and _s(fact.get("fact_id")).strip()
                 and any(_s(value).strip() for value in fact.get("qualifiers") or [])
             }
-            validate_verified_editorial_plan_revision(
+            normalized_revised_plan = validate_verified_editorial_plan_revision(
                 original_verified_editorial_plan,
                 revised_plan,
                 canonical_evidence_ids={
@@ -2219,6 +2220,8 @@ def generate_artifacts(
                 admitted_limitation_evidence_ids=limitation_ids,
                 admitted_candidate_evidence_ids=candidate_evidence_by_id,
             )
+            revised_plan.clear()
+            revised_plan.update(normalized_revised_plan)
 
         validate_verified_plan_revision(editorial_plan)
 

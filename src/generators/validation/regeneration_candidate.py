@@ -545,7 +545,7 @@ def _verified_editorial_obligation_issues(
             )
         ]
     try:
-        validate_verified_editorial_plan_revision(
+        normalized_candidate_editorial_plan = validate_verified_editorial_plan_revision(
             original_plan,
             candidate_editorial_plan,
             canonical_evidence_ids=canonical_evidence_ids,
@@ -564,8 +564,10 @@ def _verified_editorial_obligation_issues(
                 for insight in candidate_artifacts.get("insights_candidates") or []
                 if isinstance(insight, dict)
             ],
-            editorial_plan=candidate_editorial_plan,
+            editorial_plan=normalized_candidate_editorial_plan,
         )
+        candidate_editorial_plan.clear()
+        candidate_editorial_plan.update(normalized_candidate_editorial_plan)
     except AppError as exc:
         return [
             issue(

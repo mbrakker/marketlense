@@ -182,7 +182,7 @@ def test_verified_regeneration_falls_back_after_bad_admissions() -> None:
     )
 
 
-def test_verified_regeneration_cannot_use_candidate_admission_pool() -> None:
+def test_verified_regeneration_derives_binding_from_retained_admission_pool() -> None:
     current, candidate = _valid_artifact_pair()
     current["_cache"]["visual_authority_canary"]["admitted_candidates"] = [
         None,
@@ -209,8 +209,8 @@ def test_verified_regeneration_cannot_use_candidate_admission_pool() -> None:
         candidate_artifacts=candidate,
     )
 
-    assert len(issues) == 1
-    assert issues[0].rule_id == "verified_editorial_obligations"
+    assert issues == []
+    assert candidate["editorial_plan"]["themes"][0]["feasible_candidate_ids"] == ["c1"]
 
 
 def test_verified_facts_fail_closed_without_any_fact_projection():

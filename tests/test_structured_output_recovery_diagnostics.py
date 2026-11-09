@@ -255,3 +255,52 @@ def test_public_review_diagnostics_retain_scalar_and_coverage_context() -> None:
         "valid",
         "valid",
     ]
+
+
+def test_verified_plan_recovery_receives_actionable_contract_diagnostic() -> None:
+    seen_schema_errors: list[str] = []
+
+    def validate_payload(candidate: dict) -> None:
+        del candidate
+        raise AppError(
+            code="editorial_plan_invalid",
+            message=(
+                "Every verified editorial theme requires an exact admitted "
+                "candidate evidence binding"
+            ),
+            context={
+                "rule_id": "verified_editorial_plan.candidate_evidence_binding",
+                "field": "evidence_ids",
+                "missing_evidence_ids": ["verified-fact:fact-2"],
+            },
+        )
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del mode, original_response
+        seen_schema_errors.append(schema_errors)
+        return _response({"stage": "invalid"})
+
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            _request(),
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=validate_payload,
+            is_substantive=lambda payload: bool(payload),
+            model_pricing={},
+        )
+
+    assert len(seen_schema_errors) == 3
+    assert all(
+        "rule id: verified_editorial_plan.candidate_evidence_binding" in value
+        for value in seen_schema_errors[1:]
+    )
+    assert all("field: evidence_ids" in value for value in seen_schema_errors[1:])
+    assert all(
+        "missing evidence ids: verified-fact:fact-2" in value
+        for value in seen_schema_errors[1:]
+    )
+    assert exc_info.value.context["rule_id"] == (
+        "verified_editorial_plan.candidate_evidence_binding"
+    )
