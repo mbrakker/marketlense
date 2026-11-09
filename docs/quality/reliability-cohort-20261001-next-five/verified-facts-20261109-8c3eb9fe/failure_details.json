@@ -1,0 +1,38 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "grounding",
+      "claim_or_entity_id": "verified-fact:insight-09",
+      "error_context": {
+        "affected_section": "grounding",
+        "evidence_id": "verified-fact:insight-09"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 0,
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "semantic_validation",
+      "validator_rule": "grounding"
+    },
+    {
+      "artifact_family": "grounding",
+      "claim_or_entity_id": "verified-fact:video-super-user-time-and-spend",
+      "error_context": {
+        "affected_section": "grounding",
+        "evidence_id": "verified-fact:video-super-user-time-and-spend"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 0,
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "semantic_validation",
+      "validator_rule": "grounding"
+    }
+  ]
+}

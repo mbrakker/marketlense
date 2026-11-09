@@ -1,0 +1,20 @@
+{
+  "awaiting_review": 0,
+  "cohort_size": 2,
+  "disposition": "fail",
+  "findings": [
+    "Immutable cohort retained; no member replacement occurred.",
+    "Publication and repeat publication were not performed; publication was not evaluated.",
+    "Terminal outcomes are complete and typed.",
+    "At least one required terminal outcome or publication-readiness result failed."
+  ],
+  "publication_disposition": "not_evaluated",
+  "publication_performed": false,
+  "publish_ready": 0,
+  "scope": {
+    "publication": "not_evaluated",
+    "terminal_outcomes": "in_scope"
+  },
+  "status": "failed_reliability_targets",
+  "typed_terminal_outcomes": 2
+}

@@ -11681,3 +11681,90 @@ Hosted CI for the final retained evidence commit passed in run
 all passed. The WordPress staging REST check was skipped by the existing safety
 policy. The release bundle is retained as
 [`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42544581267/artifacts/13642988366).
+
+### Verified editorial-planning correction and current two-report E2E — 2026-11-09
+
+This update covers implementation commit
+`8c3eb9fe366f0f2c00fb89abb39800dd575d0daf`, based on audited HEAD
+`3b04c9061933aa106ab7900528a4395001f86c3c`. The change is report-agnostic:
+the verified editorial-plan validator now derives mechanical candidate IDs from
+the admitted candidate-to-verified-fact map, while retaining model authority for
+thesis, priorities, evidence selection, semantic grouping, essentiality and
+material limitations. The normalized plan is persisted at both initial and
+replan boundaries, so unsupported model-supplied candidate IDs cannot survive
+to downstream writers. The prompt and transform identity were updated to make
+the cache boundary explicit. Identifier-only validator diagnostics now carry
+the failed rule/field and admissible-ID context through bounded recovery. The
+terminal exporter now preserves an available failure stage, and failed
+validation with no safe repair is recorded as `no_actionable_repair` rather
+than `not_required`.
+
+The retained safe evidence did not include raw rejected model fields, so no
+exact invalid response value is guessed here. The deterministic reproduction
+was the verified contract path in which model-controlled
+`feasible_candidate_ids` was treated as authoritative even though the exact
+binding already existed in the admitted fact map. Focused regressions prove
+that valid canonical evidence derives the binding, invented IDs are ignored in
+authority-map mode, missing exact bindings fail closed with actionable context,
+and the normalized plan is retained through replan/finalization. This is the
+smallest confirmed correction; no retry or new validation stage was added.
+
+#### Current provider-backed E2E result
+
+The exact frozen Activate + Adjust run was executed in isolated fresh state
+with source hashes verified, no application-level artifact reuse, no
+publication, and no WordPress writes. Safe projections are retained in
+[`verified-facts-20261109-8c3eb9fe`](reliability-cohort-20261001-next-five/verified-facts-20261109-8c3eb9fe).
+
+| Measure | Activate | Adjust | Cohort |
+| --- | ---: | ---: | ---: |
+| Source SHA verified | Yes | Yes | 2 / 2 |
+| Verified facts admitted | 10 / 10 | 10 / 10 | 20 / 20 |
+| Provider calls | 482 | 168 | 650 |
+| Input / output tokens | 2,173,279 / 419,153 | 1,307,706 / 239,203 | 3,480,985 / 658,356 |
+| Estimated cost | $0.446986 | $0.257474 | $0.704460 |
+| Duration | 3,548.907 s | 1,688.828 s | 5,237.735 s |
+| Structured-output recovery calls | 12 | 6 | 18 |
+| Automatic repairs | 0 | 0 | 0 |
+| Terminal outcome | failed | failed | 2 failed |
+
+Both reports reached `artifact_generation` and the corrected verified
+editorial-plan handoff. Each materialized seven plan themes and seven final
+insight items in the isolated artifact projection. This demonstrates an
+observed advance over the prior retained failures, which stopped at
+`editorial_plan_invalid`; it does not establish downstream readiness.
+
+Both reports then failed closed at `semantic_validation`/grounding with
+`validation_grounding_invalid_json` because one public-item verdict was absent
+from a grounding batch:
+
+* Activate: `soft_copy:expert_comment:8f99ed4197a3ac39`.
+* Adjust: `insight:insight-09:now_what`.
+
+The stage ledger records `grounding_validation` and `semantic_validation` as
+failed and `regeneration` as skipped with `no_actionable_repair`. No
+unsupported retained factual claim was marked verified: the exporter records
+26 unresolved and 0 unsupported retained claims for Activate, and 38
+unresolved and 0 unsupported for Adjust. The public-editorial projection also
+retains an Activate support mismatch for `insight:finding-05:text` and an
+Adjust semantic-redundancy issue in the `insight-09` so-what; these were not
+overridden by the grounding failure. Neither isolated output tree contains
+HTML, and both publication-readiness outcomes are `fail`.
+
+#### Verification and verdict
+
+The fresh supported Python 3.12 suite passed **8,653 tests, 2 skips, 48
+deselected tests and 24 subtests** in **899.38 seconds**. The focused plan,
+diagnostic, exporter, obligation and disposition regressions passed; full
+mypy, Ruff/formatting, architecture/policy, schema, documentation, hygiene,
+backlog and prompt-fixture gates passed before the live run. The prompt fixture
+gate remained green without changing thresholds or factual requirements.
+
+The implementation correction is **PASS** at the verified-plan and terminal-
+diagnostic boundaries. The required live downstream acceptance is
+**PARTIAL / NO-GO**: grounding public-item coverage and independent editorial
+quality remain actionable blockers, so Step 2 is not ready to promote and
+Step 3 remains **unstarted/not ready**. No factual or readiness improvement is
+claimed beyond the observed plan-handoff advance. The exact terminal ledger,
+source identities, safe projections and artifact hashes are in the linked
+evidence directory.

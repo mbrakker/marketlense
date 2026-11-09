@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "producer_git_sha": "8c3eb9fe366f0f2c00fb89abb39800dd575d0daf",
+  "run_roots": [
+    "C:\\ml-final-grounding-e2e-20261109-5\\frozen-reliability-d0c47u4y"
+  ],
+  "command": [
+    "py -3.12 -u scripts/quality/run_frozen_reliability_cohort.py",
+    "--sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "--sources-root C:\\Programing\\Market lense",
+    "--runs-root C:\\ml-final-grounding-e2e-20261109-5",
+    "--report-ids cohort-cbb6e7df67412186b8bc cohort-b638414df0b1fccea1cd",
+    "--max-duration 7200",
+    "--verified-facts-architecture"
+  ],
+  "execution_policy": {
+    "isolated_fresh_state": true,
+    "shared_batch": false,
+    "wordpress_writes": false,
+    "publication": false,
+    "operator_intervention": false
+  },
+  "application_level_artifacts_reused": false,
+  "provider_side_caching_permitted": true
+}

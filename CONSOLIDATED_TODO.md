@@ -2319,3 +2319,24 @@ for tests/coverage, both mutation partitions and `release_evidence`; the
 configured WordPress staging REST check was skipped by policy. The release
 bundle is retained as
 [`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42544581267/artifacts/13642988366).
+
+**Evidence update — 2026-11-09 (verified editorial-plan handoff correction):**
+Commit `8c3eb9fe` derives verified-plan candidate bindings from the admitted
+candidate/evidence map, persists the normalized plan through initial and replan
+boundaries, carries identifier-only recovery diagnostics, and records failed
+validation with no safe repair as `no_actionable_repair`. The exact isolated
+provider-backed Activate + Adjust run admitted **20/20** verified facts and
+reached the corrected editorial-plan handoff for both reports; each produced
+seven themes and seven final insight items in its isolated artifact projection.
+The run then failed closed at grounding public-item coverage for one item in
+each report (`soft_copy:expert_comment:8f99ed4197a3ac39` and
+`insight:insight-09:now_what`), with no unsupported retained factual claim
+marked verified, no HTML, no readiness approval, and no publication. The
+cohort used **650 provider calls**, **3,480,985 input / 658,356 output
+tokens**, **$0.704460**, and **5,237.735 seconds**. The fresh full Python
+3.12 suite passed **8,653 tests, 2 skips, 48 deselections and 24 subtests**;
+the safe run package is
+`docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261109-8c3eb9fe`.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready** pending grounding/public-editorial quality and
+genuine readiness acceptance.

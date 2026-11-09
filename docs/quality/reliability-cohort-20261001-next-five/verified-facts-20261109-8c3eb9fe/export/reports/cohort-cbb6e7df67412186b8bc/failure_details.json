@@ -1,0 +1,22 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "grounding",
+      "claim_or_entity_id": "verified-fact:video-super-user-time-and-spend",
+      "error_context": {
+        "affected_section": "grounding",
+        "evidence_id": "verified-fact:video-super-user-time-and-spend"
+      },
+      "failure_code": "validation_terminal_outcome_missing",
+      "inner_error_class": "",
+      "outer_code": "validation_terminal_outcome_missing",
+      "repair_attempt": 0,
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "stage": "semantic_validation",
+      "terminal_outcome": "missing",
+      "terminal_stage": "",
+      "validator_rule": "grounding"
+    }
+  ],
+  "validation_run_id": "validation:80296af61ca0043d1c486b2ff923e097cd14a3a4d8dd3917070fa2867b74b7d2"
+}

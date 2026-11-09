@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "producer_git_sha": "8c3eb9fe366f0f2c00fb89abb39800dd575d0daf",
+  "members": [
+    {
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "publisher": "Activate",
+      "source_identity": "source:4d84943bbcfdef81ad8c08f29f6f6b0b",
+      "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "sha256": "5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2",
+      "manifest_md5": "cbb6e7df67412186b8bc094a424ac890",
+      "physical_page_count": 140
+    },
+    {
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "publisher": "Adjust",
+      "source_identity": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+      "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+      "sha256": "ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3",
+      "manifest_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+      "physical_page_count": 41
+    }
+  ],
+  "source_pdf_bytes_committed": false
+}

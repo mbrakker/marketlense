@@ -1,0 +1,11 @@
+{
+  "stage_records": [
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "no_actionable_repair",
+      "stage": "regeneration"
+    }
+  ],
+  "validation_run_id": "validation:5b93491ba69484aa8d5e74e635bf6492206a631d1cbe751c0088275993bcf642"
+}
