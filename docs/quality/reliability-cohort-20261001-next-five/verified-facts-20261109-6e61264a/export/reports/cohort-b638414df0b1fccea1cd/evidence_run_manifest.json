@@ -1,0 +1,17 @@
+{
+  "artifact_dir": "C:/ml-final-grounding-e2e-20261109-4/frozen-reliability-68igxxl_/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-giain5m7/output",
+  "cost_attribution": {
+    "missing_cost_event_count": 0,
+    "scope": "validation_run_id",
+    "status": "available"
+  },
+  "safe_fields_only": true,
+  "schema_version": "1.0",
+  "state_dir": "C:/ml-final-grounding-e2e-20261109-4/frozen-reliability-68igxxl_/members/cohort-b638414df0b1fccea1cd/ias-first-attempt-giain5m7/state",
+  "usage_attribution": {
+    "matching_event_count": 148,
+    "scope": "validation_run_id",
+    "status": "available"
+  },
+  "validation_run_id": "validation:9589b183ff87c167c08fec52b23cabd6a666b244efa0bb2962208f101824b348"
+}

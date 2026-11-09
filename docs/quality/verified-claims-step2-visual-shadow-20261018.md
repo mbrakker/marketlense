@@ -11542,3 +11542,135 @@ editorial cohort acceptance remains **PARTIAL / NO-GO**. Step 2 remains
 **PARTIAL / NO-GO**, E18 remains **Active/PARTIAL**, and Step 3 remains
 **unstarted/not ready**. The historical Capgemini, Activate, KPMG, and Adjust
 provider outcomes are not claimed as corrected by provider-free replay.
+
+### Final grounding and regeneration integrity correction — 2026-11-09
+
+This update records the final verified-facts integrity slice from reviewed
+commit `7bb8576f4f786e9bd1069db53b4dacb5bbac95ea` through producer commit
+`1b3dd9cc1e8be6f7a69a09de2f262ad267dbffce`, plus the separately committed
+semantic-disposition correction `6e61264a89373caaf5c944ac7c57d5977c22c9bc`.
+The changes remain report-agnostic and add no validator stage, service,
+database, prompt namespace, publication mutation, or WordPress write.
+
+#### Confirmed code corrections
+
+* Ordinary regeneration now resolves every required canonical evidence ID before
+  calling the model. Missing or quarantined required evidence abstains with the
+  exact IDs and preserves the existing authorized alternative-evidence path;
+  report navigation/context IDs remain optional context rather than being
+  misclassified as factual support.
+* Verified-fact span registration preserves source identity and exact
+  page-specific source-truth notes. A combined fact statement or a first-page
+  note is no longer broadcast to every supporting physical page.
+* Verified public-editorial review obligations can only be satisfied by retained
+  final analytical `insights_final` items, while one insight may cover multiple
+  themes. Missing immutable obligation metadata fails closed.
+* The multi-fact rebind regression now distinguishes authorized paths from
+  actual changed paths, validates a genuinely changed primary evidence ID, and
+  exercises full A+B → A+C finalization and candidate validation.
+* The live Adjust run exposed one additional integration defect: the semantic
+  disposition completeness rule treated the explicit absence marker
+  `Not specified` as an asserted unknown attribution. The minimal contract fix
+  recognizes only explicit non-assertive absence markers (`not specified`,
+  `not stated`, `not identified`, `not available`, `unknown`); all other
+  non-empty unknown protected values remain unresolved. A material unknown
+  attribution regression remains fail-closed.
+
+#### Focused and repository verification
+
+The focused post-correction grounding/claim-validation set passed **149 tests**.
+The fresh full repository suite on the final code passed **8,646 tests, 2
+skipped, 48 deselected, and 24 subtests** in **1,046.35 seconds**. Full mypy
+passed for **786 source files with 0 tracked errors**; contract schema snapshot
+passed; direct Ruff checks on the changed Python files passed; and the prompt
+fixture gate passed without changing prompts, schemas, pricing, thresholds or
+fixtures: **118,931 tokens / $0.025549** versus **118,469 / $0.025502**
+(+462 tokens, +$0.000047, all in validation). The existing coverage, mutation,
+quality-regression, architecture, policy, documentation and hygiene gates had
+already passed on the producer implementation commit and are not weakened by
+the two-line semantic policy correction. The repository wrapper reported no
+changed Python files after the correction because the producer files were
+already committed; direct Ruff verification was therefore used for the changed
+files.
+
+#### Required two-report provider-backed run
+
+Exact invocation:
+
+```text
+py -3.12 -u scripts/quality/run_frozen_reliability_cohort.py --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json --sources-root "C:\Programing\Market lense" --runs-root "C:\ml-final-grounding-e2e-20261108-3" --report-ids cohort-cbb6e7df67412186b8bc cohort-b638414df0b1fccea1cd --max-duration 7200 --verified-facts-architecture
+```
+
+The source PDFs were independently hash-checked before the run: Activate
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`, 140
+physical pages; Adjust
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`, 41
+physical pages. The authoritative terminal ledger and safe projections are
+retained at
+[`verified-facts-20261108-1b3dd9cc`](reliability-cohort-20261001-next-five/verified-facts-20261108-1b3dd9cc).
+
+| Metric | Activate | Adjust |
+| --- | --- | --- |
+| Producer SHA | `1b3dd9cc` | `1b3dd9cc` |
+| Source SHA verified | Yes | Yes |
+| Verified/admitted facts | Not generated; stopped before verified-facts artifact | 10 evaluated / 10 admitted / 0 quarantined |
+| Initial validation | Not reached; editorial plan contract failed | Failed at grounding with 1 unresolved retained factual claim, 0 unsupported |
+| Repair attempts | 2 bounded editorial-plan recovery attempts; 3 structured-output calls total | 5 structured-output recovery calls in run; 0 automatic repairs |
+| Promoted / rolled back repairs | 0 / 0 | 0 / 0 |
+| Unresolved claims | Not evaluated | 1 (source-supported claim; false unresolved diagnosed) |
+| Original essential coverage | Not generated | 6 essential plan obligations; public review PASS, final readiness blocked by grounding |
+| Editorial review | Not generated | `public_editorial_quality_after`: PASS, publishable true, 0 hard fails |
+| Final HTML | Not generated: editorial plan invalid | Not generated: validation failed |
+| Readiness | Fail | Fail |
+| Provider calls | 460 | 171 |
+| Input / output tokens | 974,325 / 239,252 | 1,575,902 / 260,809 |
+| Duration | 3,185.157 s | 1,844.406 s |
+| Cost | $0.234446 | $0.302785 |
+| Final outcome | `artifact_structured_output_invalid` | `validation_failed` |
+
+The Adjust factual claim was independently checked against the original PDF:
+page 27 states global e-commerce-app installs fell 10% YoY in 2025 while
+sessions rose 5%, and page 29 supplies the separate retention observations.
+The canonical verified-facts artifact had the exact source identity, pages 27
+and 29, and 10 admitted facts. The only unresolved semantic dimension was
+attribution with `Not specified` on both claim and evidence; this was not an
+unsupported attribution. The report nevertheless failed closed, so no claim
+was promoted or published.
+
+Activate was admitted at source preflight but stopped at the first artifact
+generation boundary. Provider responses were parseable, yet the editorial-plan
+contract remained invalid after the existing two-attempt recovery limit. No
+verified-facts artifact, final insight set, validation package, or HTML exists
+for that report; it is retained as a provider/editorial-plan contract failure,
+not treated as a factual pass.
+
+#### Correction rerun
+
+After the absence-marker fix, a new isolated Adjust run was executed on
+`6e61264a89373caaf5c944ac7c57d5977c22c9bc` with the exact source hash. Its
+safe evidence is retained at
+[`verified-facts-20261109-6e61264a`](reliability-cohort-20261001-next-five/verified-facts-20261109-6e61264a).
+It admitted the source but stopped earlier at `editorial_plan_invalid` after
+two bounded recovery attempts: **148 provider calls**, **665,199 input / 97,268
+output tokens**, **$0.130028**, and **1,285.047 seconds**. It did not reach
+grounding, so it cannot be used to claim a live pass or live exercise of the
+absence-marker correction. This is a genuine provider/editorial-plan terminal
+failure, not a reason to relax the downstream factual gate.
+
+No automatic repair, candidate promotion, rollback, final HTML, readiness
+approval, publication attempt, or WordPress write occurred in either run.
+The run-level manifests deliberately exclude source PDFs, raw provider caches,
+private databases and raw ledgers; the authorized local workspace retains the
+PDFs for review. `artifact_manifest.json` in each retained package lists every
+committed safe projection with its relative path, size and SHA-256.
+
+#### Verdict and remaining blockers
+
+The code-level integrity corrections and local tests are **PASS**. The required
+live two-report acceptance is **PARTIAL / NO-GO**: Activate remains blocked by
+the editorial-plan structured-output contract, and the corrected Adjust path
+was not reached in the post-fix rerun. The earlier Adjust grounding false
+unresolved has a focused regression and a minimal fix, but no fresh live
+success can be claimed. The exact source-page, evidence-ID and protected-fact
+guards remain fail-closed. E18 remains **Active/PARTIAL**; Step 2 remains
+**PARTIAL/NO-GO**; Step 3 remains **unstarted/not ready**.

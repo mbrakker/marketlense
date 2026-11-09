@@ -2295,3 +2295,20 @@ limitations pack plus an old plan/public-review handoff; current verified-fact
 qualifier fallback and public-scope checks are already present. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready** pending current-source/provider-backed acceptance.
+
+**Evidence update — 2026-11-09 (final grounding/regeneration integrity and
+two-report E2E):** Required preflight, per-page verified-fact spans, final
+insight obligation support, and multi-fact A+B → A+C rebind/finalization
+contracts are corrected and covered by focused regressions. The final local
+suite passed 8,646 tests with 2 skips, 48 deselections and 24 subtests; mypy,
+schema, prompt-fixture and direct changed-file Ruff checks passed. The exact
+provider-backed Activate + Adjust run admitted both sources but ended with
+Activate `editorial_plan_invalid` after bounded recovery and Adjust one false
+unresolved grounding result; no HTML, promotion, readiness approval or
+publication occurred. The minimal `Not specified` absence-marker correction
+is covered by regression tests, but its fresh Adjust rerun stopped earlier at
+the same provider/editorial-plan contract. Safe run projections and manifests
+are retained under
+`docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261108-1b3dd9cc`
+and `verified-facts-20261109-6e61264a`. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
