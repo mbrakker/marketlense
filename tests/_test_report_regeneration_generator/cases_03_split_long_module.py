@@ -523,6 +523,99 @@ def test_insight_evidence_rebind_requires_relevant_direct_source_with_page(
     ]
 
 
+def test_insight_rebind_excludes_deterministic_list_paths_from_model_scope(
+    tmp_path: Path,
+) -> None:
+    current = _current_artifacts()
+    current["insights_final"][0].update(
+        evidence_ids=["f1"],
+        evidence_spans=[],
+    )
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "f1",
+                    "text": "Failed source finding.",
+                    "evidence": "Failed source finding.",
+                    "pages": [1],
+                },
+                {
+                    "id": "repair-finding",
+                    "text": "A separately retained direct source finding.",
+                    "evidence": "A separately retained direct source finding.",
+                    "pages": [7],
+                },
+            ]
+        }
+    }
+    item_path = "insights_final[item=insight-1]"
+    target = RegenerationTarget(
+        target_section="insights_bundle",
+        regenerate_steps=["insights_final"],
+        prompt_namespaces=["report_vs/artifacts/regenerate/insights_final"],
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="insights:insight-1.text",
+                message="Rebind the insight to retained alternative source evidence.",
+                severity="error",
+                evidence_ids=["f1"],
+                excluded_evidence_ids=["f1"],
+            )
+        ],
+        repair_action="REBIND_EVIDENCE",
+        repair_strategy="alternative_evidence",
+        allowed_paths=[
+            f"{item_path}.text",
+            f"{item_path}.evidence_id",
+            f"{item_path}.evidence_ids",
+            f"{item_path}.evidence",
+            f"{item_path}.pages",
+            f"{item_path}.evidence_spans",
+        ],
+        selected_evidence_ids=["repair-finding"],
+    )
+
+    response = _regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map={},
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_EvidenceRebindOpenAIClient("repair-finding"),
+        prompt_client=_FakePromptClient(),
+    )
+
+    repaired = response.updated_artifacts["insights_final"][0]
+    assert repaired["evidence_id"] == "repair-finding"
+    assert repaired["evidence_ids"] == ["repair-finding"]
+    assert repaired["pages"] == [7]
+    assert repaired["evidence_spans"] == [
+        {
+            "evidence_id": "repair-finding",
+            "source_pack": "findings",
+            "page": 7,
+            "text": "A separately retained direct source finding.",
+        }
+    ]
+
+
 def test_page_bound_rebind_keeps_authoritative_verified_fact_pages() -> None:
     evidence_packs = {
         "findings": {

@@ -2618,6 +2618,24 @@ def _render_regeneration_model(
     current_repair_artifacts = (
         _current_repair_artifacts(execution.state) if repair_call else {}
     )
+    if repair_call and active_target.repair_action == "REBIND_EVIDENCE":
+        # Evidence IDs, spans, pages, and evidence arrays are rebuilt from the
+        # retained direct-source package after the model response.  They are
+        # deterministic binding paths, not provider-writable scalar leaves.
+        # Keep them in the original target for post-model rebinding and scope
+        # accounting, but do not present list-valued leaves to the scalar
+        # repair-decision contract.
+        active_target = replace(
+            active_target,
+            allowed_paths=[
+                path
+                for path in active_target.allowed_paths
+                if (
+                    (found := _read_repair_path(current_repair_artifacts, path))[0]
+                    and isinstance(found[1], str)
+                )
+            ],
+        )
     if repair_call and not active_target.allowed_paths:
         raise _repair_decision_error(execution, "repair_scope_partition_invalid")
     if repair_call:
@@ -6006,7 +6024,34 @@ def _regenerate_one_final_insight(
             _set_insight_path_value(repaired, field_path, deepcopy(regenerated_value))
     repaired["id"] = insight_id
     if execution.target.repair_action == "REBIND_EVIDENCE":
-        rebound_evidence_ids = _ordered_item_evidence_ids(repaired)
+        # A changed scalar primary ID must not inherit a stale prior
+        # multi-fact list when the model omits that list from its response.
+        # The validated decision's retained-ID selection is the authoritative
+        # proposal; the canonical source package below remains authoritative
+        # for the actual spans.
+        primary_binding_path = f"insights_final[item={insight_id}].evidence_id"
+        decision_changes_primary = isinstance(
+            executed_decision, RepairDecision
+        ) and any(
+            operation.path == primary_binding_path
+            for operation in executed_decision.minimal_patch
+        )
+        if decision_changes_primary:
+            # A provider patch to the primary binding is checked against its
+            # canonical page below; a conflicting decision selection must not
+            # be silently preferred over that explicit patch.
+            rebound_evidence_ids = _ordered_item_evidence_ids(matching[0])
+        else:
+            rebound_evidence_ids = (
+                list(executed_decision.evidence_ids_used)
+                if isinstance(executed_decision, RepairDecision)
+                else []
+            )
+        if not rebound_evidence_ids:
+            rebound_evidence_ids = _ordered_item_evidence_ids(matching[0])
+        if not rebound_evidence_ids:
+            rebound_evidence_ids = _ordered_item_evidence_ids(repaired)
+        rebound_evidence_ids = list(dict.fromkeys(rebound_evidence_ids))
         package_evidence_ids = {
             _s(value).strip().casefold()
             for value in execution.grounding_package.get("evidence_ids", [])
@@ -6069,6 +6114,12 @@ def _regenerate_one_final_insight(
                     "evidence_ids": rebound_evidence_ids,
                 },
             )
+        repaired["evidence_id"] = rebound_evidence_ids[0]
+        if (
+            f"insights_final[item={insight_id}].evidence_ids"
+            in execution.target.allowed_paths
+        ):
+            repaired["evidence_ids"] = list(rebound_evidence_ids)
         canonical_insight = deepcopy(repaired)
         bind_artifact_evidence_spans(
             summary={},
