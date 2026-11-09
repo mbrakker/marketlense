@@ -37,6 +37,7 @@ text: |
   }
 
   Include every planned theme exactly once. Use only exact final insight IDs. Set resolution to retained when the theme is developed directly, merged when one final insight genuinely develops multiple planned themes, omitted only for an optional redundant theme, and quarantined when an essential proposition cannot be represented. Use `report_completeness` to assess the whole article independently of the plan organization. Choose `targeted_rewrite` when supported evidence is available but the prose is incomplete, `replan` only when the plan is redundant or infeasible, and `quarantine` when material verified evidence is insufficient.
+  Use these control combinations coherently: `planned_theme_execution` with `none` for a complete plan execution; `redundant_optional_theme` with `none` when a redundant optional theme is safely omitted from a complete report, or with `replan` when the plan must be reorganized; `material_report_completeness` or `planned_theme_execution` with `targeted_rewrite` only when completeness is `incomplete` or `uncertain`; `infeasible_plan` with `replan`; and `insufficient_evidence` with `quarantine` when completeness is `incomplete` or `uncertain`. Do not use a recovery action to convert an incomplete report into a complete verdict.
   `covered` means the final prose develops the theme's intended proposition;
   `partial` means it is materially related but incomplete; `uncovered` means
   the final roster does not substantively address it. A shared fact or source

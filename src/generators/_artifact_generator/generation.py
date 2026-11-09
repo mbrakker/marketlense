@@ -885,6 +885,12 @@ def generate_artifacts(
                         final_insights=payload.get("insights_final") or [],
                         candidate_insights=insights_candidates,
                     )
+                    if visual_authority_admitter is not None:
+                        validate_final_insight_editorial_coverage(
+                            final_insights=payload.get("insights_final") or [],
+                            candidate_insights=insights_candidates,
+                            editorial_plan=editorial_plan,
+                        )
 
         elif task.step_name == "summary":
 
@@ -945,7 +951,7 @@ def generate_artifacts(
             timeout_seconds=settings.openai_timeout_seconds,
             output_contract_schema_version=(
                 (
-                    "editorial_theme_coverage_output:1.1"
+                    "editorial_theme_coverage_output:1.2"
                     if response_contract_name == "editorial_theme_coverage_output"
                     else f"{response_contract_name}:1.0"
                 )
@@ -2377,6 +2383,12 @@ def generate_artifacts(
             final_insights=payload.get("insights_final") or [],
             candidate_insights=insights_candidates,
         )
+        if visual_authority_admitter is not None:
+            validate_final_insight_editorial_coverage(
+                final_insights=payload.get("insights_final") or [],
+                candidate_insights=insights_candidates,
+                editorial_plan=editorial_plan,
+            )
 
     insights_final_result: Dict[str, Any]
     if dependency_dag_enabled:
@@ -2549,8 +2561,32 @@ def generate_artifacts(
                 if fact_id
             }
         )
+        essential_fact_ids = {
+            fact_id
+            for binding in editorial_plan_theme_bindings(editorial_plan)
+            if _s(binding.get("importance")).strip().casefold() == "essential"
+            for fact_id in binding.get("coverage_keys", set())
+            if _s(fact_id).strip()
+        }
+        omitted_essential_fact_ids = sorted(
+            fact_id for fact_id in omitted_theme_ids if fact_id in essential_fact_ids
+        )
+        recovery_attempts = semantic_theme_repair.get("attempts", {})
+        recovery_attempt_count = (
+            sum(
+                value
+                for value in recovery_attempts.values()
+                if isinstance(value, int) and not isinstance(value, bool)
+            )
+            if isinstance(recovery_attempts, dict)
+            else 0
+        )
+        recovery_path = _s(semantic_theme_repair.get("recovery_kind")).strip()
+        if not recovery_path:
+            recovery_path = "not_attempted"
         return {
             "stage": stage,
+            "assessment_phase": "semantic_theme_coverage",
             "terminal_classification": terminal_classification,
             "failure_class": failure_class or terminal_classification,
             "repair_stage": stage,
@@ -2567,9 +2603,13 @@ def generate_artifacts(
                 if _s(fact.get("fact_id")).strip()
             ),
             "omitted_theme_ids": omitted_theme_ids,
+            "omitted_essential_fact_ids": omitted_essential_fact_ids,
             "selected_candidate_ids": [item["id"] for item in roster],
             "eligible_candidate_ids": sorted(eligible_by_id),
+            "selected_count": len(roster),
             "final_roster_count": len(roster),
+            "recovery_path": recovery_path,
+            "recovery_attempt_count": recovery_attempt_count,
             "final_roster": roster,
             "theme_verdicts": model_assessments,
             "original_essential_obligation_assessments": deepcopy(
@@ -2787,7 +2827,7 @@ def generate_artifacts(
                 task_id=f"{ctx.task_id}:editorial_theme_coverage",
             ),
             response_contract_name="editorial_theme_coverage_output",
-            response_contract_identity_version="v2",
+            response_contract_identity_version="v3",
         )
         try:
             semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
@@ -2812,6 +2852,10 @@ def generate_artifacts(
                 assessment=semantic_theme_coverage_result,
                 error_context=error.context,
             )
+            coverage_diagnostics = error.context.get("coverage_diagnostics")
+            if isinstance(coverage_diagnostics, dict):
+                coverage_diagnostics["recovery_path"] = recovery_kind
+                coverage_diagnostics["recovery_attempt_count"] = 0
             omitted_themes = error.context.get("omitted_themes")
             if not isinstance(omitted_themes, list) or not omitted_themes:
                 omitted_themes = error.context.get("omitted_central_themes")
@@ -2961,7 +3005,7 @@ def generate_artifacts(
                     task_id=f"{ctx.task_id}:semantic_repair:editorial_theme_coverage",
                 ),
                 response_contract_name="editorial_theme_coverage_output",
-                response_contract_identity_version="v2",
+                response_contract_identity_version="v3",
             )
             try:
                 semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
@@ -3186,7 +3230,7 @@ def generate_artifacts(
                             task_id=f"{ctx.task_id}:semantic_repair:replanned_editorial_theme_coverage",
                         ),
                         response_contract_name="editorial_theme_coverage_output",
-                        response_contract_identity_version="v2",
+                        response_contract_identity_version="v3",
                     )
                     try:
                         semantic_theme_coverage = (

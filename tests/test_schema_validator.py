@@ -3,6 +3,7 @@ import pytest
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.services.schema_validator_service import (
+    load_schema,
     provider_output_schema,
     validate_evidence_references,
     validate_output_schema,
@@ -48,6 +49,30 @@ def test_validate_schema_fails_missing_required():
             _ctx(),
         )
     assert exc.value.code == "schema_missing_required"
+
+
+def test_editorial_theme_coverage_schema_requires_verified_control_fields():
+    schema = load_schema("editorial_theme_coverage_output")
+
+    assert set(schema["required"]) >= {
+        "theme_coverage",
+        "report_completeness",
+        "diagnosis",
+        "recovery_action",
+    }
+    assert schema["properties"]["diagnosis"]["enum"] == [
+        "planned_theme_execution",
+        "material_report_completeness",
+        "redundant_optional_theme",
+        "infeasible_plan",
+        "insufficient_evidence",
+    ]
+    assert schema["properties"]["recovery_action"]["enum"] == [
+        "none",
+        "targeted_rewrite",
+        "replan",
+        "quarantine",
+    ]
 
 
 def test_artifact_final_schema_accepts_empty_but_rejects_malformed_entries():

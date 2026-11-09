@@ -187,6 +187,45 @@ def test_coverage_failure_diagnostics_retain_bounded_roster_lineage() -> None:
     }
 
 
+def test_coverage_failure_diagnostics_retain_bounded_recovery_context() -> None:
+    context = {
+        "coverage_diagnostics": {
+            "stage": "semantic_repair",
+            "assessment_phase": "semantic_theme_coverage",
+            "report_completeness": "incomplete",
+            "diagnosis": "material_report_completeness",
+            "recovery_action": "targeted_rewrite",
+            "recovery_path": "targeted_rewrite",
+            "target_count": 4,
+            "selected_count": 3,
+            "final_roster_count": 3,
+            "recovery_attempt_count": 1,
+            "original_plan_identity": "a" * 64,
+            "current_plan_identity": "b" * 64,
+            "omitted_essential_fact_ids": ["fact-2"],
+            "raw_reason": "private source prose must not be retained",
+        }
+    }
+
+    bounded = _bounded_failure_context(context)
+
+    assert bounded["coverage_diagnostics"] == {
+        "stage": "semantic_repair",
+        "assessment_phase": "semantic_theme_coverage",
+        "report_completeness": "incomplete",
+        "diagnosis": "material_report_completeness",
+        "recovery_action": "targeted_rewrite",
+        "recovery_path": "targeted_rewrite",
+        "target_count": 4,
+        "selected_count": 3,
+        "final_roster_count": 3,
+        "recovery_attempt_count": 1,
+        "original_plan_identity": "a" * 64,
+        "current_plan_identity": "b" * 64,
+        "omitted_essential_fact_ids": ["fact-2"],
+    }
+
+
 def test_remediation_failure_reader_preserves_coverage_lineage(tmp_path: Path) -> None:
     state_db = tmp_path / "workflow.sqlite"
     with sqlite3.connect(state_db) as conn:
@@ -237,9 +276,9 @@ def test_remediation_failure_reader_preserves_coverage_lineage(tmp_path: Path) -
     )
 
     assert diagnostic["stage"] == "report_analysis"
-    assert diagnostic["error_context"]["coverage_diagnostics"][
-        "omitted_theme_ids"
-    ] == ["fact-2"]
+    assert diagnostic["error_context"]["coverage_diagnostics"]["omitted_theme_ids"] == [
+        "fact-2"
+    ]
     assert "reason" not in json.dumps(diagnostic)
 
 

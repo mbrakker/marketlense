@@ -21,7 +21,7 @@ text: |
   Source-of-truth final insight schema:
   {{ insights_final_schema }}
 
-  Target final insight count: {{ final_insight_target_count }}.
+  Minimum final insight target: {{ final_insight_target_count }}. This is a minimum target, not a maximum, when additional admitted insights are needed to develop distinct essential obligations.
 
   {% if verified_mode|default(false) %}
   Verified authority selection contract: select only from the exact stable candidate IDs in this allowlist:
@@ -29,7 +29,7 @@ text: |
   Copy each selected stable `id` verbatim from that allowlist. The stable `id` identifies the candidate; it is distinct from the factual `evidence_id`. Do not create, alter, or substitute either identifier.
   {% endif %}
 
-  Task: Choose {{ final_insight_target_count }} strongest, non-overlapping insights. {% if verified_mode|default(false) %}Develop every essential theme and its coverage obligation. Themes may share one insight only when its wording genuinely develops both propositions; optional themes may be merged or omitted when that is the coherent, source-faithful choice. Use the admitted candidate feasibility metadata and preserve material relationships, qualifiers and counter-signals.{% else %}At least one selected insight substantively developing each planned editorial theme is required before choosing any extra insight.{% endif %} Preserve the primary `evidence_id` per insight and, when the prose materially combines multiple supplied findings, include an `evidence_ids` array with the exact primary-first IDs for every necessary finding. Return JSON with an `insights_final` array of candidate-shaped entries containing scores, coverage_role, so_what, now_what, metric_public_copy, and report_type_lens.
+  Task: {% if verified_mode|default(false) %}Select at least {{ final_insight_target_count }} strongest, non-overlapping insights, and stop only when every essential theme is substantively developed and any additional insight is nonredundant and source-supported. {% else %}Choose {{ final_insight_target_count }} strongest, non-overlapping insights. {% endif %}{% if verified_mode|default(false) %}Develop every essential theme and its coverage obligation. Themes may share one insight only when its wording genuinely develops both propositions; optional themes may be merged or omitted when that is the coherent, source-faithful choice. Use the admitted candidate feasibility metadata and preserve material relationships, qualifiers and counter-signals.{% else %}At least one selected insight substantively developing each planned editorial theme is required before choosing any extra insight.{% endif %} Preserve the primary `evidence_id` per insight and, when the prose materially combines multiple supplied findings, include an `evidence_ids` array with the exact primary-first IDs for every necessary finding. Return JSON with an `insights_final` array of candidate-shaped entries containing scores, coverage_role, so_what, now_what, metric_public_copy, and report_type_lens.
   Return only the requested JSON object and final insight entries. Do not repeat the candidate roster, evidence text, schema, editorial plan, or canonical fact objects in the response. Keep `so_what` and `now_what` to one or two concise sentences tied to the selected finding; preserve exact values, comparisons, qualifiers, and scope rather than shortening them into a misleading summary.
   Reuse selected candidate IDs; keep IDs unique.
   For compact cards, aim for one complete, source-backed insight sentence at

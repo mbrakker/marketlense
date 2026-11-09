@@ -313,34 +313,64 @@ def _write_json(path: Path, payload: Any) -> None:
     )
 
 
+def _write_artifact_manifest(*, output_dir: Path, scope: str) -> None:
+    """Hash the finalized export without creating a self-referential entry."""
+
+    entries = []
+    for path in sorted(output_dir.rglob("*")):
+        if not path.is_file() or path.name == "artifact_manifest.json":
+            continue
+        relative_path = path.relative_to(output_dir).as_posix()
+        content = path.read_bytes()
+        entries.append(
+            {
+                "relative_path": relative_path,
+                "size_bytes": len(content),
+                "sha256": hashlib.sha256(content).hexdigest(),
+            }
+        )
+    _write_json(
+        output_dir / "artifact_manifest.json",
+        {
+            "schema_version": "1.0",
+            "scope": scope,
+            "manifest_self_reference": (
+                "artifact_manifest.json is the inventory itself and is intentionally "
+                "not self-listed to avoid a self-hash cycle."
+            ),
+            "entries": entries,
+        },
+    )
+
+
 def _repair_effectiveness_projection(
     *, artifact_dir: Path, validation_run_id: str
 ) -> dict[str, Any]:
     """Project only the typed content-free scorecard fields without recomputing it."""
 
+    candidate_audit_attempts = _candidate_audit_projection(artifact_dir)
+
+    def unavailable(reason: str) -> dict[str, Any]:
+        projection: dict[str, Any] = {
+            "schema_version": "1.0",
+            "measurement_status": "unavailable",
+            "reason": reason,
+        }
+        if candidate_audit_attempts:
+            projection["candidate_audit_attempts"] = candidate_audit_attempts
+        return projection
+
     run_hash = hashlib.sha256(validation_run_id.encode("utf-8")).hexdigest()
     path = artifact_dir / "validation-runs" / run_hash / "reliability_telemetry.json"
     if not path.is_file():
-        return {
-            "schema_version": "1.0",
-            "measurement_status": "unavailable",
-            "reason": "retained_reliability_artifact_missing",
-        }
+        return unavailable("retained_reliability_artifact_missing")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return {
-            "schema_version": "1.0",
-            "measurement_status": "unavailable",
-            "reason": "retained_reliability_artifact_invalid",
-        }
+        return unavailable("retained_reliability_artifact_invalid")
     scorecard = payload.get("repair_scorecard") if isinstance(payload, dict) else None
     if not isinstance(scorecard, dict):
-        return {
-            "schema_version": "1.0",
-            "measurement_status": "unavailable",
-            "reason": "retained_repair_scorecard_missing",
-        }
+        return unavailable("retained_repair_scorecard_missing")
     projection = {
         key: scorecard[key] for key in _REPAIR_SCORECARD_FIELDS if key in scorecard
     }
@@ -366,7 +396,192 @@ def _repair_effectiveness_projection(
                 for item in values
                 if isinstance(item, dict)
             ]
+    if candidate_audit_attempts:
+        projection["candidate_audit_attempts"] = candidate_audit_attempts
     return projection
+
+
+_CANDIDATE_AUDIT_HASH_FIELDS = (
+    "before_sha256",
+    "after_sha256",
+    "strategy_fingerprint",
+    "configuration_hash",
+    "policy_hash",
+    "producer_build_identity",
+)
+_CANDIDATE_AUDIT_LIST_FIELDS = (
+    "allowed_paths",
+    "verified_dependent_paths",
+    "selected_evidence_ids",
+    "quarantined_evidence_ids",
+)
+_CANDIDATE_AUDIT_SCOPE_FIELDS = ("transformation_scope", "validation_issues")
+_CANDIDATE_AUDIT_TOKEN_FIELDS = (
+    "repair_action",
+    "repair_strategy",
+    "validation_status",
+    "promotion_outcome",
+)
+_CANDIDATE_AUDIT_REPAIR_DELTA_TOKEN_FIELDS = (
+    "mutation_scope_result",
+    "evidence_lineage_result",
+    "semantic_grounding_validation_status",
+    "repair_action",
+    "repair_strategy",
+)
+_CANDIDATE_AUDIT_REPAIR_DELTA_LIST_FIELDS = ("evidence_ids_used",)
+_CANDIDATE_AUDIT_PATH_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-=[]"
+)
+
+
+def _candidate_audit_projection(artifact_dir: Path) -> list[dict[str, Any]]:
+    """Retain bounded candidate identity/status lineage from existing audit packs."""
+
+    paths = sorted(artifact_dir.rglob("regeneration_candidate_audit_*.json"))
+    projected: list[dict[str, Any]] = []
+    for path in paths[:32]:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        attempt = payload.get("attempt_index")
+        if (
+            not isinstance(attempt, int)
+            or isinstance(attempt, bool)
+            or not 0 <= attempt <= 9
+        ):
+            continue
+        item: dict[str, Any] = {"attempt_index": attempt}
+        for field_name in _CANDIDATE_AUDIT_HASH_FIELDS:
+            value = str(payload.get(field_name) or "").strip().lower()
+            if len(value) == 64 and set(value) <= frozenset("0123456789abcdef"):
+                item[field_name] = value
+        for field_name in _CANDIDATE_AUDIT_TOKEN_FIELDS:
+            value = str(payload.get(field_name) or "").strip()
+            if (
+                value
+                and len(value) <= 128
+                and set(value) <= _SAFE_DIAGNOSTIC_TOKEN_CHARS
+            ):
+                item[field_name] = value
+        for field_name in _CANDIDATE_AUDIT_LIST_FIELDS:
+            values = payload.get(field_name)
+            if not isinstance(values, list):
+                continue
+            bounded = [
+                value
+                for raw_value in values
+                if (value := str(raw_value or "").strip())
+                and len(value) <= 256
+                and set(value) <= _CANDIDATE_AUDIT_PATH_CHARS
+            ]
+            if bounded:
+                item[field_name] = list(dict.fromkeys(bounded))[:32]
+        for field_name in _CANDIDATE_AUDIT_SCOPE_FIELDS:
+            values = payload.get(field_name)
+            if not isinstance(values, list):
+                continue
+            bounded = [
+                value
+                for raw_value in values
+                if (value := str(raw_value or "").strip())
+                and len(value) <= 128
+                and set(value) <= _SAFE_DIAGNOSTIC_TOKEN_CHARS
+            ]
+            if bounded:
+                item[field_name] = list(dict.fromkeys(bounded))[:32]
+        lineage = payload.get("evidence_lineage")
+        if isinstance(lineage, list):
+            lineage_projection: list[dict[str, Any]] = []
+            for raw_lineage in lineage[:32]:
+                if not isinstance(raw_lineage, dict):
+                    continue
+                projected_lineage: dict[str, Any] = {}
+                for field_name in ("entity_kind", "entity_id"):
+                    value = _bounded_diagnostic_token(raw_lineage.get(field_name))
+                    if value:
+                        projected_lineage[field_name] = value
+                for field_name in (
+                    "original_evidence_ids",
+                    "candidate_evidence_ids",
+                ):
+                    values = raw_lineage.get(field_name)
+                    if isinstance(values, list):
+                        bounded = [
+                            value
+                            for raw_value in values
+                            if (value := str(raw_value or "").strip())
+                            and len(value) <= 256
+                            and set(value) <= _CANDIDATE_AUDIT_PATH_CHARS
+                        ]
+                        if bounded:
+                            projected_lineage[field_name] = list(
+                                dict.fromkeys(bounded)
+                            )[:32]
+                for field_name in (
+                    "original_source_pages",
+                    "candidate_source_pages",
+                ):
+                    values = raw_lineage.get(field_name)
+                    if isinstance(values, list):
+                        pages = [
+                            value
+                            for value in values
+                            if isinstance(value, int)
+                            and not isinstance(value, bool)
+                            and 1 <= value <= 10_000
+                        ]
+                        if pages:
+                            projected_lineage[field_name] = list(dict.fromkeys(pages))[
+                                :32
+                            ]
+                if projected_lineage:
+                    lineage_projection.append(projected_lineage)
+            if lineage_projection:
+                item["evidence_lineage"] = lineage_projection
+        repair_delta = payload.get("repair_delta")
+        if isinstance(repair_delta, dict):
+            delta_projection: dict[str, Any] = {}
+            for field_name in ("candidate_sha256", "input_sha256"):
+                value = str(repair_delta.get(field_name) or "").strip().lower()
+                if len(value) == 64 and set(value) <= frozenset("0123456789abcdef"):
+                    delta_projection[field_name] = value
+            for field_name in _CANDIDATE_AUDIT_REPAIR_DELTA_TOKEN_FIELDS:
+                value = _bounded_diagnostic_token(repair_delta.get(field_name))
+                if value:
+                    delta_projection[field_name] = value
+            for field_name in _CANDIDATE_AUDIT_REPAIR_DELTA_LIST_FIELDS:
+                values = repair_delta.get(field_name)
+                if isinstance(values, list):
+                    bounded = [
+                        value
+                        for raw_value in values
+                        if (value := str(raw_value or "").strip())
+                        and len(value) <= 256
+                        and set(value) <= _CANDIDATE_AUDIT_PATH_CHARS
+                    ]
+                    if bounded:
+                        delta_projection[field_name] = list(dict.fromkeys(bounded))[:32]
+            if delta_projection:
+                item["repair_delta"] = delta_projection
+        family_hashes = payload.get("unchanged_family_sha256")
+        if isinstance(family_hashes, dict):
+            bounded_family_hashes = {
+                str(key): str(value).lower()
+                for key, value in family_hashes.items()
+                if str(key) in {"summary", "insights_candidates", "quotes_final"}
+                and isinstance(value, str)
+                and len(value) == 64
+                and set(value.lower()) <= frozenset("0123456789abcdef")
+            }
+            if bounded_family_hashes:
+                item["unchanged_family_sha256"] = bounded_family_hashes
+        if len(item) > 1:
+            projected.append(item)
+    return projected
 
 
 def _authoritative_frozen_cohort_projection(
@@ -545,10 +760,19 @@ def export_frozen_cohort_outcome_views(
             "findings": findings,
         },
     )
+    _write_artifact_manifest(
+        output_dir=output_dir,
+        scope="frozen-cohort-terminal-outcomes",
+    )
 
 
 def export_run_evidence(
-    *, state_dir: Path, artifact_dir: Path, output_dir: Path, validation_run_id: str
+    *,
+    state_dir: Path,
+    artifact_dir: Path,
+    output_dir: Path,
+    validation_run_id: str,
+    authoritative_cohort_result_path: Path | None = None,
 ) -> None:
     """Create bounded, no-source-text evidence views for one validation run."""
     # Keep the run-scoped export on the same retained-diagnostics projection as
@@ -559,6 +783,12 @@ def export_run_evidence(
     output_dir.mkdir(parents=True, exist_ok=True)
     reports_db = state_dir / "reports.sqlite"
     usage_db = state_dir / "llm_usage.sqlite"
+    authoritative_terminal_rows: dict[str, dict[str, Any]] = {}
+    if authoritative_cohort_result_path is not None:
+        rows, _aggregate = _authoritative_frozen_cohort_projection(
+            authoritative_cohort_result_path
+        )
+        authoritative_terminal_rows = {row["report_id"]: row for row in rows}
     with sqlite3.connect(reports_db) as conn:
         members = _rows(
             conn,
@@ -582,8 +812,18 @@ def export_run_evidence(
             (validation_run_id,),
         )
     by_report = {row["report_id"]: row for row in attempts}
+    if authoritative_terminal_rows and {
+        str(member["report_id"]) for member in members
+    } != set(authoritative_terminal_rows):
+        raise ValueError(
+            "authoritative cohort result does not match validation-run members"
+        )
     terminal_rows = []
     for item in members:
+        authoritative = authoritative_terminal_rows.get(str(item["report_id"]))
+        if authoritative is not None:
+            terminal_rows.append(dict(authoritative))
+            continue
         attempt = by_report.get(item["report_id"], {})
         terminal_outcome = str(attempt.get("terminal_outcome") or "missing")
         failure_code = str(attempt.get("failure_code") or "") or (
@@ -633,7 +873,20 @@ def export_run_evidence(
             "terminal_stage",
             "failure_code",
         ],
-        [{**member, **by_report.get(member["report_id"], {})} for member in members],
+        [
+            {
+                **member,
+                **{
+                    key: terminal_row[key]
+                    for key in ("terminal_outcome", "terminal_stage", "failure_code")
+                },
+            }
+            for member, terminal_row in zip(
+                members,
+                terminal_rows,
+                strict=True,
+            )
+        ],
     )
     counts = Counter(row["terminal_outcome"] or "missing" for row in terminal_rows)
     stage_counts = Counter((row["stage"], row["terminal_outcome"]) for row in stages)
@@ -928,6 +1181,10 @@ def export_run_evidence(
         + " Publication was not evaluated. See `audit_findings.json`.\n",
         encoding="utf-8",
     )
+    _write_artifact_manifest(
+        output_dir=output_dir,
+        scope=f"validation-run:{validation_run_id}",
+    )
 
 
 def main() -> int:
@@ -941,6 +1198,14 @@ def main() -> int:
         type=Path,
         help="Authoritative production-derived cohort_result.json for frozen outcomes.",
     )
+    parser.add_argument(
+        "--authoritative-cohort-result",
+        type=Path,
+        help=(
+            "Use a frozen cohort result to reconcile member outcomes while "
+            "retaining local run-stage evidence."
+        ),
+    )
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
     if args.cohort_result is not None:
@@ -948,6 +1213,7 @@ def main() -> int:
             args.state_dir,
             args.artifact_dir,
             args.validation_run_id,
+            args.authoritative_cohort_result,
         )
         if any(value is not None for value in run_state_arguments):
             parser.error(
@@ -969,6 +1235,7 @@ def main() -> int:
         artifact_dir=Path(args.artifact_dir),
         output_dir=output_dir,
         validation_run_id=args.validation_run_id,
+        authoritative_cohort_result_path=args.authoritative_cohort_result,
     )
     return 0
 

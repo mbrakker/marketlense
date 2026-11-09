@@ -56,6 +56,8 @@ def test_editorial_prompts_require_complete_material_theme_coverage() -> None:
     assert "at least one selected insight substantively developing each planned" in (
         final_text
     )
+    assert "at least {{ final_insight_target_count }}" in final_text
+    assert "minimum target" in final_text
     assert "treat the omitted-theme list as a hard acceptance checklist" in final_text
     coverage = load_prompt_set(
         PromptLoadRequest(
@@ -72,9 +74,7 @@ def test_editorial_prompts_require_complete_material_theme_coverage() -> None:
     assert "instead of demanding a redundant one-to-one insight" in coverage_text
 
 
-def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> (
-    None
-):
+def test_editorial_prompts_require_representative_counterbalance() -> None:
     editorial_plan = load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",

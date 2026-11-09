@@ -83,20 +83,62 @@ _SAFE_FAILURE_CONTEXT_CHARS = frozenset(
 _COVERAGE_DIAGNOSTIC_SCALAR_KEYS = frozenset(
     {
         "stage",
+        "assessment_phase",
         "failure_class",
         "repair_stage",
         "disposition",
         "terminal_classification",
+        "report_completeness",
+        "diagnosis",
+        "recovery_action",
+        "recovery_path",
     }
 )
 _COVERAGE_DIAGNOSTIC_LIST_KEYS = frozenset(
     {
         "planned_theme_ids",
         "omitted_theme_ids",
+        "omitted_essential_fact_ids",
         "selected_candidate_ids",
         "eligible_candidate_ids",
     }
 )
+_COVERAGE_DIAGNOSTIC_INTEGER_KEYS = frozenset(
+    {
+        "target_count",
+        "selected_count",
+        "final_roster_count",
+        "recovery_attempt_count",
+    }
+)
+_COVERAGE_DIAGNOSTIC_HASH_KEYS = frozenset(
+    {"original_plan_identity", "current_plan_identity"}
+)
+_COVERAGE_DIAGNOSTIC_ENUM_VALUES = {
+    "assessment_phase": frozenset(
+        {
+            "semantic_theme_coverage",
+            "initial_selection",
+            "semantic_repair",
+            "semantic_replan",
+            "final_selection",
+        }
+    ),
+    "report_completeness": frozenset({"complete", "incomplete", "uncertain"}),
+    "diagnosis": frozenset(
+        {
+            "planned_theme_execution",
+            "material_report_completeness",
+            "redundant_optional_theme",
+            "infeasible_plan",
+            "insufficient_evidence",
+        }
+    ),
+    "recovery_action": frozenset({"none", "targeted_rewrite", "replan", "quarantine"}),
+    "recovery_path": frozenset(
+        {"not_attempted", "fail_closed", "quarantine", "targeted_rewrite", "replan"}
+    ),
+}
 
 
 def _bounded_coverage_diagnostics(value: object) -> dict[str, object]:
@@ -113,7 +155,24 @@ def _bounded_coverage_diagnostics(value: object) -> dict[str, object]:
                 token
                 and len(token) <= 128
                 and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS
+                and (
+                    key not in _COVERAGE_DIAGNOSTIC_ENUM_VALUES
+                    or token in _COVERAGE_DIAGNOSTIC_ENUM_VALUES[key]
+                )
             ):
+                result[key] = token
+            continue
+        if key in _COVERAGE_DIAGNOSTIC_INTEGER_KEYS:
+            if (
+                isinstance(raw_value, int)
+                and not isinstance(raw_value, bool)
+                and 0 <= raw_value <= 999
+            ):
+                result[key] = raw_value
+            continue
+        if key in _COVERAGE_DIAGNOSTIC_HASH_KEYS:
+            token = str(raw_value or "").strip().lower()
+            if len(token) == 64 and set(token) <= frozenset("0123456789abcdef"):
                 result[key] = token
             continue
         if key in _COVERAGE_DIAGNOSTIC_LIST_KEYS and isinstance(raw_value, list):
@@ -127,6 +186,7 @@ def _bounded_coverage_diagnostics(value: object) -> dict[str, object]:
             if identifiers:
                 result[key] = list(dict.fromkeys(identifiers))[:32]
     return result
+
 
 # This is intentionally narrow.  Adding an action requires an explicit
 # workflow/error pair and still does not enable execution without the reaper

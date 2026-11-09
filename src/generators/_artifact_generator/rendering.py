@@ -9,12 +9,12 @@ from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
 from src.contracts.structured_output import StructuredOutputExecutionRequest
+from src.generators.artifact_prompt_provenance import (
+    ARTIFACT_PROMPT_VALIDATOR_VERSION,
+)
 from src.generators.prompt_preparation import (
     PreparedPromptBundle,
     prepare_prompt_bundle,
-)
-from src.generators.artifact_prompt_provenance import (
-    ARTIFACT_PROMPT_VALIDATOR_VERSION,
 )
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
@@ -351,7 +351,10 @@ def render_artifact_json_model(
             workflow="report_analysis",
             prompt_family=prompt_bundle.routing_decision.namespace,
             allow_abstention=artifact_abstention_allowed,
-            allow_model_recovery=not bool(response_contract_name),
+            allow_model_recovery=(
+                not bool(response_contract_name)
+                or response_contract_name == "editorial_theme_coverage_output"
+            ),
             terminal_failure_code="artifact_structured_output_invalid",
         ),
         ctx,

@@ -11891,3 +11891,56 @@ required two-report live acceptance is **PARTIAL / NO-GO**: Adjust exercises
 the corrected grounding/candidate path successfully, but Activate remains
 blocked before grounding by provider-dependent insight coverage. No broad live
 selection improvement is claimed, and Step 3 remains **unstarted/not ready**.
+
+### Essential-theme selection, recovery and terminal-evidence hardening — 2026-11-09
+
+This implementation checkpoint addresses the next confirmed P0/P1 defects on
+the current branch base `64150792bd487a12c3f310e96afd6cb16938090e`. The retained
+Activate failure showed ten eligible verified candidates but only three selected
+items at `initial_selection`; the existing adaptive target was being interpreted
+as an exact ceiling before independent essential-theme review. The final-insight
+prompt now expresses the adaptive target as a minimum in verified mode, while
+the existing candidate allowlist, deterministic coverage validator and
+independent semantic reviewer remain authoritative. No candidate is inserted
+automatically and no fixed report-specific insight count was added.
+
+The final-insight coverage validator is now reused at both DAG and non-DAG final
+response boundaries, including rewritten/replanned outputs. The verified
+semantic-theme contract now requires `report_completeness`, `diagnosis` and
+`recovery_action`, with bounded enums and coherent combinations. Malformed
+structured responses continue through the existing bounded structured-output
+recovery; a genuine incomplete or insufficient-evidence verdict remains
+fail-closed. Safe diagnostic projection retains only bounded stage/phase,
+target/selected counts, omitted essential IDs, plan hashes, control enums,
+recovery path/attempt count and terminal classification.
+
+The isolated frozen-cohort CLI now returns nonzero for failed, incomplete,
+validation-failing, readiness-failing or verified-evidence-failing terminal
+states while still writing its evidence. Member export reconciliation accepts
+the typed authoritative `cohort_result.json` outcome and preserves local stage
+detail rather than manufacturing validation attempts. The existing candidate
+promotion audit is projected as bounded hashes, statuses, authorized paths and
+evidence lineage, and a final `artifact_manifest.json` inventories exported
+files without self-hashing or retaining raw source/model content.
+
+Focused verification is green: the adaptive/recovery/exporter suite passed
+**117 tests**; selection, artifact, verified-authority and handoff tests passed
+**264 tests**; regeneration, grounding, checkpoint and readiness tests passed
+**352 tests** with **7 deselected**; and the Adjust-specific selection suite
+passed **23 tests**. The prompt-fixture regression gate passes against the
+unchanged baseline. Its measured intentional delta is **+810 total tokens / +
+$0.000081**, including **+627 validation-family tokens / +$0.000063**; no
+baseline, pricing, threshold or fixture manipulation was used. Direct changed-
+file Ruff and formatting checks pass. The targeted mypy invocation still
+reports the repository's pre-existing dynamic typing errors in the mailbox,
+live-canary and exporter/cohort aggregation code; it reports no new error in
+the changed generator or validation helpers.
+
+No fresh provider-backed run is claimed in this checkpoint. The latest retained
+live evidence remains the isolated retry `verified-facts-20261109-878a989c`: it
+had **Activate 3/10 selected and failed before grounding**, while Adjust
+completed with five source-backed insights, validation/readiness PASS and zero
+unsupported or unresolved retained factual claims. A clean Activate-only run
+against the exact frozen source is still required before the two-member
+Activate+Adjust acceptance. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

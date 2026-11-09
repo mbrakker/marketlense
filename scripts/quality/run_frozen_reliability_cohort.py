@@ -500,6 +500,39 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
     )
 
 
+def _isolated_batch_passes(
+    result: dict[str, Any], *, verified_facts_architecture: bool = False
+) -> bool:
+    """Require every isolated member to reach a typed, reviewable terminal pass."""
+
+    reports = list(result.get("reports") or [])
+    cohort_size = result.get("cohort_size")
+    if (
+        not isinstance(cohort_size, int)
+        or isinstance(cohort_size, bool)
+        or cohort_size < 1
+        or len(reports) != cohort_size
+    ):
+        return False
+    for report in reports:
+        if not isinstance(report, dict):
+            return False
+        if (
+            report.get("final_state") not in {"published", "awaiting_review"}
+            or report.get("terminal_failure_code")
+            or report.get("validation") != "pass"
+            or report.get("publication_readiness") != "pass"
+        ):
+            return False
+        if verified_facts_architecture and (
+            report.get("verified_facts_architecture_passed") is not True
+            or not isinstance(report.get("verified_facts_architecture_evidence"), dict)
+            or report["verified_facts_architecture_evidence"].get("passed") is not True
+        ):
+            return False
+    return True
+
+
 def _aggregate_per_report_metrics(
     executions: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -659,21 +692,18 @@ def main() -> int:
         print(str(exc), file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+    if args.preflight_only:
+        return 0
     if args.shared_batch and args.enable_wordpress_staging:
         return 0 if _shared_batch_passes(result) else 1
-    if args.shared_batch:
-        reports = list(result.get("reports") or [])
-        passed = (
-            bool(reports)
-            and len(reports) == result.get("cohort_size")
-            and all(
-                report.get("final_state") in {"published", "awaiting_review"}
-                and not report.get("terminal_failure_code")
-                for report in reports
-            )
+    return (
+        0
+        if _isolated_batch_passes(
+            result,
+            verified_facts_architecture=args.verified_facts_architecture,
         )
-        return 0 if passed else 1
-    return 0
+        else 1
+    )
 
 
 if __name__ == "__main__":

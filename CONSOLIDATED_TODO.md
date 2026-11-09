@@ -2370,3 +2370,20 @@ remains **unstarted/not ready**. The exact historical Activate/Adjust target
 IDs were not re-emitted by the retry’s remapped artifacts, so no direct live
 re-evaluation of those IDs is claimed; their contract regressions remain
 covered by focused tests.
+
+**Evidence update — 2026-11-09 (essential-theme selection and terminal evidence
+hardening):** The current implementation treats the adaptive verified insight
+target as a minimum, reuses final-insight editorial coverage validation at DAG
+and non-DAG response boundaries, and requires coherent semantic theme-control
+fields with bounded recovery diagnostics. Isolated reliability runs now return
+failure status for failed/incomplete/readiness-failing terminal outcomes while
+preserving evidence. Frozen-member exports use authoritative typed cohort
+outcomes, retain local stage details, project existing candidate-promotion
+audit hashes/lineage, and write a non-self-referential artifact manifest.
+Focused selection, authority, regeneration, grounding, readiness and exporter
+tests passed (**117 + 264 + 352 + 23** in the reported groups); the prompt
+fixture gate passed against the unchanged baseline with a measured intentional
+delta of **+810 total tokens / +$0.000081**. No new provider-backed acceptance
+run has been claimed yet. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** pending the
+required clean Activate replay followed by the two-member acceptance.

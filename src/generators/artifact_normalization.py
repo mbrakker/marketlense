@@ -2347,6 +2347,43 @@ def validate_substantive_editorial_theme_coverage(
                     "recovery_action": recovery_action,
                 },
             )
+        coherent_controls = (
+            (diagnosis == "planned_theme_execution" and recovery_action == "none")
+            or (
+                diagnosis == "redundant_optional_theme"
+                and recovery_action == "none"
+                and report_completeness == "complete"
+            )
+            or (
+                diagnosis in {"planned_theme_execution", "material_report_completeness"}
+                and recovery_action == "targeted_rewrite"
+                and report_completeness in {"incomplete", "uncertain"}
+            )
+            or (
+                diagnosis in {"redundant_optional_theme", "infeasible_plan"}
+                and recovery_action == "replan"
+            )
+            or (
+                diagnosis == "insufficient_evidence"
+                and recovery_action == "quarantine"
+                and report_completeness in {"incomplete", "uncertain"}
+            )
+        )
+        if not coherent_controls:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message=(
+                    "Verified semantic coverage has an incoherent diagnosis and "
+                    "recovery action"
+                ),
+                retryable=False,
+                context={
+                    "assessment_contract_failure": True,
+                    "report_completeness": report_completeness,
+                    "diagnosis": diagnosis,
+                    "recovery_action": recovery_action,
+                },
+            )
     if report_completeness and report_completeness not in {
         "complete",
         "incomplete",

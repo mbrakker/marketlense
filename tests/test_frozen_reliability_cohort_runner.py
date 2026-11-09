@@ -14,6 +14,7 @@ from scripts.quality.ias_live_canary_runner import (
 from scripts.quality.run_frozen_reliability_cohort import (
     DEFAULT_SOURCES_MANIFEST,
     STAGING_FROZEN_COHORT_REPORT_IDS,
+    _isolated_batch_passes,
     _load_members,
     _shared_batch_passes,
 )
@@ -486,7 +487,9 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
     result = {
         "shared_batch": True,
         "cohort_size": 5,
-        "source_manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+        "source_manifest_sha256": (
+            "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7"
+        ),
         "reports": [
             {**report, "report_id": report_id}
             for report_id in sorted(STAGING_FROZEN_COHORT_REPORT_IDS)
@@ -659,6 +662,33 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
         "signal_manifest_mutation_verified_count"
     ] = 3
     assert _shared_batch_passes(failed) is False
+
+
+def test_isolated_batch_acceptance_requires_terminal_validation_and_readiness():
+    report = {
+        "final_state": "awaiting_review",
+        "terminal_failure_code": "",
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "verified_facts_architecture_passed": True,
+        "verified_facts_architecture_evidence": {"passed": True},
+    }
+    result = {"cohort_size": 2, "reports": [{**report}, {**report}]}
+
+    assert _isolated_batch_passes(result, verified_facts_architecture=True) is True
+
+    failed = json.loads(json.dumps(result))
+    failed["reports"][0]["final_state"] = "failed"
+    failed["reports"][0]["terminal_failure_code"] = "artifact_generation_failed"
+    assert _isolated_batch_passes(failed, verified_facts_architecture=True) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["reports"][1]["publication_readiness"] = "fail"
+    assert _isolated_batch_passes(failed, verified_facts_architecture=True) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["reports"][1].pop("verified_facts_architecture_passed")
+    assert _isolated_batch_passes(failed, verified_facts_architecture=True) is False
 
 
 def test_retained_package_lifecycle_manifest_contains_only_the_pinned_reports() -> None:

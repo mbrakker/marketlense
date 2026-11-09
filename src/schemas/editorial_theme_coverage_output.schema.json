@@ -2,7 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["theme_coverage"],
+  "required": [
+    "theme_coverage",
+    "report_completeness",
+    "diagnosis",
+    "recovery_action"
+  ],
   "properties": {
     "theme_coverage": {
       "type": "array",
@@ -29,8 +34,20 @@
       "type": "string",
       "enum": ["complete", "incomplete", "uncertain"]
     },
-    "diagnosis": {"type": "string"},
-    "recovery_action": {"type": "string"},
+    "diagnosis": {
+      "type": "string",
+      "enum": [
+        "planned_theme_execution",
+        "material_report_completeness",
+        "redundant_optional_theme",
+        "infeasible_plan",
+        "insufficient_evidence"
+      ]
+    },
+    "recovery_action": {
+      "type": "string",
+      "enum": ["none", "targeted_rewrite", "replan", "quarantine"]
+    },
     "original_essential_obligation_assessments": {
       "type": "array",
       "items": {

@@ -211,7 +211,7 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
                     "evidence_id": f"verified-fact:{candidate['id']}",
                     "evidence_spans": [],
                 }
-                for candidate in candidates[1:]
+                for candidate in candidates
             ]
         },
         {
@@ -286,7 +286,7 @@ def test_verified_generation_fails_closed_without_authored_theme_repair(tmp_path
                 **candidate,
                 "evidence_id": f"verified-fact:{candidate['id']}",
             }
-            for candidate in candidates[1:]
+            for candidate in candidates[:5]
         ]
     }
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
