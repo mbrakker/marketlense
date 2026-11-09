@@ -2349,3 +2349,24 @@ tests/coverage, both mutation partitions, and `release_evidence` passed; the
 configured WordPress staging REST check was skipped by policy. The release
 bundle is
 [`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42594930022/artifacts/13663822068).
+
+**Evidence update — 2026-11-09 (grounding contract and candidate-identity
+correction):** Commit `878a989c` adds exact retained-item identity and typed
+grounding coverage diagnostics, requires `item_id` in the grounding schema,
+keeps candidate validation read-only, and canonicalizes only valid revised
+plans before persistence. Focused regressions, the full 8,662-test suite,
+coverage, mutation, Ruff, mypy and repository release gates passed. In the
+fresh isolated retry, Adjust admitted 10/10 facts, reached initial and
+post-regeneration grounding, passed validation/readiness, retained five
+source-backed final insights, and produced HTML with 0 unsupported and 0
+unresolved retained factual claims. Activate again failed before grounding at
+`artifact_final_insight_coverage_invalid` after selecting 3/10 eligible
+candidates. The retry used 622 calls, 2,447,546 input / 517,983 output
+tokens, $0.521839 and 4,949.126 seconds; no publication or WordPress write
+occurred. Safe projections are retained under
+`docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261109-878a989c-retry`.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. The exact historical Activate/Adjust target
+IDs were not re-emitted by the retry’s remapped artifacts, so no direct live
+re-evaluation of those IDs is claimed; their contract regressions remain
+covered by focused tests.

@@ -1,0 +1,43 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "coverage_diagnostics": {
+          "disposition": "semantic_theme_repair_requested",
+          "eligible_candidate_ids": [
+            "digital-assistant-distribution-outlook",
+            "global-addressable-ar-sector-estimates",
+            "global-revenue-growth-forecast",
+            "high-engagement-audience-time-and-spend",
+            "news-subscriptions-and-paying-audiences",
+            "premium-video-fragmentation-and-forecast",
+            "s01-paid-content-growth",
+            "s03-video-top-users-spend",
+            "subscription-revenue-model",
+            "web-video-platform-creator-mix"
+          ],
+          "failure_class": "artifact_final_insight_coverage_invalid",
+          "repair_stage": "initial_selection",
+          "selected_candidate_ids": [
+            "global-revenue-growth-forecast",
+            "high-engagement-audience-time-and-spend",
+            "global-addressable-ar-sector-estimates"
+          ],
+          "stage": "initial_selection",
+          "terminal_classification": "semantic_theme_repair_requested"
+        }
+      },
+      "failure_code": "artifact_final_insight_coverage_invalid",
+      "inner_error_class": "",
+      "outer_code": "artifact_final_insight_coverage_invalid",
+      "repair_attempt": 0,
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "artifact_generation",
+      "validator_rule": ""
+    }
+  ]
+}

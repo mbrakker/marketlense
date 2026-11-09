@@ -11773,3 +11773,121 @@ evidence directory. Hosted CI for the implementation and evidence commit
 tests/coverage, both mutation partitions, and `release_evidence` passed; the
 configured WordPress staging REST check was skipped by policy. The release
 bundle is [`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42594930022/artifacts/13663822068).
+
+### Grounding contract and candidate-identity correction — focused E2E retry — 2026-11-09
+
+This update covers implementation commit
+`878a989c83614a719516d398480dcb7ab8dafb1c`. The targeted changes require
+`item_id` in every grounding check, enforce exact retained-item identity and
+one authoritative public verdict, classify coverage failures without
+deterministic semantic rewriting, keep regeneration-candidate validation
+read-only, and canonicalize only a valid revised plan before persistence.
+Cache/schema identities were advanced for the grounding contract. No new LLM
+stage or retry budget was added.
+
+Focused regressions passed before the live run: the latest grounding-contract
+set (**37 passed**), the verified-authority/regeneration set (**23 passed**),
+and the broader affected regression set (**147 passed**). The exact commit
+also passed the full supported Python 3.12 suite (**8,662 passed, 2 skipped,
+48 deselected and 24 subtests**), full coverage, mutation, Ruff, mypy,
+architecture, schema, prompt-fixture, documentation and release-gate checks.
+
+#### Provider-backed retry
+
+The first fresh two-report attempt at this commit used the correct PDF source
+root but failed both reports at the existing initial-selection coverage gate.
+Because the repository policy requires isolated confirmation of failed
+processes, the same two members were rerun in a new isolated state. The retry
+was executed with:
+
+```text
+py -3.12 -u scripts/quality/run_frozen_reliability_cohort.py --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json --sources-root "C:\Programing\Market lense" --runs-root "C:\ml-grounding-contract-e2e-20261109-878a989c-retry" --report-ids cohort-cbb6e7df67412186b8bc cohort-b638414df0b1fccea1cd --max-duration 7200 --verified-facts-architecture
+```
+
+The run identity is `frozen-reliability-5vvjxo83`. Source identity was
+verified before processing: Activate SHA-256
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2` (140
+physical pages) and Adjust SHA-256
+`ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3` (41
+physical pages). No application-level artifact was reused; provider-side
+caching was permitted. No publication or WordPress write occurred.
+
+| Measure | Activate | Adjust | Cohort |
+| --- | ---: | ---: | ---: |
+| Verified facts admitted | 10 / 10 | 10 / 10 | 20 / 20 |
+| Provider calls | 442 | 180 | 622 |
+| Input / output tokens | 1,044,793 / 240,511 | 1,402,753 / 277,472 | 2,447,546 / 517,983 |
+| Estimated cost | $0.242112 | $0.279727 | $0.521839 |
+| Duration | 2,844.141 s | 2,104.985 s | 4,949.126 s |
+| Structured-output recovery calls | not reached | 2 | 2 |
+| Automatic targeted repairs | 0 | 3 | 3 |
+| Unsupported retained factual claims | not reached | 0 | not applicable to failed report |
+| Unresolved retained factual claims | not reached | 0 | not applicable to failed report |
+| Final validation / readiness | not reached / fail | pass / pass | **PARTIAL** |
+| Final HTML | absent | present | 1 / 2 |
+
+The first attempt at this commit was 602 calls, 1,778,108 input and 374,226
+output tokens, $0.409685, and 4,238.562 seconds, with both reports failing
+the same upstream coverage class. The retry was therefore not treated as a
+quality improvement merely because its aggregate cost was higher. The
+per-report terminal ledger is authoritative and outcomes are mutually
+exclusive.
+
+#### Report-level findings
+
+Activate selected 3 of 10 eligible candidates and stopped at
+`initial_selection` with `artifact_final_insight_coverage_invalid`. It did
+not reach grounding, final HTML, or publication readiness. This reproduces a
+provider/editorial-coverage failure also seen in the preceding retained
+cohorts; it does not demonstrate a grounding-contract regression or pass.
+
+Adjust completed the full verified-facts path. It admitted 10/10 facts,
+entered grounding before and after editorial regeneration, exhausted one
+bounded structured-output recovery sequence at its second attempt, and ended
+`awaiting_review` with validation and publication-readiness pass. Its final
+artifact contains five source-backed insights with stable canonical evidence
+IDs and physical-page bindings. The HTML has no `verified-fact:`, `insight:`,
+`soft_copy:`, `evidence_id` or `claim_id` strings.
+
+The final Adjust HTML was independently checked against the original PDF:
+
+* page 9 supports the bounded GenAI-maturity and “over 20%” reported-efficiency
+  statement, without turning it into a general causal effect;
+* page 18 supports the 2025 global hyper-casual install/session shares of
+  29.1% and 15.3%, with the distinct action and simulation relationships;
+* page 23 supports 6 partners per app in 2024 and 5.3 in 2025 globally;
+* page 26 supports global e-commerce downloads rising from 4.36B in 2019 to
+  6.35B in 2025 and more than 45% growth;
+* page 29 supports the separate e-commerce Day-1 retention movement from
+  13.2% to 12.6%;
+* page 35 supports the global finance install/session changes of -4% and +21%,
+  while page 37 supports finance Day-1 retention moving from 13% to 12%.
+
+The final output preserves these metric/category/period/population
+relationships and uses a directional qualification where the plotted
+retention evidence is not an exact value. The public-editorial review passed
+with 40 checked items and zero hard failures. A warning that quotes were
+omitted because quote support was weak remained visible and was not masked.
+
+The two historical IDs that failed in the preceding run—Activate
+`soft_copy:expert_comment:8f99ed4197a3ac39` and Adjust
+`insight:insight-09:now_what`—were not re-emitted by this retry’s remapped
+artifact IDs. Therefore this run does not claim a direct live re-evaluation
+of those exact IDs. Their missing-verdict and exact-identity regressions are
+covered by the focused tests, and the live Adjust grounding path passed
+without a forced semantic verdict.
+
+#### Safe evidence and verdict
+
+The safe run package is
+[`verified-facts-20261109-878a989c-retry`](reliability-cohort-20261001-next-five/verified-facts-20261109-878a989c-retry).
+It contains the authoritative `cohort_result.json`, source and execution
+manifests, exporter projections, terminal outcomes, and inspection notes. It
+does not contain source PDFs, raw provider responses, caches, private
+databases, or usage ledgers.
+
+The implementation and focused contract verification are **PASS**. The
+required two-report live acceptance is **PARTIAL / NO-GO**: Adjust exercises
+the corrected grounding/candidate path successfully, but Activate remains
+blocked before grounding by provider-dependent insight coverage. No broad live
+selection improvement is claimed, and Step 3 remains **unstarted/not ready**.

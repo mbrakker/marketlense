@@ -1,0 +1,3 @@
+report_id,terminal_outcome,terminal_stage,failure_code
+cohort-b638414df0b1fccea1cd,awaiting_review,,
+cohort-cbb6e7df67412186b8bc,failed,artifact_generation,artifact_final_insight_coverage_invalid

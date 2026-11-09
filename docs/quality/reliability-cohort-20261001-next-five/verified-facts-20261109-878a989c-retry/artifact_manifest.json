@@ -1,0 +1,352 @@
+{
+  "schema_version": "1.0",
+  "producer_git_sha": "878a989c83614a719516d398480dcb7ab8dafb1c",
+  "run_identity": "frozen-reliability-5vvjxo83",
+  "scope": "focused two-report Activate + Adjust retry",
+  "retention_policy": {
+    "retained": "Safe JSON/JSONL/CSV/Markdown projections, manifests and evidence summaries",
+    "excluded": "Raw provider caches, workflow databases, raw usage ledgers, credentials, local runtime configuration and source PDF bytes"
+  },
+  "entries": [
+    {
+      "relative_path": "aggregate_funnel.json",
+      "size_bytes": 281,
+      "sha256": "6637a571afa9525a66cc4a54b9f1fc1eded2c48d9c57849b27cefe551751dea0"
+    },
+    {
+      "relative_path": "audit_findings.json",
+      "size_bytes": 672,
+      "sha256": "a78c8b0975a9cbca972c8146cbfec4e7d9780a7925459263906516b754a4da7a"
+    },
+    {
+      "relative_path": "cohort_result.json",
+      "size_bytes": 7192,
+      "sha256": "f887de59ccc81377ab4b8b43f6668c0c17332e454df6fcfeae81885eef2848ae"
+    },
+    {
+      "relative_path": "execution_config_identity.json",
+      "size_bytes": 926,
+      "sha256": "d7392bd55cd0c64c8bbc370fafef5b0999a292233dce82f8a94ccc9a89693ec2"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/acquisition_metrics.csv",
+      "size_bytes": 21,
+      "sha256": "4671f51ea98c9a79c504e84323db68c8bf2e68d7fbaa400a25d650a2fc3bda1a"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/admission_metrics.csv",
+      "size_bytes": 54,
+      "sha256": "50a88916dde74badcf5c738b5feaade27833d196230070e91b5cd397d3318b16"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/aggregate_funnel.json",
+      "size_bytes": 3073,
+      "sha256": "35454c3daaee51a085db245127c026dceedf1964df15a29b0340ecfa5af49db9"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/audit_findings.json",
+      "size_bytes": 1009,
+      "sha256": "dc5f1db3fb3204a5454e6620c5ead4d34b981d28abcc3b9438074b235e5a5fc9"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/AUDIT.md",
+      "size_bytes": 154,
+      "sha256": "0f2bed047a20866c9a14942807f4686a8083a7454915fd2122da194555bc6a87"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/category_outcomes.csv",
+      "size_bytes": 53,
+      "sha256": "b2d12b2bddefc8afce9a01907b5a68cb5441804dd6bd7333fb7c6c81aa39e95d"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/checkpoint_recovery.csv",
+      "size_bytes": 136,
+      "sha256": "b8041ec26144341de095920b1539cec3ee16dced89c195f0963fb54e448af7ef"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/cohort_manifest.json",
+      "size_bytes": 327,
+      "sha256": "a6b38014c9dbd442d673e6f88b5448fd86d9223d2036f85069f3c04b28c0447a"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/cost_by_report.csv",
+      "size_bytes": 93,
+      "sha256": "3748afe52ea31da65bc4f026b23d4f6d15297419dd1746c325f1453da15d1436"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/cost_by_stage.csv",
+      "size_bytes": 932,
+      "sha256": "4c7f5b3802d6a9082bf1be1e61783f9afa51b264a81e643556872feae941e946"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/evidence_run_manifest.json",
+      "size_bytes": 764,
+      "sha256": "b899c96287406bd7b678f5d3507404b6c5eff0ca2d12eebc46e448603212bf2e"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/failure_details.json",
+      "size_bytes": 333,
+      "sha256": "d3421ba2d17bb457dd5ccb9a3eba12252613737715296e3cd4b134c50bf03dc9"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/failure_pareto.csv",
+      "size_bytes": 70,
+      "sha256": "a6793292e06c298d09cf9795e9b864a7cbd0620d48cdb9f684b66b6caaf1cd07"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/figure_linkage.csv",
+      "size_bytes": 60,
+      "sha256": "1bdee27684659b41449d5111fa4a1a2a9c92d5b8556c67630822dbd379da380d"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/final_html_quality.csv",
+      "size_bytes": 62,
+      "sha256": "0353bacca8f25a3be40efe0bd3160aaeffffc7e2c5564dfa218f971ea4820254"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/intervention_metrics.csv",
+      "size_bytes": 66,
+      "sha256": "139c45fc1703c2b293b4a4b5db6c68447c707e18b81e4405a9c028b53f7c1bf4"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/llm_usage_metrics.csv",
+      "size_bytes": 19416,
+      "sha256": "8d9004394eba5a229a3cd3df4db99a3025e8b73136f341e6aa658367700fecc2"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/per_report_funnel.csv",
+      "size_bytes": 167,
+      "sha256": "84e219574bce5e23e89d7d8865361e2a0150d005488a7b9300097c208c08ca46"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/publish_readiness.csv",
+      "size_bytes": 62,
+      "sha256": "aa51933cb005ec5a86113df7866f7e738343f65ef6e8b36a310b7e93b43260a1"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/regeneration_lineage.json",
+      "size_bytes": 287,
+      "sha256": "a08b348daec5c7214b47f4d69523798789a218e3cf750b06c3413e29e9f60084"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/repair_effectiveness.json",
+      "size_bytes": 127,
+      "sha256": "c08757ae4d4b2d99292f60997ed6bb7d6893f88110d1dc20631c288d8bcd3c0a"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/repeat_publication.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/runtime_metrics.csv",
+      "size_bytes": 375,
+      "sha256": "c6d4e3c4718216607bea672bb2565f1b0c11100fae9a34a1fa34a3f7210cb890"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/stage_conversion_metrics.csv",
+      "size_bytes": 711,
+      "sha256": "4773e79438ab94d65780d78fbbc8537ac0dbe86a60731e606b21b6aacc0183c9"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/structured_output_recovery.csv",
+      "size_bytes": 136,
+      "sha256": "b8041ec26144341de095920b1539cec3ee16dced89c195f0963fb54e448af7ef"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/terminal_outcomes.csv",
+      "size_bytes": 130,
+      "sha256": "df96e2dbe08d96ca13ca554e9b41a4c2a85542cc2fec2dd036c5288129b32fa0"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/wordpress_readback.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "export/reports/cohort-b638414df0b1fccea1cd/wordpress_transactions.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/acquisition_metrics.csv",
+      "size_bytes": 21,
+      "sha256": "4671f51ea98c9a79c504e84323db68c8bf2e68d7fbaa400a25d650a2fc3bda1a"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/admission_metrics.csv",
+      "size_bytes": 54,
+      "sha256": "50a88916dde74badcf5c738b5feaade27833d196230070e91b5cd397d3318b16"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/aggregate_funnel.json",
+      "size_bytes": 1775,
+      "sha256": "d6ecc449a86a36cea362d4a86899e124d4a917153d98d3985c8484559e61d3ec"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/audit_findings.json",
+      "size_bytes": 1009,
+      "sha256": "3365113c327269ee47adb8272638c29951ce8e24f6a8c77d01f990f34c752afc"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/AUDIT.md",
+      "size_bytes": 154,
+      "sha256": "0f2bed047a20866c9a14942807f4686a8083a7454915fd2122da194555bc6a87"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/category_outcomes.csv",
+      "size_bytes": 53,
+      "sha256": "b2d12b2bddefc8afce9a01907b5a68cb5441804dd6bd7333fb7c6c81aa39e95d"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/checkpoint_recovery.csv",
+      "size_bytes": 95,
+      "sha256": "b0e9d5386743cafe52ff4060c9677bd2ffb1cda27e4f743386b9680fdb46474f"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/cohort_manifest.json",
+      "size_bytes": 329,
+      "sha256": "f912307b527d6856c527b7a2ee147815687d343b529c034101b5ef9ec1b9e22b"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/cost_by_report.csv",
+      "size_bytes": 93,
+      "sha256": "567e7114e5aae0bcbd926787b96404b60ddfd02b4208ae3aa62bf870bc5fd0ab"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/cost_by_stage.csv",
+      "size_bytes": 680,
+      "sha256": "ce16e494644bbc47ce8a858db5d0e006129b0acac848623c9ffaf5f79509148f"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/evidence_run_manifest.json",
+      "size_bytes": 764,
+      "sha256": "6a45ae99c5b9c1b1c3066946662d477dd10a982553d71f5db9ce9c0231171324"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/failure_details.json",
+      "size_bytes": 333,
+      "sha256": "e8877e3b997b71adb8d0f8d9a7bb6c31e3680f1fce8bd5086ed9e379f5435aa1"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/failure_pareto.csv",
+      "size_bytes": 70,
+      "sha256": "a6793292e06c298d09cf9795e9b864a7cbd0620d48cdb9f684b66b6caaf1cd07"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/figure_linkage.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/final_html_quality.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/intervention_metrics.csv",
+      "size_bytes": 66,
+      "sha256": "139c45fc1703c2b293b4a4b5db6c68447c707e18b81e4405a9c028b53f7c1bf4"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/llm_usage_metrics.csv",
+      "size_bytes": 40179,
+      "sha256": "4cccd54ff39ade57b0506a027876518fafc7e32bed89361d17495d4c3e8fa026"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/per_report_funnel.csv",
+      "size_bytes": 169,
+      "sha256": "ec82f2eeccf58c27ebd5a305d5ebc35a47598bbfbe18589eaa2f1271975f5d3d"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/publish_readiness.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/regeneration_lineage.json",
+      "size_bytes": 132,
+      "sha256": "f029c8c3f54718fdecd7fae3c6d27a0447cb86d080eb846b9b9cb71f4cf75a77"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/repair_effectiveness.json",
+      "size_bytes": 127,
+      "sha256": "c08757ae4d4b2d99292f60997ed6bb7d6893f88110d1dc20631c288d8bcd3c0a"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/repeat_publication.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/runtime_metrics.csv",
+      "size_bytes": 205,
+      "sha256": "150030ac8b02a104e1526f69ff8f68a0288d0aa97befe17a65d8cb7ba7e2df6e"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/stage_conversion_metrics.csv",
+      "size_bytes": 397,
+      "sha256": "a620938ac45777b1a2aef28451cf82bc088c3cdf9adaa971a2ab8c2c85387938"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/structured_output_recovery.csv",
+      "size_bytes": 95,
+      "sha256": "b0e9d5386743cafe52ff4060c9677bd2ffb1cda27e4f743386b9680fdb46474f"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/terminal_outcomes.csv",
+      "size_bytes": 130,
+      "sha256": "cda0ab6ac795ff6c74e41db561d87ab24b968305d10eccdf5f1b9305a7aaa4f3"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/wordpress_readback.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "export/reports/cohort-cbb6e7df67412186b8bc/wordpress_transactions.csv",
+      "size_bytes": 28,
+      "sha256": "e1cf6f8b906ec548dc4bb26c7f115fded00e6b64f5e46c55297a2f59a7f7f7c3"
+    },
+    {
+      "relative_path": "failure_details.json",
+      "size_bytes": 1642,
+      "sha256": "945dae78338ad7b6b6129eb149b68b4284c059cdc3ec8a2af53a0ae19be5a557"
+    },
+    {
+      "relative_path": "failure_pareto.csv",
+      "size_bytes": 74,
+      "sha256": "905f6e956644964ed22db8026e8d77029d760d2f15727d64d1088d49f5864f96"
+    },
+    {
+      "relative_path": "frozen_cohort.json",
+      "size_bytes": 3157,
+      "sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7"
+    },
+    {
+      "relative_path": "inspection_notes.md",
+      "size_bytes": 2117,
+      "sha256": "bf527badcb789890cf01bd5b58980b3527bf17ba0bd81b9f38dba83d4b638ed0"
+    },
+    {
+      "relative_path": "README.md",
+      "size_bytes": 3922,
+      "sha256": "21619eb0bc457ef8ac4588bdc56e3a55ceb04bc04b84c28b0ae31249da896c7a"
+    },
+    {
+      "relative_path": "selected_cohort.json",
+      "size_bytes": 1323,
+      "sha256": "45c7d222f1ad8f197b68ba6b1bfebff56dcec43f428f553633be593bd6a97420"
+    },
+    {
+      "relative_path": "source_identity_manifest.json",
+      "size_bytes": 1044,
+      "sha256": "938d443dd4a8f89fe32292e84e265d3f9dfffa2edb7add212d71d87f9ca22a24"
+    },
+    {
+      "relative_path": "terminal_outcomes.csv",
+      "size_bytes": 199,
+      "sha256": "4ae82a13ccc1ff9e316b3fbfb0d83913b4b0b84b3c8f1d906d156bfbb234ec74"
+    }
+  ]
+}
