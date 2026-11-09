@@ -75,6 +75,31 @@ def test_editorial_theme_coverage_schema_requires_verified_control_fields():
     ]
 
 
+def test_editorial_theme_coverage_schema_rejects_inconsistent_resolution_matrix():
+    payload = {
+        "theme_coverage": [
+            {
+                "theme": "Theme 1",
+                "status": "partial",
+                "resolution": "retained",
+                "supporting_insight_ids": ["insight-1"],
+                "explanation": "The final wording is related but incomplete.",
+            }
+        ],
+        "report_completeness": "incomplete",
+        "diagnosis": "material_report_completeness",
+        "recovery_action": "targeted_rewrite",
+    }
+
+    with pytest.raises(AppError):
+        validate_output_schema(
+            payload=payload,
+            schema_name="editorial_theme_coverage_output",
+            root_key="",
+            ctx=_ctx(),
+        )
+
+
 def test_artifact_final_schema_accepts_empty_but_rejects_malformed_entries():
     validate_output_schema(
         payload={"insights_final": []},

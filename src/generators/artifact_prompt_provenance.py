@@ -28,8 +28,8 @@ def _prompt_contract_for_namespace(namespace: str) -> tuple[str, str]:
     normalized_namespace = str(namespace or "").replace("/regenerate/", "/", 1)
     if normalized_namespace == "report_vs/artifacts/editorial_theme_coverage":
         return (
-            "editorial_theme_coverage_output:1.2",
-            "editorial_theme_coverage_output:v3",
+            "editorial_theme_coverage_output:1.3",
+            "editorial_theme_coverage_output:v4",
         )
     return "artifact_json:1.0", ARTIFACT_PROMPT_VALIDATOR_VERSION
 

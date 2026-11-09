@@ -190,14 +190,14 @@ def test_editorial_theme_coverage_identity_uses_checkpoint_contract_version() ->
         system_variables={"topic": "market"},
         user_variables={"audience": "analyst"},
         retrieval_mode="chat_json",
-        output_contract_schema_version="editorial_theme_coverage_output:1.2",
-        validator_version="editorial_theme_coverage_output:v3",
+        output_contract_schema_version="editorial_theme_coverage_output:1.3",
+        validator_version="editorial_theme_coverage_output:v4",
     )
 
     produced = artifact_prompt_identity(
         prepared=bundle,
         relevant_input_hash="input-hash",
-        validator_version="editorial_theme_coverage_output:v3",
+        validator_version="editorial_theme_coverage_output:v4",
     )
     current = current_artifact_prompt_identity(
         namespace=namespace,
@@ -210,5 +210,5 @@ def test_editorial_theme_coverage_identity_uses_checkpoint_contract_version() ->
     assert produced == current
     assert (
         bundle.execution_identity.output_contract_schema_version
-        == "editorial_theme_coverage_output:1.2"
+        == "editorial_theme_coverage_output:1.3"
     )

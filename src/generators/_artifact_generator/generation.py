@@ -951,7 +951,7 @@ def generate_artifacts(
             timeout_seconds=settings.openai_timeout_seconds,
             output_contract_schema_version=(
                 (
-                    "editorial_theme_coverage_output:1.2"
+                    "editorial_theme_coverage_output:1.3"
                     if response_contract_name == "editorial_theme_coverage_output"
                     else f"{response_contract_name}:1.0"
                 )
@@ -2827,7 +2827,7 @@ def generate_artifacts(
                 task_id=f"{ctx.task_id}:editorial_theme_coverage",
             ),
             response_contract_name="editorial_theme_coverage_output",
-            response_contract_identity_version="v3",
+            response_contract_identity_version="v4",
         )
         try:
             semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
@@ -3005,7 +3005,7 @@ def generate_artifacts(
                     task_id=f"{ctx.task_id}:semantic_repair:editorial_theme_coverage",
                 ),
                 response_contract_name="editorial_theme_coverage_output",
-                response_contract_identity_version="v3",
+                response_contract_identity_version="v4",
             )
             try:
                 semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
@@ -3230,7 +3230,7 @@ def generate_artifacts(
                             task_id=f"{ctx.task_id}:semantic_repair:replanned_editorial_theme_coverage",
                         ),
                         response_contract_name="editorial_theme_coverage_output",
-                        response_contract_identity_version="v3",
+                        response_contract_identity_version="v4",
                     )
                     try:
                         semantic_theme_coverage = (

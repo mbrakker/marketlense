@@ -8,6 +8,52 @@
     "diagnosis",
     "recovery_action"
   ],
+  "allOf": [
+    {
+      "properties": {
+        "theme_coverage": {
+          "items": {
+            "required": ["resolution"],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {"status": {"enum": ["covered"]}},
+                  "required": ["status"]
+                },
+                "then": {
+                  "properties": {
+                    "resolution": {"enum": ["retained", "merged"]}
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {"status": {"enum": ["partial"]}},
+                  "required": ["status"]
+                },
+                "then": {
+                  "properties": {"resolution": {"enum": ["unresolved"]}}
+                }
+              },
+              {
+                "if": {
+                  "properties": {"status": {"enum": ["uncovered"]}},
+                  "required": ["status"]
+                },
+                "then": {
+                  "properties": {
+                    "resolution": {
+                      "enum": ["omitted", "unresolved", "quarantined"]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
   "properties": {
     "theme_coverage": {
       "type": "array",
