@@ -11674,3 +11674,10 @@ unresolved has a focused regression and a minimal fix, but no fresh live
 success can be claimed. The exact source-page, evidence-ID and protected-fact
 guards remain fail-closed. E18 remains **Active/PARTIAL**; Step 2 remains
 **PARTIAL/NO-GO**; Step 3 remains **unstarted/not ready**.
+
+Hosted CI for the final retained evidence commit passed in run
+[`42544581267`](https://github.com/mbrakker/marketlense/actions/runs/42544581267):
+`ci_start`, tests/coverage, both mutation partitions, and `release_evidence`
+all passed. The WordPress staging REST check was skipped by the existing safety
+policy. The release bundle is retained as
+[`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42544581267/artifacts/13642988366).

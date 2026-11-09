@@ -2312,3 +2312,10 @@ are retained under
 `docs/quality/reliability-cohort-20261001-next-five/verified-facts-20261108-1b3dd9cc`
 and `verified-facts-20261109-6e61264a`. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+Hosted CI for the final retained evidence commit passed in run
+[`42544581267`](https://github.com/mbrakker/marketlense/actions/runs/42544581267)
+for tests/coverage, both mutation partitions and `release_evidence`; the
+configured WordPress staging REST check was skipped by policy. The release
+bundle is retained as
+[`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42544581267/artifacts/13642988366).
