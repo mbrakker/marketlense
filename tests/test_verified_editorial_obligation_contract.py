@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
+
 from src.generators.validation.regeneration_candidate import (
     _verified_editorial_obligation_issues,
     _verified_facts,
+    canonical_verified_editorial_plan_revision,
     validate_regeneration_candidate,
 )
 from src.utils.cache_utils import sha256_json
+from src.utils.errors import AppError
 from tests._test_validation_generator._shared import _ctx
 
 
@@ -214,6 +218,23 @@ def test_verified_regeneration_derives_binding_from_retained_admission_pool() ->
     assert candidate["editorial_plan"]["themes"][0]["feasible_candidate_ids"] == [
         "invented-candidate"
     ]
+
+
+def test_verified_editorial_plan_revision_fails_closed_without_retained_pool() -> None:
+    current, candidate = _valid_artifact_pair()
+    current["_cache"]["visual_authority_canary"]["admitted_candidates"] = []
+    current.pop("insights_candidates")
+    current.pop("insights_final")
+
+    with pytest.raises(AppError) as exc_info:
+        canonical_verified_editorial_plan_revision(
+            current_artifacts=current,
+            candidate_artifacts=candidate,
+            original_plan=current["editorial_plan"],
+            candidate_editorial_plan=candidate["editorial_plan"],
+        )
+
+    assert exc_info.value.code == "verified_editorial_plan_admission_pool_missing"
 
 
 def test_verified_facts_fail_closed_without_any_fact_projection():

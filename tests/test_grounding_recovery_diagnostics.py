@@ -534,6 +534,76 @@ def test_verified_grounding_rejection_retains_missing_retained_claim_id():
 
 
 @pytest.mark.parametrize(
+    ("variant", "expected_category"),
+    [
+        ("text", "text_identity_mismatch"),
+        ("incomplete", "incomplete_semantic_fields"),
+        ("pair", "unsupported_pair_mismatch"),
+        ("fact", "entailed_protected_fact_conflict"),
+    ],
+)
+def test_verified_grounding_retained_contract_failures_are_typed(
+    variant, expected_category
+):
+    """Retained claims fail with the contract-specific diagnostic category."""
+
+    artifacts = _verified_artifacts()
+    evidence_packs = _packs()
+    package = validate_retained_claims(
+        artifacts,
+        evidence_packs,
+        source_identity=SOURCE_IDENTITY,
+        verified_facts_only=True,
+    )
+    inputs = retained_claim_semantic_inputs(
+        package,
+        evidence_packs,
+        source_identity=SOURCE_IDENTITY,
+    )
+    assert inputs
+    claim_id = inputs[0].candidate.claim_id
+    retained_item_ids = {
+        semantic_input.candidate.claim_id: semantic_input.candidate.claim_id
+        for semantic_input in inputs
+    }
+    check = _grounding_check(claim_id, inputs[0].candidate.text, "entailed")
+    unsupported = []
+    if variant == "text":
+        check["text"] = "A different retained proposition."
+    elif variant == "incomplete":
+        check.pop("protected_facts")
+    elif variant == "pair":
+        check["entailment_outcome"] = "not_established"
+        check["proposition_status"] = "unknown"
+        unsupported = [
+            {
+                "item_id": claim_id,
+                "text": "A different retained proposition.",
+                "classification": "factual_claim",
+                "entailment_outcome": "not_established",
+                "violation_type": "not_established",
+                "reason": "The canonical evidence does not establish the claim.",
+            }
+        ]
+    else:
+        check["protected_facts"]["value"] = {
+            "claim_value": "10",
+            "evidence_value": "8",
+            "status": "incompatible",
+        }
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_grounding_check_coverage(
+            {"checks": [check], "unsupported": unsupported},
+            inputs,
+            retained_item_ids,
+        )
+
+    assert exc_info.value.context["coverage_failure_category"] == expected_category
+    assert claim_id in exc_info.value.context["item_ids"]
+
+
+@pytest.mark.parametrize(
     ("payload_factory", "expected_category", "expected_id"),
     [
         (
