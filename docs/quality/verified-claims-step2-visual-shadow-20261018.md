@@ -11767,4 +11767,9 @@ quality remain actionable blockers, so Step 2 is not ready to promote and
 Step 3 remains **unstarted/not ready**. No factual or readiness improvement is
 claimed beyond the observed plan-handoff advance. The exact terminal ledger,
 source identities, safe projections and artifact hashes are in the linked
-evidence directory.
+evidence directory. Hosted CI for the implementation and evidence commit
+`6fa3dc62dd274b89ab79b7f35ed497743dced487` passed in run
+[`42594930022`](https://github.com/mbrakker/marketlense/actions/runs/42594930022):
+tests/coverage, both mutation partitions, and `release_evidence` passed; the
+configured WordPress staging REST check was skipped by policy. The release
+bundle is [`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/42594930022/artifacts/13663822068).
