@@ -2957,9 +2957,7 @@ def generate_artifacts(
                     for theme in omitted_central_themes
                     if _s(theme).strip()
                 ],
-                **material_gap_identity_lists(
-                    error.context.get("material_gaps", [])
-                ),
+                **material_gap_identity_lists(error.context.get("material_gaps", [])),
             }
             repair_feedback = {
                 "failure": {

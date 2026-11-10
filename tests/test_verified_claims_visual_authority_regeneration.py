@@ -44,9 +44,12 @@ def test_verified_regeneration_requires_persisted_candidate_path():
 
     assert exc_info.value.code == "verified_regeneration_candidate_persistence_missing"
     assert exc_info.value.retryable is False
-    assert _require_candidate_artifacts_path(
-        response, verified_mode=False, report_id="legacy-report"
-    ) == ""
+    assert (
+        _require_candidate_artifacts_path(
+            response, verified_mode=False, report_id="legacy-report"
+        )
+        == ""
+    )
 
 
 def test_projection_mismatch_is_rejected_without_mutating_persisted_candidate():

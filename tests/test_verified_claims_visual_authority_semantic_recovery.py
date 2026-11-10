@@ -23,10 +23,7 @@ from tests.test_verified_claims_visual_authority_canary import _verified_admissi
 
 
 def test_verified_material_gap_is_handed_to_bounded_targeted_rewrite(tmp_path):
-    candidates = [
-        _insight(f"f{index}", score=1 - index / 100)
-        for index in range(1, 6)
-    ]
+    candidates = [_insight(f"f{index}", score=1 - index / 100) for index in range(1, 6)]
     responses = _verified_generation_responses(
         candidates, plan_evidence_ids=["f1", "f2"]
     )
@@ -63,9 +60,7 @@ def test_verified_material_gap_is_handed_to_bounded_targeted_rewrite(tmp_path):
                     "theme": "Theme 2",
                     "status": "covered",
                     "resolution": "retained",
-                    "supporting_insight_ids": [
-                        str(candidates[1]["id"])
-                    ],
+                    "supporting_insight_ids": [str(candidates[1]["id"])],
                     "explanation": "The final wording develops Theme 2.",
                 },
             ],
@@ -87,9 +82,7 @@ def test_verified_material_gap_is_handed_to_bounded_targeted_rewrite(tmp_path):
                     "theme": "Theme 2",
                     "status": "covered",
                     "resolution": "retained",
-                    "supporting_insight_ids": [
-                        str(candidates[1]["id"])
-                    ],
+                    "supporting_insight_ids": [str(candidates[1]["id"])],
                     "explanation": "The repaired wording develops Theme 2.",
                 },
             ],
