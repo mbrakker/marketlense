@@ -14,6 +14,7 @@ from src.contracts.regeneration import (
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _reconcile_candidate_key_figure_projections,
+    _require_candidate_artifacts_path,
 )
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
@@ -31,6 +32,21 @@ _regeneration_evidence_packs = regeneration_support._evidence_packs
 _regeneration_settings = regeneration_support._settings
 _regeneration_ctx = regeneration_support._ctx
 _test_regenerate_artifacts = regeneration_support.regenerate_artifacts
+
+
+def test_verified_regeneration_requires_persisted_candidate_path():
+    response = type("Response", (), {"candidate_artifacts_path": ""})()
+
+    with pytest.raises(AppError, match="persisted candidate artifact path") as exc_info:
+        _require_candidate_artifacts_path(
+            response, verified_mode=True, report_id="verified-report"
+        )
+
+    assert exc_info.value.code == "verified_regeneration_candidate_persistence_missing"
+    assert exc_info.value.retryable is False
+    assert _require_candidate_artifacts_path(
+        response, verified_mode=False, report_id="legacy-report"
+    ) == ""
 
 
 def test_projection_mismatch_is_rejected_without_mutating_persisted_candidate():

@@ -226,6 +226,29 @@ def test_coverage_failure_diagnostics_retain_bounded_recovery_context() -> None:
     }
 
 
+def test_coverage_failure_diagnostics_retain_source_bound_gap_ids_only() -> None:
+    bounded = _bounded_failure_context(
+        {
+            "coverage_diagnostics": {
+                "stage": "semantic_repair",
+                "material_gap_fact_ids": ["fact-1", "fact-1"],
+                "material_gap_evidence_ids": ["verified-fact:fact-1"],
+                "material_gap_insight_ids": ["insight-1"],
+                "explanation": "source prose must not be retained",
+            }
+        }
+    )
+
+    assert bounded == {
+        "coverage_diagnostics": {
+            "stage": "semantic_repair",
+            "material_gap_fact_ids": ["fact-1"],
+            "material_gap_evidence_ids": ["verified-fact:fact-1"],
+            "material_gap_insight_ids": ["insight-1"],
+        }
+    }
+
+
 def test_remediation_failure_reader_preserves_coverage_lineage(tmp_path: Path) -> None:
     state_db = tmp_path / "workflow.sqlite"
     with sqlite3.connect(state_db) as conn:

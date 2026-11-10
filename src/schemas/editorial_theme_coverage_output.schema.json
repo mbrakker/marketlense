@@ -94,6 +94,34 @@
       "type": "string",
       "enum": ["none", "targeted_rewrite", "replan", "quarantine"]
     },
+    "material_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "verified_fact_ids",
+          "evidence_ids",
+          "final_insight_ids",
+          "explanation"
+        ],
+        "properties": {
+          "verified_fact_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "final_insight_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "explanation": {"type": "string", "minLength": 1}
+        }
+      }
+    },
     "original_essential_obligation_assessments": {
       "type": "array",
       "items": {

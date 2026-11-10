@@ -2260,6 +2260,148 @@ def final_insight_editorial_coverage(
     }
 
 
+def _validate_verified_material_gaps(
+    *,
+    payload: Any,
+    candidate_insights: List[Dict[str, Any]] | None,
+    candidate_facts: Dict[str, Dict[str, Any]],
+    final_ids: set[str],
+    verified_adaptive: bool,
+    report_completeness: str,
+) -> List[Dict[str, Any]]:
+    """Validate source-bound material gaps reported by verified coverage review."""
+
+    if not verified_adaptive:
+        return []
+    raw_gaps = payload.get("material_gaps") if isinstance(payload, dict) else None
+    if raw_gaps is None:
+        raw_gaps = []
+    if not isinstance(raw_gaps, list):
+        raise AppError(
+            code="artifact_final_insight_coverage_invalid",
+            message="Verified semantic coverage has malformed material gaps",
+            retryable=False,
+            context={"assessment_contract_failure": True},
+        )
+
+    fact_evidence_ids: Dict[str, set[str]] = {}
+    candidate_by_id = {
+        _s(candidate.get("id")).strip(): candidate
+        for candidate in candidate_insights or []
+        if isinstance(candidate, dict) and _s(candidate.get("id")).strip()
+    }
+    for insight_id, fact in candidate_facts.items():
+        candidate = candidate_by_id.get(insight_id, {})
+        verified_fact = fact.get("verified_fact")
+        fact_id = _s(candidate.get("verified_fact_id")).strip()
+        if not fact_id and isinstance(verified_fact, dict):
+            fact_id = _s(verified_fact.get("fact_id")).strip()
+        if not fact_id:
+            continue
+        fact_evidence_ids.setdefault(fact_id, set()).update(
+            _ordered_item_evidence_ids(fact)
+        )
+    known_evidence_ids = {
+        evidence_id for values in fact_evidence_ids.values() for evidence_id in values
+    }
+    validated: List[Dict[str, Any]] = []
+    seen: set[tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]] = set()
+    for index, raw_gap in enumerate(raw_gaps):
+        if not isinstance(raw_gap, dict):
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Verified semantic coverage has a malformed material gap",
+                retryable=False,
+                context={
+                    "assessment_contract_failure": True,
+                    "material_gap_index": index,
+                },
+            )
+        raw_fact_ids = raw_gap.get("verified_fact_ids")
+        raw_evidence_ids = raw_gap.get("evidence_ids")
+        raw_insight_ids = raw_gap.get("final_insight_ids")
+        explanation = _s(raw_gap.get("explanation")).strip()
+        if (
+            not isinstance(raw_fact_ids, list)
+            or not isinstance(raw_evidence_ids, list)
+            or not isinstance(raw_insight_ids, list)
+        ):
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Verified semantic coverage has an incomplete material gap",
+                retryable=False,
+                context={
+                    "assessment_contract_failure": True,
+                    "material_gap_index": index,
+                },
+            )
+        fact_ids = [_s(value).strip() for value in raw_fact_ids]
+        evidence_ids = [_s(value).strip() for value in raw_evidence_ids]
+        insight_ids = [_s(value).strip() for value in raw_insight_ids]
+        if (
+            not fact_ids
+            or not evidence_ids
+            or len(fact_ids) != len(set(fact_ids))
+            or len(evidence_ids) != len(set(evidence_ids))
+            or len(insight_ids) != len(set(insight_ids))
+            or any(not value for value in (*fact_ids, *evidence_ids, *insight_ids))
+            or not explanation
+            or not set(fact_ids).issubset(fact_evidence_ids)
+            or not set(evidence_ids).issubset(known_evidence_ids)
+            or not set(insight_ids).issubset(final_ids)
+            or not set(evidence_ids).issubset(
+                {
+                    evidence_id
+                    for fact_id in fact_ids
+                    for evidence_id in fact_evidence_ids[fact_id]
+                }
+            )
+        ):
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message=(
+                    "Verified semantic coverage has an invalid material gap identity"
+                ),
+                retryable=False,
+                context={
+                    "assessment_contract_failure": True,
+                    "material_gap_index": index,
+                },
+            )
+        key = (tuple(fact_ids), tuple(evidence_ids), tuple(insight_ids))
+        if key in seen:
+            raise AppError(
+                code="artifact_final_insight_coverage_invalid",
+                message="Verified semantic coverage has duplicate material gaps",
+                retryable=False,
+                context={
+                    "assessment_contract_failure": True,
+                    "material_gap_index": index,
+                },
+            )
+        seen.add(key)
+        validated.append(
+            {
+                "verified_fact_ids": fact_ids,
+                "evidence_ids": evidence_ids,
+                "final_insight_ids": insight_ids,
+                "explanation": explanation,
+            }
+        )
+
+    if report_completeness == "complete" and validated:
+        raise AppError(
+            code="artifact_final_insight_coverage_invalid",
+            message="Complete verified semantic coverage must have no material gaps",
+            retryable=False,
+            context={
+                "assessment_contract_failure": True,
+                "material_gap_count": len(validated),
+            },
+        )
+    return validated
+
+
 def editorial_plan_has_overlapping_theme_evidence(
     editorial_plan: Dict[str, Any],
 ) -> bool:
@@ -2348,7 +2490,11 @@ def validate_substantive_editorial_theme_coverage(
                 },
             )
         coherent_controls = (
-            (diagnosis == "planned_theme_execution" and recovery_action == "none")
+            (
+                diagnosis == "planned_theme_execution"
+                and recovery_action == "none"
+                and report_completeness == "complete"
+            )
             or (
                 diagnosis == "redundant_optional_theme"
                 and recovery_action == "none"
@@ -2362,6 +2508,7 @@ def validate_substantive_editorial_theme_coverage(
             or (
                 diagnosis in {"redundant_optional_theme", "infeasible_plan"}
                 and recovery_action == "replan"
+                and report_completeness in {"incomplete", "uncertain"}
             )
             or (
                 diagnosis == "insufficient_evidence"
@@ -2445,6 +2592,14 @@ def validate_substantive_editorial_theme_coverage(
         ):
             final_fact["evidence_ids"] = final_evidence_ids
         final_facts[insight_id] = final_fact
+    material_gaps = _validate_verified_material_gaps(
+        payload=payload,
+        candidate_insights=candidate_insights,
+        candidate_facts=candidate_facts,
+        final_ids=final_ids,
+        verified_adaptive=verified_adaptive,
+        report_completeness=report_completeness,
+    )
     original_obligation_assessments: List[Dict[str, Any]] = []
     if require_original_obligation_assessment:
         raw_obligation_assessments = (
@@ -2892,8 +3047,12 @@ def validate_substantive_editorial_theme_coverage(
                 "a complete material-report assessment"
                 if omitted_essential_themes
                 else (
-                    "Verified semantic coverage requires a complete material-report "
-                    "assessment"
+                    "Verified semantic coverage requires a source-bound material gap"
+                    if not material_gaps
+                    else (
+                        "Verified semantic coverage requires a complete "
+                        "material-report assessment"
+                    )
                 )
             ),
             retryable=False,
@@ -2903,6 +3062,7 @@ def validate_substantive_editorial_theme_coverage(
                 "omitted_essential_themes": omitted_essential_themes,
                 "diagnosis": diagnosis,
                 "recovery_action": recovery_action,
+                "material_gaps": deepcopy(material_gaps),
                 "assessment_contract_failure": False,
             },
         )
@@ -2933,6 +3093,7 @@ def validate_substantive_editorial_theme_coverage(
                 "recovery_action": _s(payload.get("recovery_action")).strip()
                 if isinstance(payload, dict)
                 else "",
+                "material_gaps": deepcopy(material_gaps),
                 "assessment_contract_failure": False,
             },
         )
@@ -2950,6 +3111,7 @@ def validate_substantive_editorial_theme_coverage(
         "recovery_action": _s(payload.get("recovery_action")).strip()
         if isinstance(payload, dict)
         else "",
+        "material_gaps": deepcopy(material_gaps),
         "original_essential_obligation_assessments": original_obligation_assessments,
     }
 

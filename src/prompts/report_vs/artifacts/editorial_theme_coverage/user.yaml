@@ -16,6 +16,14 @@ text: |
     "report_completeness": "complete|incomplete|uncertain",
     "diagnosis": "planned_theme_execution|material_report_completeness|redundant_optional_theme|infeasible_plan|insufficient_evidence",
     "recovery_action": "none|targeted_rewrite|replan|quarantine",
+    "material_gaps": [
+      {
+        "verified_fact_ids": ["<exact admitted verified fact IDs>"],
+        "evidence_ids": ["<exact canonical evidence IDs bound to those facts>"],
+        "final_insight_ids": ["<exact final insight IDs, if applicable>"],
+        "explanation": "<specific source-grounded material proposition not developed>"
+      }
+    ],
     "original_essential_obligation_assessments": [
       {
         "theme": "<exact original essential obligation theme>",
@@ -54,4 +62,11 @@ text: |
   assess every original essential obligation supplied above in
   original_essential_obligation_assessments against the revised plan and final
   wording; do not mark the report complete if any obligation is dropped or only
-  weakly implied. Do not rewrite the insights or add evidence.
+  weakly implied. When report_completeness is incomplete or uncertain while every
+  planned theme is covered, return at least one material_gaps item for each
+  source-bound admitted proposition or relationship that remains materially
+  undeveloped. Each item must use exact verified_fact_ids and canonical evidence_ids
+  from the supplied roster, exact final_insight_ids when the gap concerns existing
+  prose (or an empty list when no final insight applies), and a specific explanation
+  of the missing relationship. Return an empty material_gaps array for a complete
+  report. Do not rewrite the insights or add evidence.

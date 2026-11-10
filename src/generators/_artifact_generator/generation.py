@@ -951,7 +951,7 @@ def generate_artifacts(
             timeout_seconds=settings.openai_timeout_seconds,
             output_contract_schema_version=(
                 (
-                    "editorial_theme_coverage_output:1.3"
+                    "editorial_theme_coverage_output:1.4"
                     if response_contract_name == "editorial_theme_coverage_output"
                     else f"{response_contract_name}:1.0"
                 )
@@ -2438,6 +2438,28 @@ def generate_artifacts(
     semantic_theme_coverage: Dict[str, Any] = {}
     semantic_theme_repair: Dict[str, Any] = {}
 
+    def material_gap_identity_lists(value: Any) -> Dict[str, List[str]]:
+        """Keep only source-bound IDs when carrying gap diagnostics forward."""
+
+        if not isinstance(value, list):
+            value = []
+        return {
+            key: sorted(
+                {
+                    _s(item).strip()
+                    for gap in value
+                    if isinstance(gap, dict)
+                    for item in gap.get(source_key, [])
+                    if _s(item).strip()
+                }
+            )
+            for key, source_key in (
+                ("material_gap_fact_ids", "verified_fact_ids"),
+                ("material_gap_evidence_ids", "evidence_ids"),
+                ("material_gap_insight_ids", "final_insight_ids"),
+            )
+        }
+
     def semantic_coverage_diagnostics(
         final_insights: List[Dict[str, Any]],
         *,
@@ -2584,6 +2606,23 @@ def generate_artifacts(
         recovery_path = _s(semantic_theme_repair.get("recovery_kind")).strip()
         if not recovery_path:
             recovery_path = "not_attempted"
+        if isinstance(assessment, dict) and "material_gaps" in assessment:
+            material_gap_ids = material_gap_identity_lists(
+                assessment.get("material_gaps")
+            )
+        else:
+            material_gap_ids = {
+                key: [
+                    _s(item).strip()
+                    for item in semantic_theme_repair.get(key, [])
+                    if _s(item).strip()
+                ]
+                for key in (
+                    "material_gap_fact_ids",
+                    "material_gap_evidence_ids",
+                    "material_gap_insight_ids",
+                )
+            }
         return {
             "stage": stage,
             "assessment_phase": "semantic_theme_coverage",
@@ -2632,6 +2671,7 @@ def generate_artifacts(
                 if isinstance(assessment, dict)
                 else ""
             ),
+            **material_gap_ids,
             "missing_themes": selection["omitted_themes"],
             "substitutions": deepcopy(roster_change or {}),
             "recovery_attempts": deepcopy(semantic_theme_repair.get("attempts", {})),
@@ -2827,7 +2867,7 @@ def generate_artifacts(
                 task_id=f"{ctx.task_id}:editorial_theme_coverage",
             ),
             response_contract_name="editorial_theme_coverage_output",
-            response_contract_identity_version="v4",
+            response_contract_identity_version="v5",
         )
         try:
             semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
@@ -2884,6 +2924,9 @@ def generate_artifacts(
                     "recovery_action": _s(
                         semantic_theme_coverage_result.get("recovery_action")
                     ).strip(),
+                    **material_gap_identity_lists(
+                        error.context.get("material_gaps", [])
+                    ),
                 }
                 raise
             if not isinstance(omitted_themes, list):
@@ -2914,6 +2957,9 @@ def generate_artifacts(
                     for theme in omitted_central_themes
                     if _s(theme).strip()
                 ],
+                **material_gap_identity_lists(
+                    error.context.get("material_gaps", [])
+                ),
             }
             repair_feedback = {
                 "failure": {
@@ -2925,6 +2971,7 @@ def generate_artifacts(
                     ],
                 },
                 "assessment": semantic_theme_coverage_result,
+                "material_gaps": deepcopy(error.context.get("material_gaps", [])),
                 "selection_diagnostics": error.context["coverage_diagnostics"],
                 "supported_verified_facts": relevant_verified_facts,
                 "eligible_admitted_candidate_alternatives": [
@@ -3005,7 +3052,7 @@ def generate_artifacts(
                     task_id=f"{ctx.task_id}:semantic_repair:editorial_theme_coverage",
                 ),
                 response_contract_name="editorial_theme_coverage_output",
-                response_contract_identity_version="v4",
+                response_contract_identity_version="v5",
             )
             try:
                 semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
@@ -3019,6 +3066,11 @@ def generate_artifacts(
                     ),
                 )
             except AppError as coverage_error:
+                material_gaps = coverage_error.context.get("material_gaps")
+                if isinstance(material_gaps, list):
+                    semantic_theme_repair.update(
+                        material_gap_identity_lists(material_gaps)
+                    )
                 recovery_action = (
                     _s(semantic_theme_coverage_result.get("recovery_action"))
                     .strip()
@@ -3230,7 +3282,7 @@ def generate_artifacts(
                             task_id=f"{ctx.task_id}:semantic_repair:replanned_editorial_theme_coverage",
                         ),
                         response_contract_name="editorial_theme_coverage_output",
-                        response_contract_identity_version="v4",
+                        response_contract_identity_version="v5",
                     )
                     try:
                         semantic_theme_coverage = (

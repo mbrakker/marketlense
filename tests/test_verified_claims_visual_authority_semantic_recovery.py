@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 
 from src.generators._artifact_generator.generation import generate_artifacts
@@ -15,9 +16,123 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _generation_evidence,
     _generation_responses,
     _insight,
+    _verified_generation_responses,
     _verified_plan_for_candidates,
 )
 from tests.test_verified_claims_visual_authority_canary import _verified_admission
+
+
+def test_verified_material_gap_is_handed_to_bounded_targeted_rewrite(tmp_path):
+    candidates = [
+        _insight(f"f{index}", score=1 - index / 100)
+        for index in range(1, 6)
+    ]
+    responses = _verified_generation_responses(
+        candidates, plan_evidence_ids=["f1", "f2"]
+    )
+    final_candidates = [
+        {**deepcopy(candidate), "evidence_id": f"verified-fact:{candidate['id']}"}
+        for candidate in candidates
+    ]
+    responses["insights_final"] = [
+        {"insights_final": final_candidates},
+        {"insights_final": final_candidates},
+    ]
+    responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
+        f"verified-fact:{candidates[0]['id']}"
+    )
+    fact_id = str(candidates[0]["id"])
+    evidence_id = f"verified-fact:{fact_id}"
+    gap = {
+        "verified_fact_ids": [fact_id],
+        "evidence_ids": [evidence_id],
+        "final_insight_ids": [fact_id],
+        "explanation": "The admitted qualifier is not developed in the final wording.",
+    }
+    responses["editorial_theme_coverage"] = [
+        {
+            "theme_coverage": [
+                {
+                    "theme": "Theme 1",
+                    "status": "covered",
+                    "resolution": "retained",
+                    "supporting_insight_ids": [fact_id],
+                    "explanation": "The final wording develops Theme 1.",
+                },
+                {
+                    "theme": "Theme 2",
+                    "status": "covered",
+                    "resolution": "retained",
+                    "supporting_insight_ids": [
+                        str(candidates[1]["id"])
+                    ],
+                    "explanation": "The final wording develops Theme 2.",
+                },
+            ],
+            "report_completeness": "incomplete",
+            "diagnosis": "material_report_completeness",
+            "recovery_action": "targeted_rewrite",
+            "material_gaps": [gap],
+        },
+        {
+            "theme_coverage": [
+                {
+                    "theme": "Theme 1",
+                    "status": "covered",
+                    "resolution": "retained",
+                    "supporting_insight_ids": [fact_id],
+                    "explanation": "The repaired wording develops Theme 1.",
+                },
+                {
+                    "theme": "Theme 2",
+                    "status": "covered",
+                    "resolution": "retained",
+                    "supporting_insight_ids": [
+                        str(candidates[1]["id"])
+                    ],
+                    "explanation": "The repaired wording develops Theme 2.",
+                },
+            ],
+            "report_completeness": "complete",
+            "diagnosis": "planned_theme_execution",
+            "recovery_action": "none",
+            "material_gaps": [],
+        },
+    ]
+    prompt_client = CapturingPromptClient()
+
+    payload = generate_artifacts(
+        report_id="verified-material-gap-handoff",
+        report_name="Verified material gap handoff",
+        doc_map=_doc_map(5),
+        evidence_packs=_generation_evidence(5),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+        visual_authority_admitter=lambda shortlisted: _verified_admission(
+            shortlisted, digest="m" * 64
+        ),
+    )
+
+    feedback_calls = [
+        call
+        for call in prompt_client.render_calls
+        if call["path"] == "report_vs/artifacts/insights_final/user"
+        and "semantic_theme_coverage_feedback_json" in call["variables"]
+    ]
+    assert len(feedback_calls) == 1
+    feedback = json.loads(
+        feedback_calls[0]["variables"]["semantic_theme_coverage_feedback_json"]
+    )
+    assert feedback["material_gaps"] == [gap]
+    assert payload["family_status"]["insights_bundle"]["status"] == "generated"
+    semantic_repair = payload["_cache"]["candidate_generation"][
+        "editorial_plan_coverage"
+    ]["final_selected_theme_coverage"]["semantic_repair"]
+    assert semantic_repair["material_gap_fact_ids"] == [fact_id]
+    assert "material_gaps" not in semantic_repair
 
 
 def test_verified_semantic_recovery_allows_one_immutable_plan_revision(tmp_path):

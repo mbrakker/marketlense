@@ -7,7 +7,10 @@ text: |
   theme names. Mark a theme partial or uncovered when the final wording does
   not develop its intended proposition. Separately judge whether the article
   is materially complete against the admitted fact roster, including important
-  relationships, counter-signals and limitations. A redundant optional theme
+  relationships, counter-signals and limitations. If all planned themes are
+  covered but the article is materially incomplete, report source-bound material
+  gaps using exact admitted fact/evidence identities and a specific explanation.
+  A redundant optional theme
   may be merged or omitted only with a substantive explanation; an essential
   theme that cannot be represented is a fail-closed condition. Respond only
   with the requested JSON.

@@ -80,13 +80,13 @@ from src.orchestrators._report_analysis_orchestrator.payload import (
     _ensure_report_payload_complete,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
-    _candidate_artifacts_path,
     _candidate_audit,
     _candidate_validation_report,
     _evaluate_and_store_public_editorial_quality,
     _load_promoted_claim_validation_for_reuse,
     _merge_public_editorial_quality,
     _promote_validated_regeneration_candidate,
+    _require_candidate_artifacts_path,
     _retained_claim_severity_by_fingerprint,
     _run_validation_with_fallback,
     _scope_validation_report,
@@ -1516,7 +1516,11 @@ def _resume_prompt_family_repair(
             retryable=False,
             context={"file_id": runtime.file.file_id},
         )
-    candidate_artifacts_path = _candidate_artifacts_path(regeneration)
+    candidate_artifacts_path = _require_candidate_artifacts_path(
+        regeneration,
+        verified_mode=authority_context is not None,
+        report_id=runtime.file.file_id,
+    )
     candidate_enforced = bool(candidate_artifacts_path)
     current_artifacts_path = str(analysis.evidence_paths.get("artifacts") or "")
     declared_family_roots = frozenset(

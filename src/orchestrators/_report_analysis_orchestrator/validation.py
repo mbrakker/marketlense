@@ -1982,6 +1982,25 @@ def _candidate_artifacts_path(response) -> str:
     return str(getattr(response, "candidate_artifacts_path", "") or "").strip()
 
 
+def _require_candidate_artifacts_path(
+    response, *, verified_mode: bool, report_id: object
+) -> str:
+    """Require durable candidate persistence before verified promotion."""
+
+    path = _candidate_artifacts_path(response)
+    if verified_mode and not path:
+        raise AppError(
+            code="verified_regeneration_candidate_persistence_missing",
+            message=(
+                "Verified regeneration requires a persisted candidate artifact "
+                "path before promotion"
+            ),
+            retryable=False,
+            context={"report_id": str(report_id)},
+        )
+    return path
+
+
 def _candidate_validation_report(
     validation: ValidationReport,
     candidate: CandidateIntegrityResult,
@@ -4306,7 +4325,11 @@ def _run_validation_regeneration_loop(
             evidence_packs=evidence_packs,
         )
         artifact_diff = _artifact_diff_summary(artifacts_before, candidate_artifacts)
-        candidate_artifacts_path = _candidate_artifacts_path(regeneration_response)
+        candidate_artifacts_path = _require_candidate_artifacts_path(
+            regeneration_response,
+            verified_mode=verified_mode,
+            report_id=runtime.file.file_id,
+        )
         candidate_enforced = bool(candidate_artifacts_path)
         deterministic_mutation_paths = tuple(
             getattr(regeneration_response, "deterministic_mutation_paths", []) or []

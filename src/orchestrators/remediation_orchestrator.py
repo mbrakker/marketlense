@@ -101,6 +101,9 @@ _COVERAGE_DIAGNOSTIC_LIST_KEYS = frozenset(
         "omitted_essential_fact_ids",
         "selected_candidate_ids",
         "eligible_candidate_ids",
+        "material_gap_fact_ids",
+        "material_gap_evidence_ids",
+        "material_gap_insight_ids",
     }
 )
 _COVERAGE_DIAGNOSTIC_INTEGER_KEYS = frozenset(
