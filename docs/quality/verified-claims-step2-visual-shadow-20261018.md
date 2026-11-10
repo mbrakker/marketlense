@@ -12110,3 +12110,82 @@ semantic-completeness replay **PASS**; live report/publication acceptance
 incomplete (42 unresolved, 0 unsupported) and readiness fails. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+### P0/P1 grounding, promotion and diagnostic-integrity correction — 2026-11-10
+
+This checkpoint is implemented at commit `b6f6b76da27a32229c13d505ba75838bff17d1cd`.
+The smallest demonstrated fixes are:
+
+* verified grounding contract failures now remain blocking errors even when a
+  deterministic prerequisite passed; normal-mode warning behavior is unchanged;
+* coverage failures retain bounded phase, batch/index, expected/returned counts,
+  missing/invalid field paths, protected dimensions, schema/prompt/execution and
+  relevant-input identities through the existing structured-error allowlist;
+* verified grounding contract failures have no prose-repair target, while
+  ordinary structured target routing remains unchanged outside verified mode;
+* candidate promotion rematerializes the current retained-claim package against
+  the candidate artifact/evidence/source/execution identity, requires zero
+  unresolved/unsupported material claims, and rejects missing, unreadable, stale,
+  or grounding-contract-failed persisted validation artifacts before writes.
+
+The existing grounding schema and prompts were inspected and were not rewritten:
+the authority policy is already system-only, legacy visual/OCR corroboration is
+inside the normal-mode policy, and verified mode already supplies canonical facts
+with `evidence_json=[]`. No prompt/schema identity or additional LLM stage was
+introduced.
+
+Focused regressions passed **67 tests**. The broader affected grounding,
+validation, claim-package, verified-editorial, recovery, and transactional
+regeneration set passed **455 tests**, with **7 deselected**. Changed-file Ruff,
+compile, and `git diff --check` passed. Targeted mypy reported no error in the
+changed modules; its four remaining errors are the pre-existing PyMuPDF typing
+errors in `src/services/_pdf/_figures/best_figure.py` and
+`src/services/_pdf/_crop/refine.py`. The unchanged prompt-fixture gate passed:
+119,547 total tokens versus 118,469 baseline (+1,078), validation 13,491 versus
+12,864 (+627), and estimated cost `$0.025610` versus `$0.025502` (+`$0.000108`).
+
+The full local suite completed with **8,683 passed, 2 skipped, 48 deselected,
+and 3 failures** in 931.29 seconds. The failures are outside this change:
+browser runtime discovery compares the vendored parent runtime with the
+installed child runtime; the native wheelhouse test requires CPython 3.12 while
+this host is CPython 3.14; and the PDF oversized-wrapper heuristic returned
+`x=251.58` where the existing test expects at least `290.0`. An isolated rerun
+confirmed the browser-runtime test passed, while the CPython-3.12 wheelhouse
+and PDF heuristic tests reproduced their two failures. No changed grounding or
+promotion test failed.
+
+#### Live verification status
+
+The exact frozen Activate PDF was used (SHA-256
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`) with no
+publication or WordPress flags. A fresh clean-SHA run was started at the new
+commit under
+`C:\\ml-p0p1-activate-20261110\\frozen-reliability-mh48b2bi`. Its runner process
+ended without writing `cohort_result.json` or `cohort_members.json`; the member
+database still records `report_selection.v1` as running. The retained ledger has
+**377** successful `figure_ranking` events and **zero provider error codes**, but
+no terminal grounding, validation, readiness, HTML, or publication outcome. This
+is incomplete live evidence, not a pass or a grounding-quality result. A second
+detached launcher was stopped during preflight before provider calls and is not
+counted as a run.
+
+The provider-free replay command completed with **15 reference cases / 39
+variants** and `fabricated_fixture_substitution=false`, but the current worktree
+does not contain the retained frozen PDFs or Step 1 artifacts; therefore all
+visual checks were skipped and it reported zero selected retained artifacts.
+This limitation is recorded rather than replaced with fabricated fixtures. The
+latest retained real Activate run remains the prior comparison: 510 provider
+calls, `$0.514447`, 4,360.594 seconds, validation `pass`, readiness `fail`, and
+42 unresolved/0 unsupported retained claims. That run's grounding coverage
+warning is the direct evidence for the new verified blocking severity, not proof
+that the new code improves live selection quality.
+
+Because the current Activate run did not reach a terminal outcome, the required
+fresh Adjust and frozen-five provider-backed reruns were not started. No current-
+SHA live editorial or readiness improvement is claimed; no canonical claims,
+publication artifacts, or WordPress writes were made.
+
+**Verdict:** focused implementation and regression protection **PASS**; live
+acceptance **PARTIAL / NO-GO** pending a terminal current-SHA Activate run and
+then the required Adjust/frozen-five sequence. Step 3 remains **unstarted/not
+ready**.
