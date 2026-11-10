@@ -2411,3 +2411,21 @@ than being inferred. This is current-SHA evidence for the selection and
 terminal-diagnostic fixes only, not a live editorial-quality improvement.
 E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**.
+
+**Evidence update — 2026-11-10 (semantic completeness handoff correction):**
+Implementation commits `7832c025` and `60b1fcb8` add the bounded verified
+`material_gaps` contract, coherent completeness/recovery controls, safe
+semantic diagnostics, and fail-closed verified candidate persistence. The fresh
+isolated Activate producer replay admitted 10/10 facts and retained 10
+candidate rows; its persisted semantic assessment is complete with
+`diagnosis=redundant_optional_theme`, `recovery_action=none`, and an empty
+material-gap list. One bounded targeted rewrite was promoted and public
+editorial-quality validation passed. The same run then failed closed at
+grounding public-item coverage: 42 retained claims unresolved, 0 unsupported,
+validation passed but publication readiness failed, and generated HTML was not
+accepted or published. The exact missing public item is unavailable because
+raw grounding responses were not retained; no speculative fix was made. The
+fresh run used 510 provider calls, 2,539,606 input / 483,535 output tokens,
+`$0.514447`, and 4,360.594 seconds. Hosted CI run
+`42779297187` passed all required jobs. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

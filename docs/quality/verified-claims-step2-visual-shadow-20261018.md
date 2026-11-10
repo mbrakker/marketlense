@@ -12018,3 +12018,95 @@ current live editorial acceptance **PARTIAL / NO-GO**. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. No canonical promotion, readiness approval, HTML
 publication, or WordPress write occurred.
+
+### Semantic completeness handoff correction and fresh Activate replay — 2026-11-10
+
+The remaining semantic-completeness contract was corrected in implementation
+commits `7832c025` and `60b1fcb8` on
+`codex/fix-retained-insight-evidence-validation`. The change is deliberately
+bounded: verified adaptive coverage now accepts and validates optional
+source-bound `material_gaps`, enforces the complete/incomplete recovery-action
+matrix, keeps only safe fact/evidence/insight IDs in diagnostics, versions the
+coverage contract (`1.4` / validator `v5`), and requires persisted candidate
+artifacts in verified regeneration. The legacy candidate-persistence branch is
+unchanged for non-verified generation. No new LLM stage or downstream factual
+validator was introduced.
+
+The fresh isolated producer replay used commit `7832c025977b94fba3346bee097eb529f8947404`
+and the exact frozen Activate source PDF
+`C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf`,
+SHA-256
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`.
+The authoritative run ledger is
+`C:\\ml-semantic-completeness-e2e-20261110-7832c025\\frozen-reliability-1rv906ma`.
+The run was isolated, used no application-level artifact reuse, had no
+operator intervention, and performed no canonical, publication, or WordPress
+write.
+
+| Measure | Prior corrected Activate (`0a51164d`) | Fresh handoff replay (`7832c025`) |
+| --- | ---: | ---: |
+| Visual facts admitted | 10 / 10 | 10 / 10 |
+| Eligible/candidate rows | 10 | 10 |
+| Final insight rows | 10 at terminal selection diagnostic | 9 |
+| Provider calls | 462 | 510 |
+| Input / output tokens | 1,172,604 / 267,793 | 2,539,606 / 483,535 |
+| Estimated cost | $0.278535 | $0.514447 |
+| Wall-clock duration | 2,854.5 s | 4,360.594 s |
+| File-search calls | 11 | 15 |
+| Structured-output recovery calls | 4 | 8 |
+| Automatic repairs | 0 | 3 targeted repairs |
+| Validation / readiness | fail / fail | pass / fail |
+| HTML | absent | generated, not accepted for publication |
+
+The current run clears the P0 semantic boundary. Its persisted semantic
+assessment is `report_completeness=complete`,
+`diagnosis=redundant_optional_theme`, `recovery_action=none`, and
+`material_gaps=[]`. Seven theme assessments are present: the essential
+obligations are covered or validly merged, while the optional news-sharing
+theme is explicitly omitted as non-essential. The run also records one
+bounded semantic/editorial targeted rewrite that was promoted with its
+candidate and audit hashes; the post-repair public editorial-quality check
+passed. This is direct provider-backed evidence that the new completeness and
+handoff contract works on the previously failing report. The prior omitted
+relationship cannot be reconstructed from the old run because raw provider
+responses were not retained; no gap was invented.
+
+The remaining failure is downstream and remains fail-closed. Grounding reports
+`grounding_claim_check_coverage_invalid` with
+`coverage=incomplete_semantic_fields` for the single safe diagnostic identity
+`retained_claim:bbde6051888cc605a5581aa46ae933071064286f75be2c1a50b2b50b753ec29a`.
+The retained-claim ledger has 42 unresolved and 0 unsupported claims, and
+`publish_readiness.retained_claim_grounding` fails; no claim was promoted as
+verified. The semantic-grounding rule itself completed, but public-item
+coverage was incomplete. The run also records a `quotes_missing` warning.
+Because the raw grounding response is unavailable, the exact missing public
+item cannot be safely diagnosed beyond this typed identity; changing grounding
+or regeneration on speculation would weaken the existing gate, so no such
+change is included here.
+
+The generated HTML contains no `verified-fact:`, `evidence_id`, `claim_id`,
+`candidate_id`, `soft_copy:` or `insight:` identifiers. It is not a publication
+acceptance artifact because readiness failed. Independent source inspection
+against the same PDF confirmed the representative bound relationships used by
+the final rows: global revenue forecast p.5 (`$1.7T`, `$2.0T`, `$302B`, `4.1%`),
+gaming p.18 (`63%` spend and `70%` play time), creator shares p.53, sports
+viewing p.91, Internet access and paid-content growth p.6, reality-computing
+pages 38/49, retail p.113, and daily attention p.10. Final rows retain the
+`verified-fact:<fact_id>` evidence identities and physical-page bindings. This
+compact check is not a substitute for a full accepted editorial review while
+the grounding-coverage gate remains unresolved.
+
+The final local Python 3.12 suite passed **8,683 tests, 2 skips, 48
+deselections, and 24 subtests**. Hosted CI run
+[`42779297187`](https://github.com/mbrakker/marketlense/actions/runs/42779297187)
+passed `ci_start`, tests, both mutation partitions, and `release_evidence` on
+`60b1fcb8`; no release threshold was changed. The unchanged prompt-fixture
+gate also passed with the previously measured intentional delta of +1,078
+tokens overall / +$0.000108 and +627 validation-family tokens / +$0.000063.
+
+**Verdict:** implementation and hosted engineering gates **PASS**; fresh
+semantic-completeness replay **PASS**; live report/publication acceptance
+**PARTIAL / NO-GO** because retained-claim grounding coverage remains
+incomplete (42 unresolved, 0 unsupported) and readiness fails. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.
