@@ -75,6 +75,9 @@ from src.generators.artifact_normalization import (
     bind_artifact_evidence_spans,
     page_bound_direct_evidence_packs,
 )
+from src.generators.claim_validation_generator import (
+    materialize_retained_claim_package,
+)
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
@@ -3259,6 +3262,8 @@ def _load_candidate_claim_validation_for_promotion(
     expected_source_id: str = "",
     expected_source_md5: str = "",
     require_execution_identity: bool = False,
+    candidate_artifacts: Dict[str, Any] | None = None,
+    evidence_packs: Dict[str, Any] | None = None,
     ctx,
 ) -> Dict[str, Any]:
     """Load candidate grounding only when it matches the artifacts being promoted."""
@@ -3334,6 +3339,65 @@ def _load_candidate_claim_validation_for_promotion(
                 ),
                 retryable=False,
                 context={"pack_name": pack_name, "mismatches": mismatches},
+            )
+    if require_execution_identity and (
+        candidate_artifacts is not None or evidence_packs is not None
+    ):
+        if not str(expected_source_id or "").strip() or not isinstance(
+            candidate_artifacts, dict
+        ) or not isinstance(evidence_packs, dict):
+            raise AppError(
+                code="retained_claim_candidate_package_context_missing",
+                message=(
+                    "Verified promotion requires the candidate evidence context "
+                    "for retained-claim package validation"
+                ),
+                retryable=False,
+                context={"pack_name": pack_name},
+            )
+        materialized, failure_code = materialize_retained_claim_package(
+            payload,
+            report_id=str(runtime.file.file_id),
+            artifacts=candidate_artifacts,
+            evidence_packs=evidence_packs,
+            final_html="",
+            source_id=str(expected_source_id),
+            source_md5=str(expected_source_md5 or ""),
+            configuration_hash=str(runtime.ctx.configuration_hash or ""),
+            policy_hash=str(runtime.ctx.policy_hash or ""),
+            verified_facts_only=True,
+        )
+        if materialized is None:
+            raise AppError(
+                code="retained_claim_candidate_package_invalid",
+                message=(
+                    "Verified candidate retained-claim package is not current "
+                    "for the candidate evidence snapshot"
+                ),
+                retryable=False,
+                context={"pack_name": pack_name, "failure_code": failure_code},
+            )
+        if (
+            materialized.get("readiness_status") != "awaiting_review"
+            or materialized.get("unsupported_factual_count") != 0
+            or materialized.get("unresolved_factual_count") != 0
+        ):
+            raise AppError(
+                code="retained_claim_candidate_package_not_ready",
+                message=(
+                    "Verified candidate retained-claim package has unresolved "
+                    "or unsupported material claims"
+                ),
+                retryable=False,
+                context={
+                    "pack_name": pack_name,
+                    "unsupported_factual_count": materialized.get(
+                        "unsupported_factual_count"
+                    ),
+                    "unresolved_factual_count": materialized.get(
+                        "unresolved_factual_count"
+                    ),
+                },
             )
     return payload
 
@@ -4750,6 +4814,7 @@ def _run_validation_regeneration_loop(
                         expected_source_id=validation_source_identity,
                         expected_source_md5=str(runtime.md5 or ""),
                         require_execution_identity=verified_mode,
+                        evidence_packs=evidence_packs,
                         promotion_audit=promotion_audit,
                         ctx=attempt_ctx,
                     )
@@ -5115,6 +5180,7 @@ def _promote_validated_regeneration_candidate(
     expected_source_id: str = "",
     expected_source_md5: str = "",
     require_execution_identity: bool = False,
+    evidence_packs: Dict[str, Any] | None = None,
     promotion_audit: RegenerationCandidateAudit | None = None,
     ctx,
 ) -> tuple[str, str, str, Dict[str, Any], str]:
@@ -5125,6 +5191,93 @@ def _promote_validated_regeneration_candidate(
     every earlier canonical root that this transaction could have changed.
     """
 
+    if require_execution_identity:
+        if not str(expected_source_id or "").strip() or not isinstance(
+            evidence_packs, dict
+        ):
+            raise AppError(
+                code="retained_claim_candidate_package_context_missing",
+                message=(
+                    "Verified promotion requires the candidate evidence context "
+                    "for retained-claim package validation"
+                ),
+                retryable=False,
+                context={"report_id": runtime.file.file_id},
+            )
+        if str(candidate_validation_report.status or "").casefold() not in {
+            "pass",
+            "passed",
+        }:
+            raise AppError(
+                code="retained_claim_candidate_validation_not_passed",
+                message=(
+                    "Verified regeneration promotion requires a passing current "
+                    "validation report"
+                ),
+                retryable=False,
+                context={"report_id": runtime.file.file_id},
+            )
+        if not str(candidate_validation_report.source_path or "").strip():
+            raise AppError(
+                code="retained_claim_candidate_validation_artifact_missing",
+                message=(
+                    "Verified regeneration promotion requires the persisted "
+                    "candidate validation artifact"
+                ),
+                retryable=False,
+                context={"report_id": runtime.file.file_id},
+            )
+        try:
+            persisted_validation = dependencies.read_json(
+                ReadJsonRequest(
+                    schema_version="1.0",
+                    path=str(candidate_validation_report.source_path),
+                ),
+                ctx,
+            ).payload
+        except AppError as exc:
+            raise AppError(
+                code="retained_claim_candidate_validation_artifact_invalid",
+                message=(
+                    "Verified regeneration promotion could not read the current "
+                    "candidate validation artifact"
+                ),
+                retryable=False,
+                context={"report_id": runtime.file.file_id, "cause_code": exc.code},
+                cause=exc,
+            ) from exc
+        if not isinstance(persisted_validation, dict) or sha256_json(
+            persisted_validation
+        ) != sha256_json(candidate_validation_report.to_dict()):
+            raise AppError(
+                code="retained_claim_candidate_validation_artifact_stale",
+                message=(
+                    "Verified regeneration promotion found a stale candidate "
+                    "validation artifact"
+                ),
+                retryable=False,
+                context={"report_id": runtime.file.file_id},
+            )
+        for validation_issue in candidate_validation_report.issues:
+            rule_id = str(validation_issue.rule_id or "").strip().lower()
+            code = str(validation_issue.violation_type or "").strip().lower()
+            if rule_id == "grounding" and (
+                code.startswith("grounding_")
+                or code.startswith("validation_grounding_")
+            ):
+                raise AppError(
+                    code="retained_claim_candidate_grounding_contract_failed",
+                    message=(
+                        "Verified regeneration promotion cannot proceed after a "
+                        "grounding contract failure"
+                    ),
+                    retryable=False,
+                    context={
+                        "report_id": runtime.file.file_id,
+                        "grounding_code": code,
+                    },
+                )
+
     retained_claim_candidate = _load_candidate_claim_validation_for_promotion(
         runtime=runtime,
         dependencies=dependencies,
@@ -5133,6 +5286,8 @@ def _promote_validated_regeneration_candidate(
         expected_source_id=expected_source_id,
         expected_source_md5=expected_source_md5,
         require_execution_identity=require_execution_identity,
+        candidate_artifacts=candidate_artifacts,
+        evidence_packs=evidence_packs,
         ctx=ctx,
     )
     if promotion_audit is None:

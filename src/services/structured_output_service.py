@@ -891,6 +891,8 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "unexpected_item_ids",
     "invalid_item_ids",
     "missing_fields",
+    "missing_or_invalid_fields",
+    "protected_dimensions",
     "unknown_candidate_ids",
     "unknown_evidence_ids",
 )
@@ -904,6 +906,17 @@ _ACTIONABLE_CONTEXT_SCALAR_KEYS = (
     "actual_item_count",
     "expected_dimension_count",
     "actual_dimension_count",
+    "expected_claim_count",
+    "returned_check_count",
+    "expected_public_item_count",
+    "returned_unsupported_count",
+    "batch_index",
+    "phase",
+    "schema_identity",
+    "prompt_content_hash",
+    "execution_identity",
+    "relevant_input_hash",
+    "batch_input_fingerprint",
 )
 _ARTIFACT_STRUCTURE_FIELDS = (
     "expected_root_present",

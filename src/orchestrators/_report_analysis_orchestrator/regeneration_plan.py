@@ -30,7 +30,11 @@ from src.utils.editorial_identity import (
     insight_entity_id_from_public_item_id,
 )
 from src.utils.errors import AppError
-from src.utils.verified_facts import fact_for_evidence_id, validated_verified_facts
+from src.utils.verified_facts import (
+    fact_for_evidence_id,
+    validated_verified_facts,
+    verified_facts_mode,
+)
 
 __all__ = [
     "BROAD_TARGETS",
@@ -477,6 +481,19 @@ RULE_TARGETS = {
     "quotes": ["quotes"],
     "semantic": ["insights_bundle", "quotes"],
 }
+
+_VERIFIED_GROUNDING_CONTRACT_CODES = frozenset(
+    {
+        "grounding_claim_check_coverage_invalid",
+        "grounding_claim_identity_ambiguous",
+        "grounding_claim_verdict_incomplete",
+        "grounding_public_claim_provenance_invalid",
+        "grounding_public_item_classification_invalid",
+        "grounding_public_item_evidence_invalid",
+        "grounding_verified_semantic_input_invalid",
+        "validation_grounding_invalid_json",
+    }
+)
 
 NUMBER_RULE_TARGETS = ["summary", "expert_comment", "linkedin_post"]
 
@@ -1769,7 +1786,10 @@ def _build_regeneration_plan(
             unmappable.append(normalized)
             public_editorial_abstention = True
             continue
-        target_keys = _target_keys_for_issue(normalized)
+        target_keys = _target_keys_for_issue(
+            normalized,
+            verified_mode=verified_facts_mode(artifacts, ""),
+        )
         if target_keys:
             for target_key in target_keys:
                 grouped.setdefault(target_key, []).append(normalized)
@@ -2016,7 +2036,16 @@ def _keep_atomic_summary_context(
     ]
 
 
-def _target_keys_for_issue(issue: RegenerationIssue) -> List[str]:
+def _target_keys_for_issue(
+    issue: RegenerationIssue, *, verified_mode: bool = False
+) -> List[str]:
+    rule_id = str(issue.rule_id or "").strip().lower()
+    violation_type = str(issue.violation_type or "").strip().lower()
+    if verified_mode and rule_id == "grounding":
+        if violation_type in _VERIFIED_GROUNDING_CONTRACT_CODES:
+            return []
+        structured_target = _target_section(issue.affected_section)
+        return [structured_target] if structured_target else []
     explicit_target = str(issue.repair_target or "").strip()
     if explicit_target == "key_figures":
         if (

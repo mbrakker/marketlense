@@ -169,6 +169,7 @@ def test_verified_grounding_failure_preserves_inner_contract_cause(tmp_path):
         evidence_packs=_packs(fact),
         source_id=SOURCE_IDENTITY,
         validation_mode="verified_facts",
+        deterministic_grounding_passed=True,
     )
 
     issues = run_grounding_check(
@@ -194,6 +195,7 @@ def test_verified_grounding_failure_preserves_inner_contract_cause(tmp_path):
     assert len(issues) == 1
     assert "validation_grounding_invalid_json" in issues[0].message
     assert "schema_missing_required" in issues[0].message
+    assert issues[0].severity == "error"
 
 
 def test_verified_grounding_coverage_failure_retains_bounded_batch_diagnostics(
@@ -236,6 +238,9 @@ def test_verified_grounding_coverage_failure_retains_bounded_batch_diagnostics(
     assert "batch=" in issues[0].message
     assert "missing_claim_ids=" in issues[0].message
     assert "retained_claim:" in issues[0].message
+    assert "phase=batch" in issues[0].message
+    assert "expected_claim_count=" in issues[0].message
+    assert "returned_check_count=" in issues[0].message
 
 
 def test_grounding_issue_retains_public_verified_evidence_for_repair(tmp_path):
@@ -500,6 +505,51 @@ def test_verified_grounding_rejects_non_substantive_verdict_reason() -> None:
     assert exc_info.value.context["coverage_failure_category"] == (
         "incomplete_semantic_fields"
     )
+
+
+def test_grounding_coverage_diagnostics_keep_safe_contract_identity_and_fields() -> (
+    None
+):
+    check = _grounding_check("public-item", "A supported claim.", "entailed")
+    check["protected_facts"]["timeframe"].pop("status")
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_grounding_check_coverage(
+            {"checks": [check], "unsupported": []},
+            [],
+            {},
+            expected_public_items=[
+                {
+                    "item_id": "public-item",
+                    "section": "insights:fact-1.text",
+                    "text": "A supported claim.",
+                }
+            ],
+            require_public_coverage=True,
+            diagnostic_context={
+                "phase": "batch",
+                "batch_index": 2,
+                "schema_identity": "grounding_validation_output_v5",
+                "prompt_content_hash": "a" * 64,
+                "execution_identity": "execution-identity",
+                "relevant_input_hash": "b" * 64,
+            },
+        )
+
+    context = exc_info.value.context
+    assert context["phase"] == "batch"
+    assert context["batch_index"] == 2
+    assert context["schema_identity"] == "grounding_validation_output_v5"
+    assert context["prompt_content_hash"] == "a" * 64
+    assert context["relevant_input_hash"] == "b" * 64
+    assert context["expected_public_item_count"] == 1
+    assert context["returned_check_count"] == 1
+    assert (
+        "public-item:protected_facts.timeframe.status"
+        in context["missing_or_invalid_fields"]
+    )
+    assert "timeframe" in context["protected_dimensions"]
+    assert "A supported claim." not in str(context)
 
 
 def test_verified_grounding_rejection_retains_missing_retained_claim_id():

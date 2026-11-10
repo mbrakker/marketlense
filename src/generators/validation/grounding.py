@@ -806,6 +806,9 @@ def run_grounding_check(
             expected_public_items: Sequence[Mapping[str, Any]] | None = None,
             *,
             ctx=prompt_ctx,
+            diagnostic_phase: str = "aggregate",
+            diagnostic_batch_index: int | None = None,
+            diagnostic_prompt_bundle=None,
         ) -> None:
             public_items_for_validation = (
                 audit_payload.get("public_factual_items", [])
@@ -831,6 +834,32 @@ def run_grounding_check(
                 ),
                 expected_public_items=public_items_for_validation,
                 require_public_coverage=True,
+                diagnostic_context={
+                    "phase": diagnostic_phase,
+                    "batch_index": diagnostic_batch_index,
+                    "schema_identity": GROUNDING_OUTPUT_SCHEMA_IDENTITY,
+                    "prompt_content_hash": str(
+                        getattr(
+                            diagnostic_prompt_bundle or prompt_bundle,
+                            "prompt_content_hash",
+                            "",
+                        )
+                        or ""
+                    ),
+                    "execution_identity": str(
+                        getattr(
+                            getattr(
+                                diagnostic_prompt_bundle or prompt_bundle,
+                                "execution_identity",
+                                None,
+                            ),
+                            "execution_identity",
+                            "",
+                        )
+                        or ""
+                    ),
+                    "relevant_input_hash": relevant_input_hash,
+                },
             )
 
         reused_payload = None
@@ -997,6 +1026,9 @@ def run_grounding_check(
                         batch_semantic_inputs,
                         batch_spec[0].get("public_factual_items") or [],
                         ctx=batch_ctx,
+                        diagnostic_phase="batch",
+                        diagnostic_batch_index=batch_index,
+                        diagnostic_prompt_bundle=batch_bundle,
                     )
 
                 recovery = execute_structured_output(
@@ -1567,6 +1599,8 @@ def run_grounding_check(
             "unknown_item_ids",
             "duplicate_item_ids",
             "incomplete_verdict_ids",
+            "missing_or_invalid_fields",
+            "protected_dimensions",
         ):
             values = error_context.get(key)
             if not isinstance(values, list):
@@ -1577,6 +1611,26 @@ def run_grounding_check(
                     f"{key}={','.join(bounded_ids[:8])}"
                     + (",..." if len(bounded_ids) > 8 else "")
                 )
+        for key in (
+            "phase",
+            "schema_identity",
+            "prompt_content_hash",
+            "execution_identity",
+            "relevant_input_hash",
+            "batch_input_fingerprint",
+        ):
+            value = s(error_context.get(key)).strip()
+            if value:
+                diagnostic_parts.append(f"{key}={value[:128]}")
+        for key in (
+            "expected_claim_count",
+            "returned_check_count",
+            "expected_public_item_count",
+            "returned_unsupported_count",
+        ):
+            count_value: object = error_context.get(key)
+            if isinstance(count_value, int) and not isinstance(count_value, bool):
+                diagnostic_parts.append(f"{key}={count_value}")
         if diagnostic_parts:
             failure_message += " [" + "; ".join(diagnostic_parts) + "]"
         failure_item_ids = {
@@ -1636,7 +1690,13 @@ def run_grounding_check(
                 rule_id=RULE_ID,
                 message=failure_message,
                 severity=(
-                    "warning" if request.deterministic_grounding_passed else "error"
+                    "error"
+                    if verified_mode
+                    else (
+                        "warning"
+                        if request.deterministic_grounding_passed
+                        else "error"
+                    )
                 ),
                 section="grounding",
                 violation_type=exc.code,
@@ -1823,9 +1883,14 @@ def _grounding_coverage_diagnostics(
     checks_by_id: Mapping[str, Sequence[Mapping[str, Any]]],
     unsupported_by_id: Mapping[str, Sequence[Mapping[str, Any]]],
     category: str,
+    diagnostic_context: Mapping[str, Any] | None = None,
     **details: object,
 ) -> dict[str, Any]:
-    """Build bounded identifier-only diagnostics for a rejected batch."""
+    """Build bounded diagnostics for a rejected grounding batch.
+
+    Only stable identities, counts, field names, and dimension names are kept;
+    provider responses, prompts, and source text never enter the diagnostic.
+    """
 
     del payload
     returned_check_ids = list(checks_by_id)
@@ -1852,9 +1917,32 @@ def _grounding_coverage_diagnostics(
         "expected_public_item_ids": list(expected_public)[:32],
         "returned_check_ids": returned_check_ids[:32],
         "returned_unsupported_item_ids": returned_unsupported_ids[:32],
+        "expected_claim_count": len(expected_claims),
+        "expected_public_item_count": len(expected_public),
+        "returned_check_count": sum(
+            len(entries) for entries in checks_by_id.values()
+        ),
+        "returned_unsupported_count": sum(
+            len(entries) for entries in unsupported_by_id.values()
+        ),
         "duplicate_item_ids": duplicate_ids[:32],
         "text_mismatch_ids": list(dict.fromkeys(text_mismatch_ids))[:32],
     }
+    if isinstance(diagnostic_context, Mapping):
+        for key in (
+            "phase",
+            "schema_identity",
+            "prompt_content_hash",
+            "execution_identity",
+            "relevant_input_hash",
+            "batch_input_fingerprint",
+        ):
+            value = diagnostic_context.get(key)
+            if isinstance(value, str) and value:
+                context[key] = value
+        batch_index = diagnostic_context.get("batch_index")
+        if isinstance(batch_index, int) and not isinstance(batch_index, bool):
+            context["batch_index"] = batch_index
     for key, value in details.items():
         if isinstance(value, list):
             context[key] = list(dict.fromkeys(str(item) for item in value))[:32]
@@ -1866,6 +1954,56 @@ def _grounding_coverage_diagnostics(
     return context
 
 
+def _grounding_semantic_field_defects(
+    entry: Mapping[str, Any],
+    *,
+    valid_classifications: set[str],
+    valid_outcomes: set[str],
+) -> tuple[list[str], list[str]]:
+    """Return bounded structural field and protected-dimension defects."""
+
+    invalid_fields: list[str] = []
+    protected_dimensions: list[str] = []
+    if s(entry.get("classification")) not in valid_classifications:
+        invalid_fields.append("classification")
+    if s(entry.get("entailment_outcome")) not in valid_outcomes:
+        invalid_fields.append("entailment_outcome")
+    if s(entry.get("proposition_status")) not in {
+        "compatible",
+        "incompatible",
+        "unknown",
+    }:
+        invalid_fields.append("proposition_status")
+    if not _grounding_reason_is_substantive(entry.get("reason")):
+        invalid_fields.append("reason")
+    protected_facts = entry.get("protected_facts")
+    if not isinstance(protected_facts, Mapping):
+        invalid_fields.append("protected_facts")
+        protected_dimensions.extend(PROTECTED_FACT_DIMENSIONS)
+    else:
+        for name in PROTECTED_FACT_DIMENSIONS:
+            dimension = protected_facts.get(name)
+            if not isinstance(dimension, Mapping):
+                invalid_fields.append(f"protected_facts.{name}")
+                protected_dimensions.append(name)
+                continue
+            dimension_defect = False
+            for field_name in ("claim_value", "evidence_value", "status"):
+                if field_name not in dimension:
+                    invalid_fields.append(f"protected_facts.{name}.{field_name}")
+                    dimension_defect = True
+            if s(dimension.get("status")) not in {
+                "compatible",
+                "incompatible",
+                "unknown",
+            }:
+                invalid_fields.append(f"protected_facts.{name}.status")
+                dimension_defect = True
+            if dimension_defect:
+                protected_dimensions.append(name)
+    return invalid_fields, protected_dimensions
+
+
 def _grounding_check_has_complete_semantic_fields(
     entry: Mapping[str, Any],
     *,
@@ -1874,25 +2012,12 @@ def _grounding_check_has_complete_semantic_fields(
 ) -> bool:
     """Return whether one model check has the complete semantic contract."""
 
-    if (
-        s(entry.get("classification")) not in valid_classifications
-        or s(entry.get("entailment_outcome")) not in valid_outcomes
-        or s(entry.get("proposition_status"))
-        not in {"compatible", "incompatible", "unknown"}
-        or not _grounding_reason_is_substantive(entry.get("reason"))
-    ):
-        return False
-    protected_facts = entry.get("protected_facts")
-    if not isinstance(protected_facts, Mapping):
-        return False
-    return all(
-        isinstance(dimension, Mapping)
-        and "claim_value" in dimension
-        and "evidence_value" in dimension
-        and s(dimension.get("status")) in {"compatible", "incompatible", "unknown"}
-        for name in PROTECTED_FACT_DIMENSIONS
-        for dimension in [protected_facts.get(name)]
+    invalid_fields, _protected_dimensions = _grounding_semantic_field_defects(
+        entry,
+        valid_classifications=valid_classifications,
+        valid_outcomes=valid_outcomes,
     )
+    return not invalid_fields
 
 
 def _validate_grounding_check_coverage(
@@ -1902,6 +2027,7 @@ def _validate_grounding_check_coverage(
     allowed_public_item_ids: Sequence[str] = (),
     expected_public_items: Sequence[Mapping[str, Any]] = (),
     require_public_coverage: bool = False,
+    diagnostic_context: Mapping[str, Any] | None = None,
 ) -> None:
     """Require exact structured coverage for retained and verified public claims."""
 
@@ -1964,6 +2090,7 @@ def _validate_grounding_check_coverage(
             checks_by_id=checks_by_id,
             unsupported_by_id=unsupported_by_id,
             category=category,
+            diagnostic_context=diagnostic_context,
             **details,
         )
 
@@ -2054,6 +2181,8 @@ def _validate_grounding_check_coverage(
         missing_claim_ids: list[str] = []
         retained_text_mismatch_ids: list[str] = []
         retained_incomplete_ids: list[str] = []
+        retained_incomplete_fields: list[str] = []
+        retained_incomplete_dimensions: list[str] = []
         retained_pair_mismatch_ids: list[str] = []
         retained_fact_conflict_ids: list[str] = []
         for claim_id, text in expected.items():
@@ -2073,6 +2202,15 @@ def _validate_grounding_check_coverage(
                 valid_outcomes=valid_outcomes,
             ):
                 retained_incomplete_ids.append(claim_id)
+                field_defects, dimension_defects = _grounding_semantic_field_defects(
+                    verdict,
+                    valid_classifications=valid_classifications,
+                    valid_outcomes=valid_outcomes,
+                )
+                retained_incomplete_fields.extend(
+                    f"{claim_id}:{field}" for field in field_defects
+                )
+                retained_incomplete_dimensions.extend(dimension_defects)
                 missing_claim_ids.append(claim_id)
                 continue
             if matching_unsupported:
@@ -2150,6 +2288,8 @@ def _validate_grounding_check_coverage(
                     message="Retained grounding verdicts are semantically incomplete",
                     missing_claim_ids=missing_claim_ids,
                     missing_claim_count=len(missing_claim_ids),
+                    missing_or_invalid_fields=retained_incomplete_fields,
+                    protected_dimensions=retained_incomplete_dimensions,
                 )
             raise_coverage(
                 "missing_verdict",
@@ -2164,20 +2304,27 @@ def _validate_grounding_check_coverage(
     if not require_public_coverage or not expected_public:
         return
     if require_public_coverage:
-        malformed_checks = (
-            [
-                s(entry.get("item_id")) or "<missing>"
-                for entry in checks
-                if isinstance(entry, dict)
-                and not _grounding_check_has_complete_semantic_fields(
-                    entry,
-                    valid_classifications=valid_classifications,
-                    valid_outcomes=valid_outcomes,
+        malformed_checks: list[str] = []
+        malformed_check_fields: list[str] = []
+        malformed_check_dimensions: list[str] = []
+        if isinstance(checks, list):
+            for entry in checks:
+                if not isinstance(entry, dict):
+                    continue
+                field_defects, dimension_defects = (
+                    _grounding_semantic_field_defects(
+                        entry,
+                        valid_classifications=valid_classifications,
+                        valid_outcomes=valid_outcomes,
+                    )
                 )
-            ]
-            if isinstance(checks, list)
-            else []
-        )
+                if field_defects:
+                    item_id = s(entry.get("item_id")) or "<missing>"
+                    malformed_checks.append(item_id)
+                    malformed_check_fields.extend(
+                        f"{item_id}:{field}" for field in field_defects
+                    )
+                    malformed_check_dimensions.extend(dimension_defects)
         if malformed_checks:
             raise_coverage(
                 "incomplete_semantic_fields",
@@ -2187,6 +2334,8 @@ def _validate_grounding_check_coverage(
                     "Verified grounding checks require complete semantic fields "
                     "and a substantive reason"
                 ),
+                missing_or_invalid_fields=malformed_check_fields,
+                protected_dimensions=malformed_check_dimensions,
             )
         non_entailing_checks = []
         if isinstance(checks, list):
@@ -2238,16 +2387,42 @@ def _validate_grounding_check_coverage(
             else []
         )
         if malformed_unsupported:
+            malformed_unsupported_fields: list[str] = []
+            if isinstance(unsupported, list):
+                for entry in unsupported:
+                    if not isinstance(entry, dict):
+                        continue
+                    item_id = s(entry.get("item_id")) or "<missing>"
+                    defects: list[str] = []
+                    if s(entry.get("classification")) not in valid_classifications:
+                        defects.append("classification")
+                    if s(entry.get("entailment_outcome")) not in {
+                        "contradicted",
+                        "not_established",
+                    }:
+                        defects.append("entailment_outcome")
+                    if not normalize_violation_type(
+                        s(entry.get("violation_type") or entry.get("failure_type"))
+                    ):
+                        defects.append("violation_type")
+                    if not _grounding_reason_is_substantive(entry.get("reason")):
+                        defects.append("reason")
+                    malformed_unsupported_fields.extend(
+                        f"{item_id}:{field}" for field in defects
+                    )
             raise_coverage(
                 "incomplete_semantic_fields",
                 malformed_unsupported,
                 public=True,
                 message="Verified unsupported grounding verdicts are incomplete",
+                missing_or_invalid_fields=malformed_unsupported_fields,
             )
     public_missing_ids: list[str] = []
     public_text_mismatch_ids: list[str] = []
     public_pair_mismatch_ids: list[str] = []
     public_incomplete_ids: list[str] = []
+    public_incomplete_fields: list[str] = []
+    public_incomplete_dimensions: list[str] = []
     public_fact_conflict_ids: list[str] = []
     for item_id, text in expected_public.items():
         matching_checks = checks_by_id.get(item_id, [])
@@ -2265,6 +2440,15 @@ def _validate_grounding_check_coverage(
                 valid_outcomes=valid_outcomes,
             ):
                 public_incomplete_ids.append(item_id)
+                field_defects, dimension_defects = _grounding_semantic_field_defects(
+                    check,
+                    valid_classifications=valid_classifications,
+                    valid_outcomes=valid_outcomes,
+                )
+                public_incomplete_fields.extend(
+                    f"{item_id}:{field}" for field in field_defects
+                )
+                public_incomplete_dimensions.extend(dimension_defects)
                 continue
             if matching_unsupported:
                 unsupported_entry = matching_unsupported[0]
@@ -2345,6 +2529,8 @@ def _validate_grounding_check_coverage(
             public_incomplete_ids,
             public=True,
             message="Grounding public-item verdicts are semantically incomplete",
+            missing_or_invalid_fields=public_incomplete_fields,
+            protected_dimensions=public_incomplete_dimensions,
         )
     if public_missing_ids:
         raise_coverage(

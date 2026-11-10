@@ -25,7 +25,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_to_payload,
     soft_copy_sentence_hash,
 )
-from src.contracts.validation import ValidationRequest
+from src.contracts.validation import ValidationIssue, ValidationRequest
 from src.generators.claim_validation_generator import (
     retained_claim_semantic_inputs,
     validate_retained_claims,
@@ -43,6 +43,9 @@ from src.generators.soft_copy_claim_provenance import (
 from src.generators.validation.grounding import (
     _public_factual_items,
     run_grounding_check,
+)
+from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
+    _build_regeneration_plan,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _public_editorial_review_issue,
@@ -786,6 +789,28 @@ def test_verified_editorial_aliases_reach_grounding_but_mislabeled_fact_fails(
         source_id=source_identity,
     )
     assert any(issue.violation_type == "unsupported_number" for issue in issues)
+
+
+def test_verified_grounding_contract_failure_is_not_a_prose_repair_target():
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="Grounding response coverage is incomplete.",
+        severity="error",
+        affected_section="grounding",
+        rule_id="grounding",
+        violation_type="grounding_claim_check_coverage_invalid",
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts={"verified_facts": [{"fact_id": "fact-1"}]},
+        broad_retry_available=False,
+    )
+
+    assert plan.targets == []
+    assert plan.unmappable_issues[0].violation_type == (
+        "grounding_claim_check_coverage_invalid"
+    )
 
 
 def test_verified_grounding_rejects_stale_unbound_semantic_input(tmp_path):

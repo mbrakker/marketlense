@@ -26,6 +26,70 @@ from ._shared import *  # noqa: F401,F403
 
 
 @pytest.mark.parametrize(
+    ("source_path", "persisted_payload", "expected_code"),
+    [
+        ("", None, "retained_claim_candidate_validation_artifact_missing"),
+        (
+            "candidate-validation.json",
+            {"status": "pass", "issues": []},
+            "retained_claim_candidate_validation_artifact_stale",
+        ),
+        (
+            "candidate-validation.json",
+            "unreadable",
+            "retained_claim_candidate_validation_artifact_invalid",
+        ),
+    ],
+)
+def test_verified_promotion_requires_current_persisted_validation_artifact(
+    tmp_path, source_path, persisted_payload, expected_code
+) -> None:
+    runtime = _runtime(tmp_path)
+    validation_report = ValidationReport(
+        schema_version="1.1",
+        status="pass",
+        severity="pass",
+        issues=[],
+        source_path=source_path,
+    )
+
+    def _read_json(_request, _ctx):
+        if persisted_payload == "unreadable":
+            raise AppError(
+                code="file_not_found",
+                message="Candidate validation artifact is absent.",
+                retryable=False,
+            )
+        return SimpleNamespace(payload=persisted_payload)
+
+    dependencies = _deps(read_json=_read_json)
+    with pytest.raises(AppError) as exc_info:
+        _promote_validated_regeneration_candidate(
+            runtime=runtime,
+            dependencies=dependencies,
+            candidate_artifacts={},
+            candidate_validation_report=validation_report,
+            candidate_validation_pack_name="validation_regen_candidate_1",
+            promoted_artifacts={},
+            promoted_validation_report=ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                severity="error",
+                issues=[],
+            ),
+            promoted_claim_validation_package=None,
+            current_artifacts_path=str(tmp_path / "artifacts.json"),
+            expected_source_id="source:canonical",
+            expected_source_md5=runtime.md5,
+            require_execution_identity=True,
+            evidence_packs={},
+            ctx=runtime.ctx,
+        )
+
+    assert exc_info.value.code == expected_code
+
+
+@pytest.mark.parametrize(
     "failure_stage",
     [
         "candidate_audit",

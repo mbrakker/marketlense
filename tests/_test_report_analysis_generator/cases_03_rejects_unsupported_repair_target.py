@@ -1,6 +1,19 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from dataclasses import replace
+
+from src.contracts.claim_validation import (
+    CLAIM_GROUNDING_VALIDATOR_VERSION,
+    CLAIM_VALIDATION_VALIDATOR_VERSION,
+)
+from src.generators.claim_validation_generator import claim_validation_package_hash
+from tests.test_verified_facts_validation_authority import (
+    SOURCE_IDENTITY,
+    _packs,
+    _verified_artifacts,
+)
+
 from ._support_cases import *  # noqa: F401,F403
 
 
@@ -98,6 +111,66 @@ def test_load_retained_claim_candidate_checks_execution_identity(
                 require_execution_identity=True,
                 ctx=runtime.ctx,
             )
+
+
+def test_verified_promotion_rejects_incomplete_current_claim_package(tmp_path):
+    runtime = _runtime(tmp_path)
+    runtime = replace(
+        runtime,
+        ctx=replace(
+            runtime.ctx,
+            configuration_hash="config-sha256",
+            policy_hash="policy-sha256",
+        ),
+    )
+    candidate_artifacts = _verified_artifacts()
+    artifact_hash = sha256_json(candidate_artifacts)
+    candidate_package = {
+        "schema_version": "1.4",
+        "artifact_hash": artifact_hash,
+        "package_hash": "",
+        "results": [],
+        "readiness_status": "awaiting_review",
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "deterministic_pass_count": 0,
+        "semantic_validation_count": 0,
+        "semantic_execution_identities": [],
+        "validation_identity": {
+            "schema_version": "1.1",
+            "report_id": runtime.file.file_id,
+            "source_id": SOURCE_IDENTITY,
+            "source_md5": runtime.md5,
+            "claim_validation_validator_version": CLAIM_VALIDATION_VALIDATOR_VERSION,
+            "grounding_validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
+            "configuration_hash": runtime.ctx.configuration_hash,
+            "policy_hash": runtime.ctx.policy_hash,
+        },
+    }
+    candidate_package["package_hash"] = claim_validation_package_hash(candidate_package)
+
+    dependencies = _deps(
+        analysis_pack_path=lambda request, _ctx: SimpleNamespace(
+            output_path=f"candidate/{request.pack_name}.json"
+        ),
+        read_json=lambda _request, _ctx: SimpleNamespace(payload=candidate_package),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        _load_candidate_claim_validation_for_promotion(
+            runtime=runtime,
+            dependencies=dependencies,
+            candidate_validation_pack_name="validation_regen_candidate_1",
+            expected_artifact_hash=artifact_hash,
+            expected_source_id=SOURCE_IDENTITY,
+            expected_source_md5=runtime.md5,
+            require_execution_identity=True,
+            candidate_artifacts=candidate_artifacts,
+            evidence_packs=_packs(),
+            ctx=runtime.ctx,
+        )
+
+    assert exc_info.value.code == "retained_claim_candidate_package_not_ready"
 
 
 def test_store_promoted_retained_claim_candidate_to_report_scoped_pack(tmp_path):
