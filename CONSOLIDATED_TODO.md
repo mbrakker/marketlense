@@ -2387,3 +2387,27 @@ delta of **+810 total tokens / +$0.000081**. No new provider-backed acceptance
 run has been claimed yet. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** pending the
 required clean Activate replay followed by the two-member acceptance.
+
+**Evidence update — 2026-11-10 (fresh Activate replay):** Commit `0a51164d`
+was replayed against the frozen Activate PDF in isolated state. The run
+admitted **10/10** visual facts, retained **10/10** eligible candidates and
+recorded all **10** selected IDs at the terminal diagnostic, correcting the
+previous `3/10` initial-selection stop. It also did not reproduce the prior
+regeneration-scope type error. The run nevertheless failed closed after one
+bounded targeted rewrite at semantic theme coverage with
+`report_completeness=incomplete`, `material_report_completeness`, and
+`semantic_theme_repair_exhausted`; no HTML, readiness approval, canonical
+promotion, publication, or WordPress write occurred. Measured usage was **462
+provider calls**, **1,172,604 input / 267,793 output tokens**, **$0.278535**,
+**2,854.5 seconds**, 11 file-search calls, four structured-output recovery
+calls, and zero automatic repairs or operator interventions. The authoritative
+ledger is under
+`C:\ml-essential-theme-e2e-20261110-0a51164d\frozen-reliability-oro16lls`.
+Because Activate failed, the planned Activate+Adjust follow-up was not run.
+The safe exporter could not produce a verified-facts package after the early
+artifact-generation failure, and raw final model responses were not retained;
+the exact omitted semantic relationship therefore remains unresolved rather
+than being inferred. This is current-SHA evidence for the selection and
+terminal-diagnostic fixes only, not a live editorial-quality improvement.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**.

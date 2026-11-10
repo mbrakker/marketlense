@@ -11944,3 +11944,77 @@ unsupported or unresolved retained factual claims. A clean Activate-only run
 against the exact frozen source is still required before the two-member
 Activate+Adjust acceptance. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+### Fresh Activate replay after essential-theme and handoff corrections — 2026-11-10
+
+The required clean Activate-only replay was run at implementation commit
+`0a51164d7298620825d6cd28ead2395ef5860ade` in isolated state. The source was
+the frozen Activate PDF at
+`C:\\Programing\\Market lense\\out\\browser_downloads\\cdn.sanity.io\\b224e6d4d2bc\\d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf`,
+SHA-256
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`.
+The run root is
+`C:\\ml-essential-theme-e2e-20261110-0a51164d\\frozen-reliability-oro16lls`;
+the authoritative terminal ledger is `cohort_result.json` at that root.
+No application-level artifacts were reused, no operator intervention occurred,
+and no WordPress or publication write was attempted.
+
+| Measure | Previous retained Activate (`878a989c`, before correction) | Fresh Activate (`0a51164d`) |
+| --- | ---: | ---: |
+| Visual facts admitted | 10 / 10 | 10 / 10 |
+| Eligible final candidates | 10 | 10 |
+| Final selected candidates at terminal diagnostic | 3 / 10 | 10 / 10 |
+| Provider calls | 442 | 462 |
+| Input / output tokens | 1,044,793 / 240,511 | 1,172,604 / 267,793 |
+| Estimated cost | $0.242112 | $0.278535 |
+| Wall-clock duration | 2,844.141 s | 2,854.5 s |
+| File-search calls | not retained in prior ledger | 11 |
+| Structured-output recovery calls | not reached | 4 |
+| Automatic repairs | 0 | 0 |
+| Validation / readiness | failed at initial selection / fail | fail / fail |
+| HTML | absent | absent |
+
+The earlier failure was `artifact_final_insight_coverage_invalid` at
+`initial_selection` after the model returned only three items. The fresh run
+cleared that boundary: the final-selection diagnostic records all ten eligible
+IDs and all ten selected IDs, with the adaptive target of five treated as a
+minimum. It also cleared the previously observed regeneration-scope failure;
+no `model_writable_path_not_string` error or automatic regeneration repair was
+observed.
+
+The fresh run then failed closed at the independent semantic theme-coverage
+boundary. Its authoritative diagnostic is:
+
+* `assessment_phase=semantic_theme_coverage`;
+* `diagnosis=material_report_completeness`;
+* `report_completeness=incomplete`;
+* `recovery_action=targeted_rewrite` and `recovery_path=targeted_rewrite`;
+* `recovery_attempt_count=1`;
+* `disposition=semantic_theme_repair_exhausted`;
+* `terminal_classification=semantic_theme_repair_exhausted`; and
+* `terminal_failure_code=artifact_final_insight_coverage_invalid`.
+
+The same current and original editorial-plan identity was retained, and the
+ten selected IDs were `insight-01`, `insight-02`, `insight-03`, `insight-06`,
+`insight-07`, `finding-13`, `insight-05`, `finding-02`, `insight-04`, and
+`insight-08`. Thus the run demonstrates the intended recovery boundary and
+bounded rewrite behavior, but it does not demonstrate that the provider's
+final prose covered every material report relationship. The gate was not
+relaxed and no speculative candidate or evidence binding was inserted.
+
+The run is retained as provider-backed terminal evidence, but the exporter
+could not create the verified-facts artifact package because artifact
+generation stopped before that package existed (`verified_facts_artifact_unreadable`;
+`FileNotFoundError`). Raw final model responses were not retained, so the exact
+semantic omission cannot be independently reconstructed from the safe ledger;
+this is an evidence limitation, not a reason to infer a successful repair.
+Because Activate did not pass, the required Activate+Adjust follow-up was not
+started. There is no current-SHA evidence for a two-report acceptance or for
+live editorial quality improvement beyond the initial-selection and
+regeneration-boundary corrections.
+
+**Verdict:** implementation and terminal-diagnostic correction **PASS**;
+current live editorial acceptance **PARTIAL / NO-GO**. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. No canonical promotion, readiness approval, HTML
+publication, or WordPress write occurred.
