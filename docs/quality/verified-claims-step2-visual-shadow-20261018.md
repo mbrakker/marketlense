@@ -12166,8 +12166,16 @@ database still records `report_selection.v1` as running. The retained ledger has
 **377** successful `figure_ranking` events and **zero provider error codes**, but
 no terminal grounding, validation, readiness, HTML, or publication outcome. This
 is incomplete live evidence, not a pass or a grounding-quality result. A second
-detached launcher was stopped during preflight before provider calls and is not
-counted as a run.
+detached launcher initially failed the clean-SHA preflight before provider calls
+and is not counted as a run. After temporarily removing only the protected ZIP
+from the worktree, a clean detached retry
+(`C:\\ml-p0p1-activate-20261110-detached3\\frozen-reliability-fyt1q4wl`)
+and an attached PTY retry
+(`C:\\ml-p0p1-activate-20261110-pty\\frozen-reliability-1xo7uj0e`) both
+reached `source_ingest.v1=succeeded` and `report_selection.v1=running`, then
+their runner processes terminated before the first provider ledger event. Both
+had zero provider calls/cost, no error code, and no terminal export. They are
+retained as runner-lifecycle diagnostics, not live quality results.
 
 The provider-free replay command completed with **15 reference cases / 39
 variants** and `fabricated_fixture_substitution=false`, but the current worktree
