@@ -2631,8 +2631,8 @@ def _render_regeneration_model(
                 path
                 for path in active_target.allowed_paths
                 if (
-                    (found := _read_repair_path(current_repair_artifacts, path))[0]
-                    and isinstance(found[1], str)
+                    (resolved := _read_repair_path(current_repair_artifacts, path))[0]
+                    and isinstance(resolved[1], str)
                 )
             ],
         )
