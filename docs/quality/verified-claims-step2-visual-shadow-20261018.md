@@ -12197,3 +12197,150 @@ publication artifacts, or WordPress writes were made.
 acceptance **PARTIAL / NO-GO** pending a terminal current-SHA Activate run and
 then the required Adjust/frozen-five sequence. Step 3 remains **unstarted/not
 ready**.
+
+### Supervised terminal Activate acceptance replay — 2026-11-10
+
+The supervised, provider-backed Activate replay required by the acceptance gate
+was run at implementation SHA `7906cc70a024da6583654e273c965bdb2a9e7067`.
+The exact frozen source was reused only as input:
+
+* source identity: `source:4d84943bbcfdef81ad8c08f29f6f6b0b`;
+* PDF SHA-256:
+  `5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`;
+* verified-fact digest:
+  `c987edeb1011a36d37ac335ad261b0afa1981b054d3fad84d27b42bde9081af2`; and
+* isolated run root:
+  `C:\ml-p0p1-activate-20261110-acceptance\frozen-reliability-4gomc5qp`.
+
+The runner was kept attached and polled until the workflow reached a typed
+terminal result. This resolved the earlier launcher-lifecycle ambiguity: the
+run now has a complete `cohort_result.json`, a terminal `report_analysis` job,
+and a `report_render` job ending in `dead_letter` with `validation_failed`.
+The run was isolated (`isolated_fresh_state=true`), had no operator
+intervention, no application-level validation reuse (`prior_package_missing`),
+and no WordPress or publication write.
+
+#### Terminal result and failure mechanism
+
+| Measure | Previous retained Activate baseline | Supervised terminal replay |
+| --- | ---: | ---: |
+| Visual facts admitted | 10 / 10 | 10 / 10 |
+| Candidate rows | 10 | 10 |
+| Final insight rows | 9 | 9 |
+| Provider calls | 510 | 483 |
+| Input / output tokens | 2,539,606 / 483,535 | 1,874,661 / 383,848 |
+| Cached input tokens | not retained | 20,302 |
+| Estimated cost | `$0.514447` | `$0.400066` |
+| Wall-clock | 4,360.594 s | 3,832.551 s |
+| File-search calls | 15 | 9 |
+| Structured repair calls | 8 | 5 repair + 4 regeneration events |
+| Transactional automatic repairs | 3 targeted repairs | 0 |
+| Workflow retries | not retained | 0 |
+| Retained unsupported claims | 0 | 0 |
+| Retained unresolved claims | 42 | 41 |
+| Validation / readiness | pass / fail | fail / fail |
+| HTML | generated but not accepted | absent |
+
+The lower current usage is an observed run difference, not evidence of a
+quality improvement: the current run failed earlier in the acceptance gates and
+did not produce an accepted HTML artifact. Provider telemetry recorded 483
+completed calls, zero provider error codes, nine file-search tool calls, ten
+visual-correction calls, ten visual-verification calls, ten grounding calls,
+five structured-repair calls, and four structured-regeneration calls. Cache
+telemetry recorded 423 enabled, 50 disabled, and 10 provider-hit decisions.
+Validation reuse avoided zero grounding calls and reused zero prior results.
+
+The grounding failure is fully typed and fail-closed. The aggregate response
+contained 94 checks for 39 retained claims plus 55 public items, but
+`returned_unsupported_count=0`; the diagnostic identified
+`retained_claim:48504fa8824ff13f36a42d7ebc12e62b3f5eae99c7bb79944cfaf308b11fe1bc`.
+The grounding contract treats a non-entailed check without its matching
+model-owned unsupported entry as `unsupported_pair_mismatch`, so no retained
+semantic result was promoted. The safe diagnostic labels this ID through the
+public-coverage path even though it is a retained-claim ID; that naming
+imprecision does not bypass the blocking check. Raw provider responses are not
+retained by policy, so the exact claim text and the provider's omitted pairing
+cannot be reconstructed safely. There is no demonstrated application-side
+evidence-authority defect to patch, and no prompt/model relaxation was made.
+
+Independent public-editorial review also failed closed after its bounded
+sequence: primary `support_mismatch`, model repair `incomplete`, and
+regeneration `support_mismatch`. The three attempts did not yield a complete
+support-consistent review. The persisted validation issues include the
+grounding contract failure, the public-review failure, and a non-blocking
+`quotes_missing` warning. The `render_complete.json` checkpoint records
+`status=error`, `outcome.error=validation_failed`, and an empty `html_path`;
+there are no `.html`, `.htm`, or `.docx` files in the run root. This is why the
+run cannot be counted as an accepted HTML or readiness result.
+
+#### Candidate generation and selection evidence
+
+The prior empty-candidate concern was exercised and explained by the retained
+`artifacts.json` cache metadata:
+
+* the provider returned eight candidates with
+  `model_output_status=accepted_non_empty`;
+* no structured-output recovery was needed for that call and no candidate was
+  rejected for invalid evidence;
+* the existing fidelity-approved fallback was invoked for
+  `fallback_reason=primary_incomplete`, adding two candidates;
+* `selected_candidate_source=model_and_fallback`, `selected_candidate_count=10`,
+  and `candidate_pool_bound=10`; and
+* the two fallback additions closed the one missing theme opportunity, leaving
+  `supplementation_unresolved_themes=[]`.
+
+The final IDs were:
+`global-internet-media-revenue-outlook`,
+`us-daily-tech-media-time-forecast`, `web-video-platform-composition`,
+`sports-viewer-motivation`, `news-source-trust-canada-us`,
+`global-retail-and-ecommerce-forecast`, `s11-podcast-genre-mix`,
+`reality-computing-platform-and-forecast`, and
+`svod-previsit-title-selection-likelihood`. The tenth candidate,
+`s01-growth-by-segment`, was merged into the global-revenue insight. The
+persisted selection metadata reports all seven planned themes selected, with no
+omitted essential or central theme. Candidate generation therefore did not
+silently lose the report's material coverage.
+
+#### Independent source and editorial inspection
+
+The nine final insight texts were inspected against the original PDF and the
+authoritative verified-fact spans. The checks covered the full set of material
+numeric and qualified assertions:
+
+| Final insight | Physical source pages | Inspection result |
+| --- | --- | --- |
+| `global-internet-media-revenue-outlook` | 5–6 | Total forecast, segment dollars/CAGRs, scope, access definition, and GDP comparator remain separated and correctly qualified. |
+| `us-daily-tech-media-time-forecast` | 11 | 12:28 to 12:46, U.S. adults 18+, daily basis, seven-day averaging, and forecast status match. |
+| `web-video-platform-composition` | 54 | Platform-specific 83/17 and 52/48 shares, top-creator cohort, residual brand shares, and category definitions match. |
+| `sports-viewer-motivation` | 82 | 90/10 motivations, weekly sports-viewer cohort, U.S. adults 18+, 2017, and sample-size limitation match. |
+| `news-source-trust-canada-us` | 101 | Country/category pairings 51/24 and 38/20, 2017, and news-reader population match. |
+| `global-retail-and-ecommerce-forecast` | 113 | Total/channel endpoints, `$2.9T` vs `$2.2T`, 18% vs 3%, exclusion, and forecast period match. |
+| `s11-podcast-genre-mix` | 128 | The physical page's right-hand chart visually shows 14%, 11%, and 10%; its printed footer is 127 and was not used for binding. |
+| `reality-computing-platform-and-forecast` | 36, 38 | Qualitative platform description and separate `$71B` VR/AR chart total with exclusions match; the prose does not conflate the chart with the broader platform headline. |
+| `svod-previsit-title-selection-likelihood` | 79 | 26/27/35 likelihood categories, U.S. 2017 scope, 88% displayed sum, and unstated subgroup denominator match. |
+
+No independently confirmed unsupported material assertion was found in the
+structured final insights. That observation is not a validation or publication
+pass: 41 retained claims remain unresolved because grounding contract coverage
+failed, and the public semantic review did not complete.
+
+#### Retained artifacts and decision
+
+The primary retained files are:
+
+* `C:\ml-p0p1-activate-20261110-acceptance\frozen-reliability-4gomc5qp\cohort_result.json`;
+* `...\report_analysis\artifacts.json` (10 candidates, 9 finals, 10 verified facts);
+* `...\report_analysis\validation.json`;
+* `...\report_analysis\validation_retained_claim_validation_candidate.json`;
+* `...\report_analysis\analysis_vector_store.json`;
+* `...\output\.checkpoints\report_generation\...\render_complete.json`; and
+* `...\state\llm_usage.sqlite` and `...\state\workflow.sqlite`.
+
+The implementation and regression gates remain **PASS**, and the supervised
+runner/lifecycle investigation is **PASS**. The genuine real-report
+acceptance result is **PARTIAL / NO-GO**: Activate reached a terminal,
+source-preserving pipeline outcome, but validation/readiness and HTML acceptance
+failed closed. Adjust and the remaining frozen-five members were not started,
+because the required first report did not reach readiness PASS. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. No canonical promotion or publication was performed.

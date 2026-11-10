@@ -2431,3 +2431,26 @@ fresh run used 510 provider calls, 2,539,606 input / 483,535 output tokens,
 `$0.514447`, and 4,360.594 seconds. Hosted CI run
 `42779297187` passed all required jobs. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+**Evidence update — 2026-11-10 (supervised terminal Activate acceptance):**
+The current-SHA supervised replay at `7906cc70` completed to a typed terminal
+outcome against the exact frozen Activate PDF (SHA-256
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`). It
+admitted **10/10** verified facts, produced **8** non-empty model candidates
+plus **2** existing fidelity-approved fallback candidates, retained **10**
+candidate rows, selected **9** final insights, and covered all seven planned
+themes. The candidate checkpoint was therefore explained rather than silently
+empty. Independent page inspection found no unsupported material assertion in
+the structured final insights, but grounding failed closed on an
+`unsupported_pair_mismatch` (one non-entailed retained check had no paired
+unsupported entry), and public semantic review exhausted its bounded attempts.
+The retained ledger has **41 unresolved / 0 unsupported** claims; readiness
+failed and no HTML artifact was emitted. Usage was **483 calls**, **1,874,661
+input / 383,848 output tokens**, **20,302 cached input tokens**, **$0.400066**,
+**3,832.551 seconds**, 9 file-search calls, 5 structured repairs plus 4
+regeneration events, 0 transactional automatic repairs, and 0 workflow retries.
+No application-level validation reuse, canonical promotion, publication, or
+WordPress write occurred. Because Activate did not reach readiness PASS, Adjust
+and the remaining frozen-five acceptance members were not started. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.
