@@ -321,12 +321,30 @@ def _public_editorial_review_failure_explanation(exc: AppError) -> str:
     for key in (
         "item_id",
         "dimension",
+        "theme",
         "expected_item_count",
         "actual_item_count",
+        "expected_obligation_count",
+        "actual_obligation_count",
     ):
         value = context.get(key)
         if value not in (None, "", []):
             parts.append(f"{key}={value}")
+    for key in (
+        "missing_evidence_ids",
+        "unknown_evidence_ids",
+        "unbound_evidence_ids",
+        "invalid_insight_ids",
+        "duplicate_insight_ids",
+        "missing_obligation_ids",
+        "duplicate_obligation_ids",
+        "invalid_obligation_ids",
+    ):
+        value = context.get(key)
+        if isinstance(value, list):
+            identifiers = [str(item).strip() for item in value if str(item).strip()]
+            if identifiers:
+                parts.append(f"{key}={','.join(identifiers[:8])}")
     return (
         "Independent public-editorial semantic review failed closed: "
         + "; ".join(parts)
@@ -479,6 +497,19 @@ def _validate_original_essential_obligation_assessments(
             allowed_support_ids.add(alias)
             public_item_evidence[alias] = evidence_ids
 
+    assessment_themes = [
+        str(assessment.get("theme") or "").strip()
+        for assessment in assessments
+        if isinstance(assessment, dict)
+    ]
+    duplicate_obligation_ids = sorted(
+        {
+            theme
+            for theme in assessment_themes
+            if theme and assessment_themes.count(theme) > 1
+        }
+    )
+    missing_obligation_ids = sorted(set(expected) - set(assessment_themes))
     if len(assessments) != len(expected):
         raise AppError(
             code="public_editorial_quality_obligation_review_incomplete",
@@ -490,6 +521,8 @@ def _validate_original_essential_obligation_assessments(
             context={
                 "expected_obligation_count": len(expected),
                 "actual_obligation_count": len(assessments),
+                "missing_obligation_ids": missing_obligation_ids,
+                "duplicate_obligation_ids": duplicate_obligation_ids,
             },
         )
     seen: set[str] = set()
@@ -509,7 +542,11 @@ def _validate_original_essential_obligation_assessments(
                     "Original obligation assessment has an unknown or duplicate theme"
                 ),
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "invalid_obligation_ids": [theme] if theme not in expected else [],
+                    "duplicate_obligation_ids": [theme] if theme in seen else [],
+                },
             )
         seen.add(theme)
         status = str(assessment.get("status") or "").strip()
@@ -538,44 +575,78 @@ def _validate_original_essential_obligation_assessments(
             for value in assessment.get("evidence_ids") or []
             if str(value).strip()
         ]
-        if len(set(assessment_evidence_ids)) != len(assessment_evidence_ids) or not set(
-            assessment_evidence_ids
-        ).issubset(obligation_evidence_ids):
+        duplicate_evidence_ids = sorted(
+            {
+                evidence_id
+                for evidence_id in assessment_evidence_ids
+                if assessment_evidence_ids.count(evidence_id) > 1
+            }
+        )
+        unauthorized_evidence_ids = sorted(
+            set(assessment_evidence_ids) - obligation_evidence_ids
+        )
+        missing_evidence_ids = sorted(
+            obligation_evidence_ids - set(assessment_evidence_ids)
+        )
+        if duplicate_evidence_ids or unauthorized_evidence_ids:
             raise AppError(
                 code="public_editorial_quality_obligation_review_evidence_mismatch",
                 message="Original obligation assessment cites unauthorized evidence",
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "duplicate_evidence_ids": duplicate_evidence_ids,
+                    "unknown_evidence_ids": unauthorized_evidence_ids,
+                    "missing_evidence_ids": missing_evidence_ids,
+                },
             )
         supporting_ids = [
             str(value).strip()
             for value in assessment.get("supporting_insight_ids") or []
             if str(value).strip()
         ]
-        if len(set(supporting_ids)) != len(supporting_ids) or not set(
-            supporting_ids
-        ).issubset(allowed_support_ids):
+        duplicate_insight_ids = sorted(
+            {
+                insight_id
+                for insight_id in supporting_ids
+                if supporting_ids.count(insight_id) > 1
+            }
+        )
+        invalid_insight_ids = sorted(set(supporting_ids) - allowed_support_ids)
+        if duplicate_insight_ids or invalid_insight_ids:
             raise AppError(
                 code="public_editorial_quality_obligation_review_support_mismatch",
                 message=(
                     "Original obligation assessment cites an unknown supporting item"
                 ),
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "duplicate_insight_ids": duplicate_insight_ids,
+                    "invalid_insight_ids": invalid_insight_ids,
+                    "missing_evidence_ids": missing_evidence_ids,
+                },
             )
         supported_evidence_ids = (
             set().union(*(public_item_evidence[item_id] for item_id in supporting_ids))
             if supporting_ids
             else set()
         )
-        if not set(assessment_evidence_ids).issubset(supported_evidence_ids):
+        unbound_evidence_ids = sorted(
+            set(assessment_evidence_ids) - supported_evidence_ids
+        )
+        if unbound_evidence_ids:
             raise AppError(
                 code="public_editorial_quality_obligation_review_support_mismatch",
                 message=(
                     "Original obligation evidence is not bound to its supporting items"
                 ),
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "unbound_evidence_ids": unbound_evidence_ids,
+                    "missing_evidence_ids": missing_evidence_ids,
+                },
             )
         if status == "covered" and (
             set(assessment_evidence_ids) != obligation_evidence_ids
@@ -589,14 +660,17 @@ def _validate_original_essential_obligation_assessments(
                     "authorized fact"
                 ),
                 retryable=False,
-                context={"theme": theme},
+                context={
+                    "theme": theme,
+                    "missing_evidence_ids": missing_evidence_ids,
+                },
             )
         if status == "partial" and not assessment_evidence_ids:
             raise AppError(
                 code="public_editorial_quality_obligation_review_incomplete",
                 message="Partial obligation assessment has no retained evidence",
                 retryable=False,
-                context={"theme": theme},
+                context={"theme": theme, "missing_evidence_ids": missing_evidence_ids},
             )
         if status == "uncovered" and (assessment_evidence_ids or supporting_ids):
             raise AppError(
@@ -613,7 +687,10 @@ def _validate_original_essential_obligation_assessments(
             code="public_editorial_quality_obligation_review_incomplete",
             message="Verified public review omitted an original essential obligation",
             retryable=False,
-            context={"missing_themes": sorted(set(expected) - seen)},
+            context={
+                "missing_themes": sorted(set(expected) - seen),
+                "missing_obligation_ids": sorted(set(expected) - seen),
+            },
         )
     return statuses
 
@@ -3340,12 +3417,12 @@ def _load_candidate_claim_validation_for_promotion(
                 retryable=False,
                 context={"pack_name": pack_name, "mismatches": mismatches},
             )
-    if require_execution_identity and (
-        candidate_artifacts is not None or evidence_packs is not None
-    ):
-        if not str(expected_source_id or "").strip() or not isinstance(
-            candidate_artifacts, dict
-        ) or not isinstance(evidence_packs, dict):
+    if require_execution_identity:
+        if (
+            not str(expected_source_id or "").strip()
+            or not isinstance(candidate_artifacts, dict)
+            or not isinstance(evidence_packs, dict)
+        ):
             raise AppError(
                 code="retained_claim_candidate_package_context_missing",
                 message=(
@@ -3723,6 +3800,7 @@ def _preflight_empty_grounding_strategies(
     rejected_strategy_keys: set[str],
     broad_retry_available: bool,
     repair_memory: Sequence[RepairDelta] = (),
+    verified_mode: bool | None = None,
 ) -> tuple[RegenerationPlan, list[tuple[str, str]]]:
     """Advance past model strategies whose canonical grounding package is empty."""
 
@@ -3980,6 +4058,7 @@ def _preflight_empty_grounding_strategies(
             broad_retry_available=broad_retry_available,
             rejected_strategy_keys=rejected_strategy_keys,
             repair_memory=repair_memory,
+            verified_mode=verified_mode,
         )
     return current_plan, skipped
 
@@ -4165,6 +4244,7 @@ def _run_validation_regeneration_loop(
             broad_retry_available=not verified_mode and not broad_retry_used,
             rejected_strategy_keys=rejected_strategy_keys,
             repair_memory=(),
+            verified_mode=verified_mode,
         )
         plan, empty_grounding_strategies = _preflight_empty_grounding_strategies(
             plan=plan,
@@ -4175,6 +4255,7 @@ def _run_validation_regeneration_loop(
             rejected_strategy_keys=rejected_strategy_keys,
             broad_retry_available=not verified_mode and not broad_retry_used,
             repair_memory=(),
+            verified_mode=verified_mode,
         )
         if empty_grounding_strategies:
             logger.info(

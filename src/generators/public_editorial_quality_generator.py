@@ -1978,6 +1978,37 @@ def public_editorial_report_review_scope(
     }
     if editorial_plan_coverage:
         scope["original_editorial_plan_coverage"] = editorial_plan_coverage
+    final_insights: list[dict[str, Any]] = []
+    final_items_by_insight_id: dict[str, list[str]] = {}
+    for item in items:
+        if str(item.get("artifact") or "").strip() != "insights_final":
+            continue
+        item_id = str(item.get("public_item_id") or "").strip()
+        parts = item_id.split(":")
+        if len(parts) >= 3 and parts[0] in {"insight", "insights"}:
+            final_items_by_insight_id.setdefault(parts[1], []).append(item_id)
+    for insight in safe_artifacts.get("insights_final") or []:
+        if not isinstance(insight, Mapping):
+            continue
+        insight_id = str(insight.get("id") or insight.get("insight_id") or "").strip()
+        if not insight_id:
+            continue
+        evidence_ids = _public_evidence_ids(insight)
+        final_insights.append(
+            {
+                "insight_id": insight_id,
+                "public_item_ids": sorted(
+                    final_items_by_insight_id.get(insight_id, [])
+                ),
+                "evidence_ids": evidence_ids,
+                "verified_fact_ids": [
+                    evidence_id.removeprefix("verified-fact:")
+                    for evidence_id in evidence_ids
+                    if evidence_id.startswith("verified-fact:")
+                ],
+            }
+        )
+    scope["final_insights"] = final_insights
     return scope
 
 

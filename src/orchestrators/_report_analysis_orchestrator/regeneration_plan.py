@@ -1699,7 +1699,13 @@ def _build_regeneration_plan(
     broad_retry_available: bool,
     rejected_strategy_keys: set[str] | None = None,
     repair_memory: Sequence[RepairDelta] = (),
+    verified_mode: bool | None = None,
 ) -> RegenerationPlan:
+    trusted_verified_mode = (
+        verified_mode
+        if verified_mode is not None
+        else verified_facts_mode(artifacts, "")
+    )
     planning_issues = list(issues)
     latest_resolved: set[str] = set()
     if repair_memory:
@@ -1788,7 +1794,7 @@ def _build_regeneration_plan(
             continue
         target_keys = _target_keys_for_issue(
             normalized,
-            verified_mode=verified_facts_mode(artifacts, ""),
+            verified_mode=trusted_verified_mode,
         )
         if target_keys:
             for target_key in target_keys:

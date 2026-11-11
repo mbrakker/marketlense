@@ -13,6 +13,7 @@ from src.generators.claim_validation_generator import (
     validate_retained_claims,
 )
 from src.generators.validation.grounding import (
+    _retained_claim_grounding_item_ids,
     _split_grounding_batch,
     _validate_grounding_check_coverage,
     grounding_payload,
@@ -315,6 +316,80 @@ def test_grounding_issue_retains_public_verified_evidence_for_repair(tmp_path):
     assert item_issues[0].evidence_ids == public_item["evidence_ids"]
 
 
+def test_verified_grounding_attributes_issue_from_canonical_item_not_model_section(
+    tmp_path,
+):
+    fact = _fact()
+    artifacts = _verified_artifacts(fact=fact)
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-canonical-grounding-attribution",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs(fact),
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+    payload = grounding_payload(request, artifacts)
+    public_item = payload["public_factual_items"][0]
+    entries = payload["retained_claims_to_ground"] + payload["public_factual_items"]
+    checks = []
+    for entry in entries:
+        outcome = (
+            "not_established"
+            if entry["item_id"] == public_item["item_id"]
+            else "entailed"
+        )
+        check = _grounding_check(
+            entry["item_id"],
+            entry["text"],
+            outcome,
+            classification=entry.get("declared_classification", "factual_claim"),
+        )
+        check["section"] = "model-reported-wrong-section"
+        checks.append(check)
+    response = {
+        "checks": checks,
+        "unsupported": [
+            {
+                "item_id": public_item["item_id"],
+                "section": "model-reported-wrong-section",
+                "text": public_item["text"],
+                "classification": public_item.get(
+                    "declared_classification", "factual_claim"
+                ),
+                "entailment_outcome": "not_established",
+                "violation_type": "not_established",
+                "reason": "The source does not establish this exact proposition.",
+            }
+        ],
+    }
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(response),
+        ctx=_ctx(),
+        source_id=SOURCE_IDENTITY,
+        prompt_family_reuse_reader=lambda *_args: SimpleNamespace(
+            reusable=False,
+            output_payload=None,
+            reason="test_canonical_grounding_attribution",
+        ),
+    )
+
+    item_issues = [
+        issue for issue in issues if issue.entity_id == public_item["item_id"]
+    ]
+    assert item_issues
+    assert item_issues[0].affected_section == public_item["section"]
+    assert item_issues[0].evidence_ids == public_item["evidence_ids"]
+
+
 def test_verified_grounding_does_not_bypass_model_verdict_for_exact_fact_text(tmp_path):
     fact = _fact()
     artifacts = _verified_artifacts(fact=fact)
@@ -568,10 +643,7 @@ def test_verified_grounding_rejection_retains_missing_retained_claim_id():
     )
     assert inputs
     claim_id = inputs[0].candidate.claim_id
-    retained_item_ids = {
-        semantic_input.candidate.claim_id: semantic_input.candidate.claim_id
-        for semantic_input in inputs
-    }
+    retained_item_ids = _retained_claim_grounding_item_ids(inputs, set())
 
     with pytest.raises(AppError) as exc_info:
         _validate_grounding_check_coverage(
@@ -612,10 +684,7 @@ def test_verified_grounding_retained_contract_failures_are_typed(
     )
     assert inputs
     claim_id = inputs[0].candidate.claim_id
-    retained_item_ids = {
-        semantic_input.candidate.claim_id: semantic_input.candidate.claim_id
-        for semantic_input in inputs
-    }
+    retained_item_ids = _retained_claim_grounding_item_ids(inputs, set())
     check = _grounding_check(claim_id, inputs[0].candidate.text, "entailed")
     unsupported = []
     if variant == "text":
@@ -651,6 +720,94 @@ def test_verified_grounding_retained_contract_failures_are_typed(
 
     assert exc_info.value.context["coverage_failure_category"] == expected_category
     assert claim_id in exc_info.value.context["item_ids"]
+
+
+def test_verified_grounding_retained_non_entailed_requires_model_owned_pair():
+    artifacts = _verified_artifacts()
+    evidence_packs = _packs()
+    package = validate_retained_claims(
+        artifacts,
+        evidence_packs,
+        source_identity=SOURCE_IDENTITY,
+        verified_facts_only=True,
+    )
+    inputs = retained_claim_semantic_inputs(
+        package,
+        evidence_packs,
+        source_identity=SOURCE_IDENTITY,
+    )
+    assert inputs
+    claim_id = inputs[0].candidate.claim_id
+    retained_item_ids = _retained_claim_grounding_item_ids(inputs, set())
+    checks = [
+        _grounding_check(
+            retained_item_ids[semantic_input.candidate.claim_id],
+            semantic_input.candidate.text,
+            "entailed",
+        )
+        for semantic_input in inputs
+    ]
+    checks[0]["entailment_outcome"] = "not_established"
+    checks[0]["proposition_status"] = "unknown"
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_grounding_check_coverage(
+            {"checks": checks, "unsupported": []},
+            inputs,
+            retained_item_ids,
+        )
+
+    assert exc_info.value.context["coverage_failure_category"] == (
+        "unsupported_pair_mismatch"
+    )
+    assert retained_item_ids[claim_id] in exc_info.value.context["item_ids"]
+
+
+def test_verified_grounding_retained_non_entailed_accepts_matching_pair_only():
+    artifacts = _verified_artifacts()
+    evidence_packs = _packs()
+    package = validate_retained_claims(
+        artifacts,
+        evidence_packs,
+        source_identity=SOURCE_IDENTITY,
+        verified_facts_only=True,
+    )
+    inputs = retained_claim_semantic_inputs(
+        package,
+        evidence_packs,
+        source_identity=SOURCE_IDENTITY,
+    )
+    assert inputs
+    claim_id = inputs[0].candidate.claim_id
+    retained_item_ids = _retained_claim_grounding_item_ids(inputs, set())
+    text = inputs[0].candidate.text
+    checks = [
+        _grounding_check(
+            retained_item_ids[semantic_input.candidate.claim_id],
+            semantic_input.candidate.text,
+            "entailed",
+        )
+        for semantic_input in inputs
+    ]
+    check = checks[0]
+    check["item_id"] = retained_item_ids[claim_id]
+    check["text"] = text
+    check["entailment_outcome"] = "not_established"
+    check["proposition_status"] = "unknown"
+    unsupported = {
+        "item_id": retained_item_ids[claim_id],
+        "text": text,
+        "classification": "factual_claim",
+        "entailment_outcome": "not_established",
+        "violation_type": "not_established",
+        "reason": "The canonical evidence does not establish the claim.",
+    }
+
+    _validate_grounding_check_coverage(
+        {"checks": checks, "unsupported": [unsupported]},
+        inputs,
+        retained_item_ids,
+    )
 
 
 @pytest.mark.parametrize(

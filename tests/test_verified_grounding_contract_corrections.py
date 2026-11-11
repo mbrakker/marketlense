@@ -229,6 +229,7 @@ def test_factual_disposition_still_fails_closed_for_material_unknown_dimension()
         == "unresolved"
     )
 
+
 def test_unbound_editorial_quality_failure_is_valid_negative_verdict():
     item = {
         "public_item_id": "soft_copy:expert_comment:generic",
@@ -810,6 +811,33 @@ def test_verified_grounding_contract_failure_is_not_a_prose_repair_target():
     assert plan.targets == []
     assert plan.unmappable_issues[0].violation_type == (
         "grounding_claim_check_coverage_invalid"
+    )
+
+
+def test_trusted_verified_mode_does_not_downgrade_when_artifact_marker_is_missing():
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="Grounding verdict is incomplete.",
+        severity="error",
+        affected_section="insights:insight-1.text",
+        rule_id="grounding",
+        violation_type="grounding_claim_verdict_incomplete",
+        entity_id="insight:insight-1:text",
+        evidence_ids=["verified-fact:f1"],
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts={
+            "insights_final": [{"id": "insight-1", "evidence_id": "verified-fact:f1"}]
+        },
+        broad_retry_available=False,
+        verified_mode=True,
+    )
+
+    assert plan.targets == []
+    assert plan.unmappable_issues[0].violation_type == (
+        "grounding_claim_verdict_incomplete"
     )
 
 

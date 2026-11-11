@@ -95,7 +95,7 @@ from .verified_facts import (
 )
 
 RULE_ID = "grounding"
-GROUNDING_FAMILY_SCHEMA_VERSION = "1.6"
+GROUNDING_FAMILY_SCHEMA_VERSION = "1.7"
 GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v5"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 GROUNDING_MAX_CLAIMS_PER_CALL = 4
@@ -337,6 +337,49 @@ def _claim_prompt_content_hashes(
     }
 
 
+def _prompt_bundle_execution_context(prompt_bundle: Any) -> dict[str, str]:
+    """Return the execution identity actually used by one prompt bundle."""
+
+    return {
+        "prompt_content_hash": str(prompt_bundle.prompt_content_hash or ""),
+        "execution_identity": str(
+            prompt_bundle.execution_identity.execution_identity or ""
+        ),
+        "model_provider": str(prompt_bundle.execution_policy.policy.provider),
+        "model_name": str(prompt_bundle.resolved_model or ""),
+        "configuration_policy_identity": sha256_json(
+            {
+                "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
+                "execution_policy": asdict(prompt_bundle.execution_policy.policy),
+                "routing_policy": asdict(prompt_bundle.routing_decision),
+            }
+        ),
+    }
+
+
+def _claim_prompt_execution_contexts(
+    grounding_batches: Sequence[tuple[dict, list[ClaimSemanticInput]]],
+    prompt_bundles: Sequence[Any],
+) -> dict[str, dict[str, str]]:
+    """Bind each claim to its one current primary batch execution."""
+
+    contexts_by_claim_id: dict[str, list[dict[str, str]]] = {}
+    for (_batch_payload, semantic_inputs), prompt_bundle in zip(
+        grounding_batches, prompt_bundles, strict=True
+    ):
+        context = _prompt_bundle_execution_context(prompt_bundle)
+        for semantic_input in semantic_inputs:
+            contexts_by_claim_id.setdefault(
+                semantic_input.candidate.claim_id, []
+            ).append(context)
+    output: dict[str, dict[str, str]] = {}
+    for claim_id, contexts in contexts_by_claim_id.items():
+        unique_contexts = {tuple(sorted(context.items())) for context in contexts}
+        if len(unique_contexts) == 1:
+            output[claim_id] = dict(contexts[0])
+    return output
+
+
 def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
     verified_mode = bool(getattr(runtime.prepared, "verified_facts_mode", False))
     evidence_packs = (
@@ -528,9 +571,6 @@ def run_grounding_check(
         retained_claim_inputs=retained_claim_inputs,
     )
     public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
-    public_item_evidence_ids = _public_item_evidence_ids(
-        audit_payload.get("public_factual_items")
-    )
     provenance_defects = [
         item
         for item in audit_payload.get("public_factual_items") or []
@@ -557,6 +597,11 @@ def run_grounding_check(
         retained_claim_inputs,
         set(public_item_ids.values()),
     )
+    grounding_items_by_id = _grounding_item_inventory(audit_payload)
+    grounding_item_evidence_ids = {
+        item_id: list(item.get("evidence_ids") or [])
+        for item_id, item in grounding_items_by_id.items()
+    }
     grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
     authority_policy = grounding_authority_policy(verified_mode)
     batch_prompt_vars = _grounding_batch_prompt_variables(
@@ -587,14 +632,13 @@ def run_grounding_check(
     prompt_content_hash_by_claim_id = _claim_prompt_content_hashes(
         grounding_batches, prompt_bundles
     )
-    full_grounding_batch_count = len(grounding_batches)
-    configuration_policy_hash = sha256_json(
-        {
-            "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
-            "execution_policy": asdict(prompt_bundle.execution_policy.policy),
-            "routing_policy": asdict(prompt_bundle.routing_decision),
-        }
+    execution_context_by_claim_id = _claim_prompt_execution_contexts(
+        grounding_batches, prompt_bundles
     )
+    full_grounding_batch_count = len(grounding_batches)
+    configuration_policy_hash = _prompt_bundle_execution_context(prompt_bundle)[
+        "configuration_policy_identity"
+    ]
     retrieval_identity = sha256_json(
         {
             "use_vector_store": grounding_use_vector_store,
@@ -634,6 +678,7 @@ def run_grounding_check(
             configuration_policy_identity=configuration_policy_hash,
             retrieval_identity=retrieval_identity,
             prompt_content_hash_by_claim_id=prompt_content_hash_by_claim_id,
+            execution_context_by_claim_id=execution_context_by_claim_id,
         )
     )
 
@@ -649,9 +694,6 @@ def run_grounding_check(
             retained_claim_inputs=retained_claim_inputs,
         )
         public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
-        public_item_evidence_ids = _public_item_evidence_ids(
-            audit_payload.get("public_factual_items")
-        )
         retained_item_ids = _retained_claim_grounding_item_ids(
             retained_claim_inputs,
             set(public_item_ids.values()),
@@ -668,6 +710,9 @@ def run_grounding_check(
         ]
         prompt_bundle = prompt_bundles[0]
         prompt_content_hash_by_claim_id = _claim_prompt_content_hashes(
+            grounding_batches, prompt_bundles
+        )
+        execution_context_by_claim_id = _claim_prompt_execution_contexts(
             grounding_batches, prompt_bundles
         )
     reuse_telemetry["grounding_calls_avoided"] = max(
@@ -874,7 +919,7 @@ def run_grounding_check(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
-                    processing_version="validation_rule_v6",
+                    processing_version="validation_rule_v7",
                     prompt_content_hash=prompt_bundle.prompt_content_hash,
                     execution_identity=prompt_bundle.execution_identity.execution_identity,
                     model_provider=str(prompt_bundle.execution_policy.policy.provider),
@@ -951,7 +996,7 @@ def run_grounding_check(
                 batch_bundle,
                 *,
                 stage_suffix: str = "",
-            ) -> tuple[int, Any, bool]:
+            ) -> tuple[int, Any, bool, dict[str, dict[str, str]]]:
                 _batch_payload, batch_semantic_inputs = batch_spec
                 stage_token = f"{batch_index:02d}{stage_suffix}"
                 batch_task_id = f"{prompt_ctx.task_id}:batch:{stage_token}:grounding"
@@ -960,6 +1005,7 @@ def run_grounding_check(
                     task_id=batch_task_id,
                 )
                 batch_recovery_attempted = False
+                last_call_bundle = batch_bundle
 
                 def call_model(
                     mode: str,
@@ -970,7 +1016,7 @@ def run_grounding_check(
                     base_bundle=batch_bundle,
                     call_index=stage_token,
                 ):
-                    nonlocal batch_recovery_attempted
+                    nonlocal batch_recovery_attempted, last_call_bundle
                     if mode != "primary":
                         batch_recovery_attempted = True
                     bundle = base_bundle
@@ -995,6 +1041,7 @@ def run_grounding_check(
                                 else None
                             ),
                         )
+                    last_call_bundle = bundle
                     return invoke_structured_output_model(
                         openai_client=openai_client,
                         prompt_bundle=bundle,
@@ -1028,7 +1075,7 @@ def run_grounding_check(
                         ctx=batch_ctx,
                         diagnostic_phase="batch",
                         diagnostic_batch_index=batch_index,
-                        diagnostic_prompt_bundle=batch_bundle,
+                        diagnostic_prompt_bundle=last_call_bundle,
                     )
 
                 recovery = execute_structured_output(
@@ -1053,8 +1100,17 @@ def run_grounding_check(
                     ),
                     model_pricing=settings.model_pricing,
                 )
+                execution_context = _prompt_bundle_execution_context(last_call_bundle)
 
-                return batch_index, recovery.payload, batch_recovery_attempted
+                return (
+                    batch_index,
+                    recovery.payload,
+                    batch_recovery_attempted,
+                    {
+                        semantic_input.candidate.claim_id: execution_context
+                        for semantic_input in batch_semantic_inputs
+                    },
+                )
 
             def execute_batch(
                 batch_index: int,
@@ -1063,7 +1119,7 @@ def run_grounding_check(
                 batch_bundle,
                 *,
                 stage_suffix: str = "",
-            ) -> tuple[int, Any, bool]:
+            ) -> tuple[int, Any, bool, dict[str, dict[str, str]]]:
                 try:
                     return _execute_batch(
                         batch_index,
@@ -1087,7 +1143,9 @@ def run_grounding_check(
                         else []
                     )
                     if split_specs:
-                        split_results: list[tuple[Any, bool]] = []
+                        split_results: list[
+                            tuple[Any, bool, dict[str, dict[str, str]]]
+                        ] = []
                         for split_index, split_spec in enumerate(split_specs, start=1):
                             split_vars = _grounding_batch_prompt_variables(
                                 [split_spec],
@@ -1096,31 +1154,47 @@ def run_grounding_check(
                                 verified_mode=verified_mode,
                             )[0]
                             split_bundle = prepare_batch_bundle(split_vars)
-                            _split_index, split_payload, split_recovered = (
-                                execute_batch(
-                                    batch_index,
-                                    split_spec,
-                                    split_vars,
-                                    split_bundle,
-                                    stage_suffix=(f"{stage_suffix}_split{split_index}"),
+                            (
+                                _split_index,
+                                split_payload,
+                                split_recovered,
+                                split_execution_context,
+                            ) = execute_batch(
+                                batch_index,
+                                split_spec,
+                                split_vars,
+                                split_bundle,
+                                stage_suffix=(f"{stage_suffix}_split{split_index}"),
+                            )
+                            split_results.append(
+                                (
+                                    split_payload,
+                                    split_recovered,
+                                    split_execution_context,
                                 )
                             )
-                            split_results.append((split_payload, split_recovered))
                         merged_payload: dict[str, list[Any]] = {
                             "unsupported": [],
                             "checks": [],
                         }
-                        for split_payload, _split_recovered in split_results:
+                        merged_execution_context: dict[str, dict[str, str]] = {}
+                        for (
+                            split_payload,
+                            _split_recovered,
+                            split_execution_context,
+                        ) in split_results:
                             merged_payload["unsupported"].extend(
                                 split_payload.get("unsupported") or []
                             )
                             merged_payload["checks"].extend(
                                 split_payload.get("checks") or []
                             )
+                            merged_execution_context.update(split_execution_context)
                         return (
                             batch_index,
                             merged_payload,
                             True,
+                            merged_execution_context,
                         )
                     with batch_failure_lock:
                         batch_failure_event.set()
@@ -1170,7 +1244,7 @@ def run_grounding_check(
                     context.setdefault("source_md5", source_md5)
                 exc.context = context
 
-            batch_results: dict[int, tuple[Any, bool]] = {}
+            batch_results: dict[int, tuple[Any, bool, dict[str, dict[str, str]]]] = {}
             batch_failures: list[tuple[int, Exception]] = []
             next_batch = 0
             pending: dict[Future, int] = {}
@@ -1200,7 +1274,12 @@ def run_grounding_check(
                     for future in sorted(completed, key=pending.__getitem__):
                         batch_index = pending.pop(future)
                         try:
-                            _index, payload, batch_recovery_attempted = future.result()
+                            (
+                                _index,
+                                payload,
+                                batch_recovery_attempted,
+                                batch_execution_context,
+                            ) = future.result()
                         except Exception as exc:
                             annotate_batch_failure(
                                 batch_index,
@@ -1212,6 +1291,7 @@ def run_grounding_check(
                             batch_results[batch_index] = (
                                 payload,
                                 batch_recovery_attempted,
+                                batch_execution_context,
                             )
 
                     if batch_failures:
@@ -1221,9 +1301,12 @@ def run_grounding_check(
                             if future.cancel():
                                 continue
                             try:
-                                _index, payload, batch_recovery_attempted = (
-                                    future.result()
-                                )
+                                (
+                                    _index,
+                                    payload,
+                                    batch_recovery_attempted,
+                                    batch_execution_context,
+                                ) = future.result()
                             except Exception as exc:
                                 annotate_batch_failure(
                                     batch_index,
@@ -1235,6 +1318,7 @@ def run_grounding_check(
                                 batch_results[batch_index] = (
                                     payload,
                                     batch_recovery_attempted,
+                                    batch_execution_context,
                                 )
                         pending.clear()
                         _failure_index, failure = min(
@@ -1271,14 +1355,21 @@ def run_grounding_check(
                             ] = batch_index
                             next_batch += 1
 
+            response_execution_context_by_claim_id: dict[str, dict[str, str]] = {}
             for batch_index in sorted(batch_results):
-                payload, batch_recovery_attempted = batch_results[batch_index]
+                (
+                    payload,
+                    batch_recovery_attempted,
+                    batch_execution_context,
+                ) = batch_results[batch_index]
                 recovery_attempted = recovery_attempted or batch_recovery_attempted
                 response_payload["unsupported"].extend(payload.get("unsupported") or [])
                 response_payload["checks"].extend(payload.get("checks") or [])
+                response_execution_context_by_claim_id.update(batch_execution_context)
             validate_grounding_payload(response_payload)
         else:
             response_payload = reused_payload
+            response_execution_context_by_claim_id = dict(execution_context_by_claim_id)
         unsupported: list[Any] = response_payload.get("unsupported") or []
         checks: list[Any] = response_payload.get("checks") or []
         if (
@@ -1297,7 +1388,7 @@ def run_grounding_check(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
-                    processing_version="validation_rule_v6",
+                    processing_version="validation_rule_v7",
                     output_payload=response_payload,
                     system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
                     user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
@@ -1336,6 +1427,7 @@ def run_grounding_check(
             relevant_input_hash=relevant_input_hash,
             retrieval_identity=retrieval_identity,
             prompt_content_hash_by_claim_id=prompt_content_hash_by_claim_id,
+            execution_context_by_claim_id=response_execution_context_by_claim_id,
         )
         updated_claim_package = apply_retained_claim_semantic_results(
             retained_claim_package,
@@ -1358,7 +1450,6 @@ def run_grounding_check(
                 },
             )
         )
-        failed_check_keys = set()
         unsupported_item_ids = {
             s(entry.get("item_id"))
             for entry in unsupported
@@ -1369,10 +1460,18 @@ def run_grounding_check(
             for item in audit_payload.get("public_factual_items") or []
             if isinstance(item, dict) and s(item.get("item_id"))
         }
+        failed_check_item_ids: set[str] = set()
         if isinstance(checks, list):
             for entry in checks:
                 if not isinstance(entry, dict):
                     continue
+                item_id = s(entry.get("item_id"))
+                canonical_item = grounding_items_by_id.get(item_id, {})
+                section = (
+                    s(canonical_item.get("section"))
+                    or s(entry.get("section"))
+                    or "grounding"
+                )
                 comparison = ProtectedFactComparison.from_payload(
                     entry.get("protected_facts"),
                     proposition_status=s(entry.get("proposition_status")),
@@ -1393,7 +1492,7 @@ def run_grounding_check(
                         retryable=False,
                         context={"item_id": s(entry.get("item_id"))},
                     )
-                public_item = public_items_by_id.get(s(entry.get("item_id")))
+                public_item = public_items_by_id.get(item_id)
                 if (
                     verified_mode
                     and public_item is not None
@@ -1410,22 +1509,20 @@ def run_grounding_check(
                                 f"{text[:200]}"
                             ),
                             severity="error",
-                            section=s(entry.get("section") or "grounding"),
+                            section=section,
                             violation_type="missing_material_evidence",
-                            entity_id=_public_item_id_for_failure(
-                                s(entry.get("section") or "grounding"),
-                                text,
-                                public_item_ids,
+                            entity_id=item_id
+                            if canonical_item
+                            else _public_item_id_for_failure(
+                                section, text, public_item_ids
                             ),
+                            evidence_ids=canonical_item.get("evidence_ids", ()),
                             classification=classification,
                         )
                     )
-                    failed_check_keys.add((s(entry.get("section")), text))
+                    failed_check_item_ids.add(item_id)
                     continue
-                if (
-                    outcome != "entailed"
-                    and s(entry.get("item_id")) in unsupported_item_ids
-                ):
+                if outcome != "entailed" and item_id in unsupported_item_ids:
                     continue
                 model_violation_type = normalize_violation_type(
                     s(entry.get("violation_type") or entry.get("failure_type"))
@@ -1443,7 +1540,6 @@ def run_grounding_check(
                 }:
                     continue
                 text = s(entry.get("text"))
-                section = s(entry.get("section") or "grounding")
                 unresolved = (
                     outcome == "not_established"
                     and comparison.proposition_status != "incompatible"
@@ -1464,7 +1560,11 @@ def run_grounding_check(
                     else ""
                 )
                 reason = s(entry.get("reason") or "Unsupported factual claim")
-                entity_id = _public_item_id_for_failure(section, text, public_item_ids)
+                entity_id = (
+                    item_id
+                    if canonical_item
+                    else _public_item_id_for_failure(section, text, public_item_ids)
+                )
                 issues.append(
                     issue(
                         rule_id=RULE_ID,
@@ -1482,19 +1582,25 @@ def run_grounding_check(
                         section=section,
                         violation_type=violation_type,
                         entity_id=entity_id,
-                        evidence_ids=public_item_evidence_ids.get(entity_id, ()),
+                        evidence_ids=canonical_item.get("evidence_ids", ()),
                         classification=classification,
                     )
                 )
-                failed_check_keys.add((section, text))
+                failed_check_item_ids.add(item_id)
         if isinstance(unsupported, list):
             for entry in unsupported:
                 if not isinstance(entry, dict):
                     continue
-                text = s(entry.get("text"))
-                section = s(entry.get("section") or "grounding")
-                if (section, text) in failed_check_keys:
+                item_id = s(entry.get("item_id"))
+                if item_id in failed_check_item_ids:
                     continue
+                canonical_item = grounding_items_by_id.get(item_id, {})
+                text = s(entry.get("text"))
+                section = (
+                    s(canonical_item.get("section"))
+                    or s(entry.get("section"))
+                    or "grounding"
+                )
                 reason = s(entry.get("reason") or "Unsupported sentence")
                 current_policy = section_policy(section)
                 classification = normalize_claim_classification(
@@ -1546,8 +1652,10 @@ def run_grounding_check(
                 if severity == "pass":
                     continue
                 if text:
-                    entity_id = _public_item_id_for_failure(
-                        section, text, public_item_ids
+                    entity_id = (
+                        item_id
+                        if canonical_item
+                        else _public_item_id_for_failure(section, text, public_item_ids)
                     )
                     issues.append(
                         issue(
@@ -1560,7 +1668,7 @@ def run_grounding_check(
                             section=section,
                             violation_type=violation_type,
                             entity_id=entity_id,
-                            evidence_ids=public_item_evidence_ids.get(entity_id, ()),
+                            evidence_ids=canonical_item.get("evidence_ids", ()),
                             classification=classification,
                         )
                     )
@@ -1642,13 +1750,13 @@ def run_grounding_check(
                 "incomplete_verdict_ids",
             )
             for item_id in error_context.get(key, [])
-            if s(item_id) in public_item_evidence_ids
+            if s(item_id) in grounding_item_evidence_ids
         }
         failure_evidence_ids = list(
             dict.fromkeys(
                 evidence_id
                 for item_id in sorted(failure_item_ids)
-                for evidence_id in public_item_evidence_ids[item_id]
+                for evidence_id in grounding_item_evidence_ids[item_id]
             )
         )
         logger.info(
@@ -1693,9 +1801,7 @@ def run_grounding_check(
                     "error"
                     if verified_mode
                     else (
-                        "warning"
-                        if request.deterministic_grounding_passed
-                        else "error"
+                        "warning" if request.deterministic_grounding_passed else "error"
                     )
                 ),
                 section="grounding",
@@ -1919,9 +2025,7 @@ def _grounding_coverage_diagnostics(
         "returned_unsupported_item_ids": returned_unsupported_ids[:32],
         "expected_claim_count": len(expected_claims),
         "expected_public_item_count": len(expected_public),
-        "returned_check_count": sum(
-            len(entries) for entries in checks_by_id.values()
-        ),
+        "returned_check_count": sum(len(entries) for entries in checks_by_id.values()),
         "returned_unsupported_count": sum(
             len(entries) for entries in unsupported_by_id.values()
         ),
@@ -2121,6 +2225,33 @@ def _validate_grounding_check_coverage(
             context=diagnostics(category, **details),
         )
 
+    def unsupported_pair_matches(
+        check: Mapping[str, Any], unsupported_entry: Mapping[str, Any]
+    ) -> bool:
+        """Require the model-owned unsupported record to mirror its check."""
+
+        return (
+            _grounding_text_matches(
+                s(check.get("text")), s(unsupported_entry.get("text"))
+            )
+            and s(unsupported_entry.get("classification")) in valid_classifications
+            and s(unsupported_entry.get("classification"))
+            == s(check.get("classification"))
+            and s(unsupported_entry.get("entailment_outcome"))
+            == s(check.get("entailment_outcome"))
+            and s(unsupported_entry.get("entailment_outcome"))
+            in {"contradicted", "not_established"}
+            and bool(
+                normalize_violation_type(
+                    s(
+                        unsupported_entry.get("violation_type")
+                        or unsupported_entry.get("failure_type")
+                    )
+                )
+            )
+            and _grounding_reason_is_substantive(unsupported_entry.get("reason"))
+        )
+
     allowed_item_ids = set(expected)
     allowed_item_ids.update(expected_public)
     allowed_item_ids.update(
@@ -2213,23 +2344,19 @@ def _validate_grounding_check_coverage(
                 retained_incomplete_dimensions.extend(dimension_defects)
                 missing_claim_ids.append(claim_id)
                 continue
-            if matching_unsupported:
-                unsupported_entry = matching_unsupported[0]
-                if (
-                    s(verdict.get("entailment_outcome")) == "entailed"
-                    or not _grounding_text_matches(
-                        text, s(unsupported_entry.get("text"))
-                    )
-                    or s(unsupported_entry.get("classification"))
-                    not in valid_classifications
-                    or s(unsupported_entry.get("classification"))
-                    != s(verdict.get("classification"))
-                    or s(unsupported_entry.get("entailment_outcome"))
-                    != s(verdict.get("entailment_outcome"))
-                ):
-                    retained_pair_mismatch_ids.append(claim_id)
-                    missing_claim_ids.append(claim_id)
-                    continue
+            if (
+                s(verdict.get("entailment_outcome")) != "entailed"
+                and (
+                    len(matching_unsupported) != 1
+                    or not unsupported_pair_matches(verdict, matching_unsupported[0])
+                )
+            ) or (
+                s(verdict.get("entailment_outcome")) == "entailed"
+                and matching_unsupported
+            ):
+                retained_pair_mismatch_ids.append(claim_id)
+                missing_claim_ids.append(claim_id)
+                continue
             comparison = ProtectedFactComparison.from_payload(
                 verdict.get("protected_facts"),
                 proposition_status=s(verdict.get("proposition_status")),
@@ -2311,12 +2438,10 @@ def _validate_grounding_check_coverage(
             for entry in checks:
                 if not isinstance(entry, dict):
                     continue
-                field_defects, dimension_defects = (
-                    _grounding_semantic_field_defects(
-                        entry,
-                        valid_classifications=valid_classifications,
-                        valid_outcomes=valid_outcomes,
-                    )
+                field_defects, dimension_defects = _grounding_semantic_field_defects(
+                    entry,
+                    valid_classifications=valid_classifications,
+                    valid_outcomes=valid_outcomes,
                 )
                 if field_defects:
                     item_id = s(entry.get("item_id")) or "<missing>"
@@ -2346,16 +2471,8 @@ def _validate_grounding_check_coverage(
                     continue
                 item_id = s(entry.get("item_id"))
                 matching_unsupported = unsupported_by_id.get(item_id, [])
-                if (
-                    len(matching_unsupported) != 1
-                    or not _grounding_text_matches(
-                        s(entry.get("text")),
-                        s(matching_unsupported[0].get("text")),
-                    )
-                    or s(entry.get("classification"))
-                    != s(matching_unsupported[0].get("classification"))
-                    or s(entry.get("entailment_outcome"))
-                    != s(matching_unsupported[0].get("entailment_outcome"))
+                if len(matching_unsupported) != 1 or not unsupported_pair_matches(
+                    entry, matching_unsupported[0]
                 ):
                     non_entailing_checks.append(item_id or "<missing>")
         if non_entailing_checks:
@@ -2454,11 +2571,8 @@ def _validate_grounding_check_coverage(
                 unsupported_entry = matching_unsupported[0]
                 if (
                     outcome == "entailed"
-                    or not _grounding_text_matches(
-                        text, s(unsupported_entry.get("text"))
-                    )
-                    or s(unsupported_entry.get("classification")) != classification
-                    or s(unsupported_entry.get("entailment_outcome")) != outcome
+                    or len(matching_unsupported) != 1
+                    or not unsupported_pair_matches(check, unsupported_entry)
                 ):
                     public_pair_mismatch_ids.append(item_id)
                     continue
@@ -2560,6 +2674,7 @@ def _retained_claim_semantic_results(
     relevant_input_hash: str,
     retrieval_identity: str,
     prompt_content_hash_by_claim_id: dict[str, str],
+    execution_context_by_claim_id: Mapping[str, Mapping[str, str]] | None = None,
 ) -> list[ClaimSemanticGroundingResult]:
     verdicts_by_id: dict[str, list[dict[str, Any]]] = {}
     if isinstance(verdict_payload, dict):
@@ -2590,9 +2705,36 @@ def _retained_claim_semantic_results(
     semantic_results: list[ClaimSemanticGroundingResult] = []
     for semantic_input in semantic_inputs:
         candidate = semantic_input.candidate
-        claim_prompt_content_hash = prompt_content_hash_by_claim_id.get(
-            candidate.claim_id, ""
-        )
+        execution_context = None
+        if execution_context_by_claim_id is not None:
+            execution_context = execution_context_by_claim_id.get(candidate.claim_id)
+            if not execution_context:
+                continue
+            claim_prompt_content_hash = s(execution_context.get("prompt_content_hash"))
+            claim_execution_identity = s(execution_context.get("execution_identity"))
+            claim_model_provider = s(execution_context.get("model_provider"))
+            claim_model_name = s(execution_context.get("model_name"))
+            claim_configuration_policy_identity = s(
+                execution_context.get("configuration_policy_identity")
+            )
+            if not all(
+                (
+                    claim_prompt_content_hash,
+                    claim_execution_identity,
+                    claim_model_provider,
+                    claim_model_name,
+                    claim_configuration_policy_identity,
+                )
+            ):
+                continue
+        else:
+            claim_prompt_content_hash = prompt_content_hash_by_claim_id.get(
+                candidate.claim_id, ""
+            )
+            claim_execution_identity = execution_identity
+            claim_model_provider = model_provider
+            claim_model_name = model_name
+            claim_configuration_policy_identity = configuration_policy_identity
         if not re.fullmatch(r"[0-9a-f]{64}", claim_prompt_content_hash):
             continue
         retained_item_id = retained_item_ids.get(candidate.claim_id, "")
@@ -2665,11 +2807,11 @@ def _retained_claim_semantic_results(
             source_identity=source_identity,
             prompt_family=prompt_family,
             prompt_content_hash=claim_prompt_content_hash,
-            execution_identity=execution_identity,
+            execution_identity=claim_execution_identity,
             validator_version=validator_version,
-            model_provider=model_provider,
-            model_name=model_name,
-            configuration_policy_identity=configuration_policy_identity,
+            model_provider=claim_model_provider,
+            model_name=claim_model_name,
+            configuration_policy_identity=claim_configuration_policy_identity,
             relevant_input_hash=relevant_input_hash,
             retrieval_identity=retrieval_identity,
         )
@@ -3454,6 +3596,28 @@ def _public_item_evidence_ids(items: object) -> dict[str, list[str]]:
         evidence_ids = _artifact_evidence_ids(entry)
         if evidence_ids:
             indexed[item_id] = evidence_ids
+    return indexed
+
+
+def _grounding_item_inventory(payload: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Index the canonical grounding inventory, including retained claims."""
+
+    indexed: dict[str, dict[str, Any]] = {}
+    for field_name in ("retained_claims_to_ground", "public_factual_items"):
+        entries = payload.get(field_name)
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            item_id = s(entry.get("item_id"))
+            if not item_id:
+                continue
+            indexed[item_id] = {
+                "section": s(entry.get("section")) or "grounding",
+                "evidence_ids": _artifact_evidence_ids(entry),
+                "kind": "retained" if field_name.startswith("retained") else "public",
+            }
     return indexed
 
 

@@ -2053,6 +2053,7 @@ def reuse_retained_claim_semantic_results(
     configuration_policy_identity: str,
     retrieval_identity: str,
     prompt_content_hash_by_claim_id: dict[str, str],
+    execution_context_by_claim_id: Mapping[str, Mapping[str, str]] | None = None,
 ) -> tuple[ClaimValidationPackage, list[ClaimSemanticInput], dict[str, object]]:
     """Reuse only passing semantic results bound to exact claim/source identities."""
     fallback_reasons: dict[str, int] = {}
@@ -2261,22 +2262,54 @@ def reuse_retained_claim_semantic_results(
         ):
             reject("evidence_identity_changed")
             continue
-        current_prompt_content_hash = prompt_content_hash_by_claim_id.get(claim_id, "")
+        current_execution_context = (
+            execution_context_by_claim_id.get(claim_id)
+            if execution_context_by_claim_id is not None
+            else None
+        )
+        if execution_context_by_claim_id is not None and not current_execution_context:
+            reject("semantic_identity_missing")
+            continue
+        current_prompt_content_hash = (
+            str(current_execution_context.get("prompt_content_hash") or "")
+            if current_execution_context is not None
+            else prompt_content_hash_by_claim_id.get(claim_id, "")
+        )
         if not re.fullmatch(r"[0-9a-f]{64}", current_prompt_content_hash):
             reject("semantic_identity_missing")
             continue
         if identity.get("prompt_content_hash") != current_prompt_content_hash:
             reject("prompt_context_changed")
             continue
+        expected_execution_identity = (
+            str(current_execution_context.get("execution_identity") or "")
+            if current_execution_context is not None
+            else prompt_execution_identity
+        )
+        expected_model_provider = (
+            str(current_execution_context.get("model_provider") or "")
+            if current_execution_context is not None
+            else model_provider
+        )
+        expected_model_name = (
+            str(current_execution_context.get("model_name") or "")
+            if current_execution_context is not None
+            else model_name
+        )
+        expected_configuration_policy_identity = (
+            str(current_execution_context.get("configuration_policy_identity") or "")
+            if current_execution_context is not None
+            else configuration_policy_identity
+        )
         if any(
             (
                 identity.get("prompt_family") != prompt_family,
-                identity.get("execution_identity") != prompt_execution_identity,
+                identity.get("execution_identity") != expected_execution_identity,
                 identity.get("validator_version") != CLAIM_GROUNDING_VALIDATOR_VERSION,
-                identity.get("model_provider") != model_provider,
-                identity.get("model_name") != model_name,
+                identity.get("model_provider") != expected_model_provider,
+                identity.get("model_name") != expected_model_name,
                 identity.get("configuration_policy_identity")
-                != configuration_policy_identity,
+                != expected_configuration_policy_identity,
             )
         ):
             reject("validator_identity_incompatible")

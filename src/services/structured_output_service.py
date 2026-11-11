@@ -895,6 +895,11 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "protected_dimensions",
     "unknown_candidate_ids",
     "unknown_evidence_ids",
+    "missing_obligation_ids",
+    "duplicate_obligation_ids",
+    "invalid_obligation_ids",
+    "duplicate_evidence_ids",
+    "unbound_evidence_ids",
 )
 _ACTIONABLE_CONTEXT_SCALAR_KEYS = (
     "item_id",
@@ -917,6 +922,10 @@ _ACTIONABLE_CONTEXT_SCALAR_KEYS = (
     "execution_identity",
     "relevant_input_hash",
     "batch_input_fingerprint",
+    "theme",
+    "status",
+    "expected_obligation_count",
+    "actual_obligation_count",
 )
 _ARTIFACT_STRUCTURE_FIELDS = (
     "expected_root_present",

@@ -88,17 +88,17 @@ def test_load_retained_claim_candidate_checks_execution_identity(
     )
 
     if source_id == "source:canonical":
-        loaded = _load_candidate_claim_validation_for_promotion(
-            runtime=runtime,
-            dependencies=dependencies,
-            candidate_validation_pack_name="validation_regen_candidate_2",
-            expected_artifact_hash=artifact_hash,
-            expected_source_id="source:canonical",
-            expected_source_md5=runtime.md5,
-            require_execution_identity=True,
-            ctx=runtime.ctx,
-        )
-        assert loaded == candidate_package
+        with pytest.raises(AppError, match="candidate evidence context"):
+            _load_candidate_claim_validation_for_promotion(
+                runtime=runtime,
+                dependencies=dependencies,
+                candidate_validation_pack_name="validation_regen_candidate_2",
+                expected_artifact_hash=artifact_hash,
+                expected_source_id="source:canonical",
+                expected_source_md5=runtime.md5,
+                require_execution_identity=True,
+                ctx=runtime.ctx,
+            )
     else:
         with pytest.raises(AppError, match="stale execution identity"):
             _load_candidate_claim_validation_for_promotion(

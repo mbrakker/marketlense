@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from src.contracts.claim_validation import (
     ClaimCandidate,
     ClaimSemanticInput,
@@ -202,6 +204,85 @@ def test_retained_grounding_result_preserves_model_classification_and_violation(
     assert len(results) == 1
     assert results[0].classification == "factual_claim"
     assert results[0].violation_type == "unsupported_factual_claim"
+
+
+def test_retained_grounding_results_use_their_successful_batch_identities() -> None:
+    first = _candidate()
+    second = replace(
+        first,
+        claim_id="claim:semantic-2",
+        text="The second retained market finding is material.",
+        text_hash="claim-hash-2",
+    )
+    inputs = [
+        ClaimSemanticInput(
+            schema_version="1.4",
+            candidate=candidate,
+            evidence_texts=[candidate.text],
+            evidence_hash=f"evidence-{index}",
+            source_identity="source-1",
+        )
+        for index, candidate in enumerate((first, second), start=1)
+    ]
+    checks = [
+        {
+            "item_id": candidate.claim_id,
+            "text": candidate.text,
+            "classification": "factual_claim",
+            "entailment_outcome": "entailed",
+            "proposition_status": "compatible",
+            "protected_facts": _compatible_protected_facts(),
+            "reason": "The evidence supports the retained proposition.",
+        }
+        for candidate in (first, second)
+    ]
+
+    results = _retained_claim_semantic_results(
+        {"checks": checks, "unsupported": []},
+        inputs,
+        retained_item_ids={
+            first.claim_id: first.claim_id,
+            second.claim_id: second.claim_id,
+        },
+        source_identity="source-1",
+        prompt_family="report_vs/validate/grounding",
+        execution_identity="legacy-first-batch",
+        validator_version="grounding_validation_output:2.0",
+        model_provider="openai",
+        model_name="test-model",
+        configuration_policy_identity="policy-1",
+        relevant_input_hash="input-1",
+        retrieval_identity="retrieval-1",
+        prompt_content_hash_by_claim_id={
+            first.claim_id: "a" * 64,
+            second.claim_id: "b" * 64,
+        },
+        execution_context_by_claim_id={
+            first.claim_id: {
+                "prompt_content_hash": "a" * 64,
+                "execution_identity": "successful-batch-1",
+                "model_provider": "openai",
+                "model_name": "test-model",
+                "configuration_policy_identity": "policy-1",
+            },
+            second.claim_id: {
+                "prompt_content_hash": "b" * 64,
+                "execution_identity": "successful-batch-2",
+                "model_provider": "openai",
+                "model_name": "test-model",
+                "configuration_policy_identity": "policy-2",
+            },
+        },
+    )
+
+    assert [result.identity.execution_identity for result in results] == [
+        "successful-batch-1",
+        "successful-batch-2",
+    ]
+    assert [result.identity.configuration_policy_identity for result in results] == [
+        "policy-1",
+        "policy-2",
+    ]
 
 
 def test_grounding_payload_keeps_report_specific_metric_structure() -> None:
