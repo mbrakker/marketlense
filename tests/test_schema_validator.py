@@ -58,20 +58,19 @@ def test_editorial_theme_coverage_schema_requires_verified_control_fields():
         "theme_coverage",
         "report_completeness",
         "diagnosis",
-        "recovery_action",
+        "material_gaps",
+        "original_essential_obligation_assessments",
     }
+    assert "recovery_action" not in schema["properties"]
+    assert "resolution" not in schema["properties"]["theme_coverage"]["items"][
+        "properties"
+    ]
     assert schema["properties"]["diagnosis"]["enum"] == [
         "planned_theme_execution",
         "material_report_completeness",
         "redundant_optional_theme",
         "infeasible_plan",
         "insufficient_evidence",
-    ]
-    assert schema["properties"]["recovery_action"]["enum"] == [
-        "none",
-        "targeted_rewrite",
-        "replan",
-        "quarantine",
     ]
 
 

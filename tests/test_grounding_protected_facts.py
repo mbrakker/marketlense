@@ -36,6 +36,13 @@ def _check(
         "text": text,
         "classification": "factual_claim",
         "entailment_outcome": outcome,
+        "violation_type": (
+            "none"
+            if outcome == "entailed"
+            else "not_established"
+            if outcome == "not_established"
+            else "contradicted"
+        ),
         "proposition_status": proposition_status,
         "protected_facts": complete_protected_facts,
         "reason": "Grounding comparison completed.",
@@ -306,6 +313,19 @@ def test_retrieval_wording_without_structured_type_does_not_soften_grounding(
         "classification": "factual_claim",
         "reason": "Retrieval failed; the evidence does not support the claim.",
     }
+    metadata_check = _check(
+        outcome="entailed", protected_facts={}, text="Report"
+    )
+    metadata_check.pop("section", None)
+    metadata_check.pop("text", None)
+    metadata_check["item_id"] = "metadata:title"
+    malformed_check = _check(
+        outcome="not_established", protected_facts={}, text=entry["text"]
+    )
+    malformed_check.pop("section", None)
+    malformed_check.pop("text", None)
+    malformed_check["item_id"] = entry["item_id"]
+    malformed_check.pop("violation_type", None)
     issues = run_grounding_check(
         request=ValidationRequest(
             schema_version="1.0",
@@ -322,15 +342,9 @@ def test_retrieval_wording_without_structured_type_does_not_soften_grounding(
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
             grounding_payload={
-                "unsupported": [entry],
-                "checks": [
-                    {
-                        **_check(outcome="entailed", protected_facts={}, text="Report"),
-                        "item_id": "metadata:title",
-                        "section": "metadata.title",
-                    }
-                ],
-            }
+                "checks": [metadata_check, malformed_check],
+            },
+            complete_grounding_contract=False,
         ),
         ctx=_ctx(),
     )

@@ -71,7 +71,9 @@ def test_grounding_semantic_outcome_preserves_distinct_disposition(
                         "entailment_outcome": outcome,
                         "proposition_status": "unknown",
                         "protected_facts": protected_facts,
-                        "reason": "The retained evidence does not support this wording.",
+                        "reason": (
+                            "The retained evidence does not support this wording."
+                        ),
                     },
                     {
                         "item_id": "metadata:title",

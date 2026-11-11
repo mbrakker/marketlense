@@ -53,6 +53,7 @@ def _grounding_check(
         "text": text,
         "classification": classification,
         "entailment_outcome": outcome,
+        "violation_type": "none" if outcome == "entailed" else "not_established",
         "proposition_status": (
             "compatible"
             if outcome == "entailed" and classification == "factual_claim"
@@ -75,6 +76,26 @@ def _grounding_check(
     }
 
 
+def _raw_grounding_check(
+    item_id: str,
+    text: str,
+    outcome: str,
+    *,
+    classification: str = "factual_claim",
+) -> dict:
+    """Return the provider-owned single-verdict shape used by live calls."""
+
+    check = _grounding_check(
+        item_id,
+        text,
+        outcome,
+        classification=classification,
+    )
+    check.pop("section", None)
+    check.pop("text", None)
+    return check
+
+
 def test_verified_grounding_recovery_passes_missing_public_item_id_to_model(
     tmp_path,
 ):
@@ -94,16 +115,15 @@ def test_verified_grounding_recovery_passes_missing_public_item_id_to_model(
     public_item = payload["public_factual_items"][-1]
 
     def check(entry: dict) -> dict:
-        return _grounding_check(
+        return _raw_grounding_check(
             entry["item_id"],
             entry["text"],
             "entailed",
             classification=entry.get("declared_classification", "factual_claim"),
         )
 
-    complete = {"unsupported": [], "checks": [check(entry) for entry in entries]}
+    complete = {"checks": [check(entry) for entry in entries]}
     incomplete = {
-        "unsupported": [],
         "checks": [
             check(entry)
             for entry in entries
@@ -181,7 +201,7 @@ def test_verified_grounding_failure_preserves_inner_contract_cause(tmp_path):
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
-            grounding_payload={"unsupported": []},
+                grounding_payload={},
             complete_grounding_contract=False,
         ),
         ctx=_ctx(),
@@ -222,7 +242,7 @@ def test_verified_grounding_coverage_failure_retains_bounded_batch_diagnostics(
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
-            grounding_payload={"checks": [], "unsupported": []},
+            grounding_payload={"checks": []},
             complete_grounding_contract=False,
         ),
         ctx=_ctx(),
@@ -693,6 +713,7 @@ def test_verified_grounding_retained_contract_failures_are_typed(
         check.pop("protected_facts")
     elif variant == "pair":
         check["entailment_outcome"] = "not_established"
+        check["violation_type"] = "not_established"
         check["proposition_status"] = "unknown"
         unsupported = [
             {
@@ -748,6 +769,7 @@ def test_verified_grounding_retained_non_entailed_requires_model_owned_pair():
         for semantic_input in inputs
     ]
     checks[0]["entailment_outcome"] = "not_established"
+    checks[0]["violation_type"] = "not_established"
     checks[0]["proposition_status"] = "unknown"
 
     with pytest.raises(AppError) as exc_info:
@@ -793,6 +815,7 @@ def test_verified_grounding_retained_non_entailed_accepts_matching_pair_only():
     check["item_id"] = retained_item_ids[claim_id]
     check["text"] = text
     check["entailment_outcome"] = "not_established"
+    check["violation_type"] = "not_established"
     check["proposition_status"] = "unknown"
     unsupported = {
         "item_id": retained_item_ids[claim_id],
@@ -852,7 +875,11 @@ def test_verified_grounding_retained_non_entailed_accepts_matching_pair_only():
         (
             lambda check: {
                 "checks": [
-                    {**check, "entailment_outcome": "not_established"},
+                        {
+                            **check,
+                            "entailment_outcome": "not_established",
+                            "violation_type": "not_established",
+                        },
                 ],
                 "unsupported": [
                     {

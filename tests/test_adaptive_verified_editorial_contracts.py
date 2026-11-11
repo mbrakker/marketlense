@@ -889,6 +889,51 @@ def test_post_replan_coverage_explicitly_confirms_original_obligations() -> None
 
 
 @pytest.mark.parametrize(
+    ("status", "supporting_ids"),
+    [("partial", ["i1"]), ("uncovered", [])],
+)
+def test_post_replan_preserves_partial_or_uncovered_obligation_as_substantive_negative(
+    status: str, supporting_ids: list[str]
+) -> None:
+    obligations = [
+        {
+            "theme": "Theme 1",
+            "evidence_ids": ["verified-fact:f1"],
+            "importance": "essential",
+            "coverage_obligation": "Develop proposition 1.",
+        }
+    ]
+    payload = _coverage_payload(
+        _assessment("Theme 1", status="covered", resolution="retained", ids=["i1"]),
+        _assessment("Theme 2", status="covered", resolution="retained", ids=["i2"]),
+        original_essential_obligation_assessments=[
+            {
+                "theme": "Theme 1",
+                "evidence_ids": ["verified-fact:f1"],
+                "status": status,
+                "supporting_insight_ids": supporting_ids,
+                "explanation": "The original obligation is not fully developed.",
+            }
+        ],
+    )
+
+    with pytest.raises(AppError) as caught:
+        validate_substantive_editorial_theme_coverage(
+            payload=payload,
+            editorial_plan=_coverage_plan(),
+            final_insights=[
+                {"id": "i1", "text": "Signal one.", "evidence_id": "verified-fact:f1"},
+                {"id": "i2", "text": "Signal two.", "evidence_id": "verified-fact:f2"},
+            ],
+            original_essential_obligations=obligations,
+            require_original_obligation_assessment=True,
+        )
+
+    assert caught.value.context.get("original_obligations_unresolved") is True
+    assert not caught.value.context.get("assessment_contract_failure", False)
+
+
+@pytest.mark.parametrize(
     ("diagnosis", "action", "expected"),
     [
         ("planned_theme_execution", "targeted_rewrite", "targeted_rewrite"),

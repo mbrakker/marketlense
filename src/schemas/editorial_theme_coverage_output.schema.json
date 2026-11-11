@@ -6,53 +6,8 @@
     "theme_coverage",
     "report_completeness",
     "diagnosis",
-    "recovery_action"
-  ],
-  "allOf": [
-    {
-      "properties": {
-        "theme_coverage": {
-          "items": {
-            "required": ["resolution"],
-            "allOf": [
-              {
-                "if": {
-                  "properties": {"status": {"enum": ["covered"]}},
-                  "required": ["status"]
-                },
-                "then": {
-                  "properties": {
-                    "resolution": {"enum": ["retained", "merged"]}
-                  }
-                }
-              },
-              {
-                "if": {
-                  "properties": {"status": {"enum": ["partial"]}},
-                  "required": ["status"]
-                },
-                "then": {
-                  "properties": {"resolution": {"enum": ["unresolved"]}}
-                }
-              },
-              {
-                "if": {
-                  "properties": {"status": {"enum": ["uncovered"]}},
-                  "required": ["status"]
-                },
-                "then": {
-                  "properties": {
-                    "resolution": {
-                      "enum": ["omitted", "unresolved", "quarantined"]
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        }
-      }
-    }
+    "material_gaps",
+    "original_essential_obligation_assessments"
   ],
   "properties": {
     "theme_coverage": {
@@ -63,16 +18,15 @@
         "required": ["theme", "status", "supporting_insight_ids", "explanation"],
         "properties": {
           "theme": {"type": "string", "minLength": 1},
-          "status": {"type": "string", "enum": ["covered", "partial", "uncovered"]},
+          "status": {
+            "type": "string",
+            "enum": ["covered", "partial", "uncovered", "redundant_optional"]
+          },
           "supporting_insight_ids": {
             "type": "array",
             "items": {"type": "string"}
           },
-          "explanation": {"type": "string", "minLength": 1},
-          "resolution": {
-            "type": "string",
-            "enum": ["retained", "merged", "omitted", "unresolved", "quarantined"]
-          }
+          "explanation": {"type": "string", "minLength": 1}
         }
       }
     },
@@ -90,10 +44,6 @@
         "insufficient_evidence"
       ]
     },
-    "recovery_action": {
-      "type": "string",
-      "enum": ["none", "targeted_rewrite", "replan", "quarantine"]
-    },
     "material_gaps": {
       "type": "array",
       "items": {
@@ -106,18 +56,9 @@
           "explanation"
         ],
         "properties": {
-          "verified_fact_ids": {
-            "type": "array",
-            "items": {"type": "string"}
-          },
-          "evidence_ids": {
-            "type": "array",
-            "items": {"type": "string"}
-          },
-          "final_insight_ids": {
-            "type": "array",
-            "items": {"type": "string"}
-          },
+          "verified_fact_ids": {"type": "array", "items": {"type": "string"}},
+          "evidence_ids": {"type": "array", "items": {"type": "string"}},
+          "final_insight_ids": {"type": "array", "items": {"type": "string"}},
           "explanation": {"type": "string", "minLength": 1}
         }
       }
@@ -136,10 +77,7 @@
         ],
         "properties": {
           "theme": {"type": "string", "minLength": 1},
-          "evidence_ids": {
-            "type": "array",
-            "items": {"type": "string"}
-          },
+          "evidence_ids": {"type": "array", "items": {"type": "string"}},
           "status": {
             "type": "string",
             "enum": ["covered", "partial", "uncovered"]

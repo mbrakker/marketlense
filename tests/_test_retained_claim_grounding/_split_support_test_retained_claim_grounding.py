@@ -87,6 +87,7 @@ def _grounding_check(
         "text": text,
         "classification": "factual_claim",
         "entailment_outcome": outcome,
+        "violation_type": "none" if outcome == "entailed" else "not_established",
         "proposition_status": "compatible",
         "protected_facts": {
             dimension: {
@@ -119,6 +120,18 @@ def _grounding_checks_for_payload(
         )
         for item in items
     ]
+
+
+def _raw_grounding_checks_for_payload(
+    payload: dict, outcome: str = "entailed"
+) -> list[dict]:
+    """Return the provider contract without derived inventory fields."""
+
+    checks = _grounding_checks_for_payload(payload, outcome)
+    for check in checks:
+        check.pop("section", None)
+        check.pop("text", None)
+    return checks
 
 
 def _grounding_unsupported(item: dict, outcome: str = "not_established") -> dict:

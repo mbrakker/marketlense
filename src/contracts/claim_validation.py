@@ -12,7 +12,7 @@ from src.contracts.protected_facts import ProtectedFactComparison
 # reused under the revised policy.
 CLAIM_VALIDATION_SCHEMA_VERSION = "1.4"
 CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v12"
-CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:2.5"
+CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:2.6"
 ClaimKind = Literal["numeric", "quotation", "descriptive", "causal", "interpretive"]
 ClaimSemanticOutcome = Literal["entailed", "contradicted", "not_established"]
 ClaimValidationStatus = Literal[

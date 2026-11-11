@@ -393,6 +393,9 @@ def test_verified_final_selection_repairs_a_noncentral_theme_omission(tmp_path):
         }
         for index in (0, 1, 2, 3, 4)
     ]
+    repaired_final[0]["text"] = (
+        "An unrelated rewrite must not replace the first signal."
+    )
     responses["insights_final"] = [
         {"insights_final": initial_final},
         {"insights_final": repaired_final},
@@ -672,6 +675,18 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
             "report_completeness": "incomplete",
             "diagnosis": "material_report_completeness",
             "recovery_action": "targeted_rewrite",
+            "material_gaps": [
+                {
+                    "verified_fact_ids": [candidates[1]["id"]],
+                    "evidence_ids": [
+                        f"verified-fact:{candidates[1]['id']}"
+                    ],
+                    "final_insight_ids": [candidates[1]["id"]],
+                    "explanation": (
+                        "The second final proposition omits the central relationship."
+                    ),
+                }
+            ],
         },
         {
             "theme_coverage": [
@@ -723,6 +738,14 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
             if item["id"] == candidates[1]["id"]
         )
         == "The second decision signal governs the response."
+    )
+    assert (
+        next(
+            item["text"]
+            for item in payload["insights_final"]
+            if item["id"] == candidates[0]["id"]
+        )
+        == candidates[0]["text"]
     )
 
 

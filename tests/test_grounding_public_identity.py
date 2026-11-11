@@ -120,7 +120,9 @@ def test_bain_cover_title_establishes_identity_over_filename_slug():
             artifacts=artifacts,
             evidence_packs={
                 "doc_map": {
-                    "title": "Technology isn't just an industry anymore. It's everything"
+                    "title": (
+                        "Technology isn't just an industry anymore. It's everything"
+                    )
                 }
             },
             source_pages=[
@@ -145,9 +147,12 @@ def test_bain_cover_title_establishes_identity_over_filename_slug():
     )
 
 
-def test_grounding_uses_propagated_source_title_resolution_without_rebuilding_identity():
+def test_grounding_uses_propagated_source_title_resolution_without_rebuilding_identity(
+):
     artifacts = {"insights_final": []}
-    source_title = "Technology isn't just an industry anymore. It's everything"
+    source_title = (
+        "Technology isn't just an industry anymore. It's everything"
+    )
     payload = grounding_payload(
         ValidationRequest(
             schema_version="1.0",

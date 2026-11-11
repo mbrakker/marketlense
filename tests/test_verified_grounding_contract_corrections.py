@@ -42,6 +42,7 @@ from src.generators.soft_copy_claim_provenance import (
 )
 from src.generators.validation.grounding import (
     _public_factual_items,
+    grounding_payload,
     run_grounding_check,
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
@@ -876,3 +877,50 @@ def test_verified_grounding_rejects_stale_unbound_semantic_input(tmp_path):
         )
 
     assert caught.value.code == "grounding_verified_semantic_input_invalid"
+
+
+def test_verified_grounding_accepts_one_model_owned_verdict_per_item(tmp_path):
+    request, source_identity = _verified_editorial_request(
+        "This finding changes planning priorities.", "interpretive"
+    )
+    inventory = grounding_payload(request, request.artifacts)
+    protected_facts = {
+        dimension: {
+            "claim_value": None,
+            "evidence_value": None,
+            "status": "unknown",
+        }
+        for dimension in PROTECTED_FACT_DIMENSIONS
+    }
+    response = {
+        "checks": [
+            {
+                "item_id": item["item_id"],
+                "classification": (
+                    "analyst_interpretation"
+                    if str(item["item_id"]).startswith("soft_copy:")
+                    else "factual_claim"
+                ),
+                "entailment_outcome": "entailed",
+                "violation_type": "none",
+                "proposition_status": "compatible",
+                "protected_facts": protected_facts,
+                "reason": "The linked canonical evidence supports this item.",
+            }
+            for item in inventory["public_factual_items"]
+        ]
+    }
+
+    issues = run_grounding_check(
+        request=request,
+        settings=validation_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=ValidationFakePromptClient(),
+        openai_client=FakeOpenAI(grounding_payload=response),
+        ctx=validation_ctx(),
+        source_id=source_identity,
+    )
+
+    assert issues == []

@@ -95,8 +95,8 @@ from .verified_facts import (
 )
 
 RULE_ID = "grounding"
-GROUNDING_FAMILY_SCHEMA_VERSION = "1.7"
-GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v5"
+GROUNDING_FAMILY_SCHEMA_VERSION = "1.8"
+GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v6"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 GROUNDING_MAX_CLAIMS_PER_CALL = 4
 GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 8
@@ -317,6 +317,176 @@ def _grounding_batch_prompt_variables(
         }
         for batch_payload, _batch_semantic_inputs in grounding_batches
     ]
+
+
+_GROUNDING_NO_VIOLATION_VALUES = frozenset(
+    {"none", "no_violation", "no_violation_detected"}
+)
+
+
+def _adapt_grounding_model_payload(
+    payload: object,
+    *,
+    audit_payload: Mapping[str, Any],
+    semantic_inputs: Sequence[ClaimSemanticInput],
+    retained_item_ids: Mapping[str, str],
+    expected_public_items: Sequence[Mapping[str, Any]],
+    ctx,
+) -> dict[str, Any]:
+    """Adapt one raw provider verdict into the existing internal pair shape.
+
+    The provider owns one semantic verdict per item.  The legacy internal
+    representation still exposes ``unsupported`` for downstream consumers, so
+    this boundary derives that projection only after the raw schema and exact
+    inventory coverage have passed.
+    """
+
+    validate_schema(
+        SchemaValidateRequest(
+            schema_version="1.0",
+            payload=payload,
+            schema_name="grounding_validation_output",
+        ),
+        ctx,
+    )
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="grounding_claim_check_coverage_invalid",
+            message="Grounding response must be an object",
+            retryable=False,
+            context={"coverage_failure_category": "missing_verdict"},
+        )
+    checks = payload.get("checks")
+    if not isinstance(checks, list):
+        raise AppError(
+            code="grounding_claim_check_coverage_invalid",
+            message="Grounding response must contain a checks array",
+            retryable=False,
+            context={"coverage_failure_category": "missing_verdict"},
+        )
+    grounding_items = _grounding_item_inventory(audit_payload)
+    expected_ids = {
+        retained_item_ids[semantic_input.candidate.claim_id]
+        for semantic_input in semantic_inputs
+    }
+    expected_ids.update(
+        s(item.get("item_id"))
+        for item in expected_public_items
+        if isinstance(item, Mapping) and s(item.get("item_id"))
+    )
+    returned_ids = [
+        s(item.get("item_id")) for item in checks if isinstance(item, Mapping)
+    ]
+    returned_id_set = {item_id for item_id in returned_ids if item_id}
+    duplicate_ids = sorted(
+        item_id
+        for item_id in returned_id_set
+        if returned_ids.count(item_id) > 1
+    )
+    unknown_ids = sorted(returned_id_set - expected_ids)
+    missing_ids = sorted(expected_ids - returned_id_set)
+    if duplicate_ids or unknown_ids or missing_ids:
+        category = (
+            "duplicate_verdict"
+            if duplicate_ids
+            else "unknown_item_id"
+            if unknown_ids
+            else "missing_verdict"
+        )
+        raise AppError(
+            code="grounding_claim_check_coverage_invalid",
+            message="Grounding response must contain exactly one verdict per item",
+            retryable=False,
+            context={
+                "coverage_failure_category": category,
+                "duplicate_item_ids": duplicate_ids,
+                "unknown_item_ids": unknown_ids,
+                "missing_claim_ids": missing_ids,
+                "expected_item_count": len(expected_ids),
+                "returned_check_count": len(checks),
+            },
+        )
+
+    normalized_checks: list[dict[str, Any]] = []
+    unsupported: list[dict[str, Any]] = []
+    for raw_check in checks:
+        if not isinstance(raw_check, dict):
+            raise AppError(
+                code="grounding_claim_check_coverage_invalid",
+                message="Grounding checks must be objects",
+                retryable=False,
+                context={"coverage_failure_category": "incomplete_semantic_fields"},
+            )
+        item_id = s(raw_check.get("item_id"))
+        canonical_item = grounding_items.get(item_id)
+        if not canonical_item:
+            raise AppError(
+                code="grounding_claim_check_coverage_invalid",
+                message="Grounding verdict has no canonical inventory item",
+                retryable=False,
+                context={
+                    "coverage_failure_category": "unknown_item_id",
+                    "unknown_item_ids": [item_id],
+                },
+            )
+        outcome = normalize_entailment_outcome(
+            s(raw_check.get("entailment_outcome"))
+        )
+        raw_violation_type = s(raw_check.get("violation_type")).strip().casefold()
+        if outcome == "entailed":
+            if raw_violation_type not in _GROUNDING_NO_VIOLATION_VALUES:
+                raise AppError(
+                    code="grounding_claim_check_coverage_invalid",
+                    message=(
+                        "Entailed grounding verdicts require an explicit no-violation "
+                        "value"
+                    ),
+                    retryable=False,
+                    context={
+                        "coverage_failure_category": "incomplete_semantic_fields",
+                        "item_ids": [item_id],
+                        "missing_or_invalid_fields": [f"{item_id}:violation_type"],
+                    },
+                )
+            violation_type = "none"
+        else:
+            violation_type = normalize_violation_type(raw_violation_type)
+            if not violation_type or violation_type == "none":
+                raise AppError(
+                    code="grounding_claim_check_coverage_invalid",
+                    message=(
+                        "Non-entailed grounding verdicts require a valid model-owned "
+                        "violation type"
+                    ),
+                    retryable=False,
+                    context={
+                        "coverage_failure_category": "incomplete_semantic_fields",
+                        "item_ids": [item_id],
+                        "missing_or_invalid_fields": [f"{item_id}:violation_type"],
+                    },
+                )
+        check = dict(raw_check)
+        check["item_id"] = item_id
+        check["section"] = s(canonical_item.get("section")) or "grounding"
+        check["text"] = s(canonical_item.get("text"))
+        check["evidence_ids"] = list(canonical_item.get("evidence_ids") or [])
+        check["violation_type"] = violation_type
+        normalized_checks.append(check)
+        if outcome != "entailed":
+            unsupported.append(
+                {
+                    "item_id": item_id,
+                    "section": check["section"],
+                    "text": check["text"],
+                    "classification": check["classification"],
+                    "entailment_outcome": outcome,
+                    "violation_type": violation_type,
+                    "proposition_status": check.get("proposition_status"),
+                    "protected_facts": deepcopy(check.get("protected_facts")),
+                    "reason": check.get("reason", ""),
+                }
+            )
+    return {"checks": normalized_checks, "unsupported": unsupported}
 
 
 def _claim_prompt_content_hashes(
@@ -597,6 +767,9 @@ def run_grounding_check(
         retained_claim_inputs,
         set(public_item_ids.values()),
     )
+    retained_entity_ids = {
+        item_id: claim_id for claim_id, item_id in retained_item_ids.items()
+    }
     grounding_items_by_id = _grounding_item_inventory(audit_payload)
     grounding_item_evidence_ids = {
         item_id: list(item.get("evidence_ids") or [])
@@ -698,6 +871,9 @@ def run_grounding_check(
             retained_claim_inputs,
             set(public_item_ids.values()),
         )
+        retained_entity_ids = {
+            item_id: claim_id for claim_id, item_id in retained_item_ids.items()
+        }
         grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
         batch_prompt_vars = _grounding_batch_prompt_variables(
             grounding_batches,
@@ -860,14 +1036,6 @@ def run_grounding_check(
                 if expected_public_items is None
                 else expected_public_items
             )
-            validate_schema(
-                SchemaValidateRequest(
-                    schema_version="1.0",
-                    payload=payload,
-                    schema_name="grounding_validation_output",
-                ),
-                ctx,
-            )
             _validate_grounding_check_coverage(
                 payload,
                 retained_claim_inputs if expected_inputs is None else expected_inputs,
@@ -919,7 +1087,7 @@ def run_grounding_check(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
-                    processing_version="validation_rule_v7",
+                    processing_version="validation_rule_v8",
                     prompt_content_hash=prompt_bundle.prompt_content_hash,
                     execution_identity=prompt_bundle.execution_identity.execution_identity,
                     model_provider=str(prompt_bundle.execution_policy.policy.provider),
@@ -1078,6 +1246,34 @@ def run_grounding_check(
                         diagnostic_prompt_bundle=last_call_bundle,
                     )
 
+                def normalize_batch_payload(payload: Any) -> dict[str, Any]:
+                    try:
+                        return _adapt_grounding_model_payload(
+                            payload,
+                            audit_payload=batch_spec[0],
+                            semantic_inputs=batch_semantic_inputs,
+                            retained_item_ids=retained_item_ids,
+                            expected_public_items=(
+                                batch_spec[0].get("public_factual_items") or []
+                            ),
+                            ctx=batch_ctx,
+                        )
+                    except AppError as exc:
+                        error_context = (
+                            exc.context if isinstance(exc.context, dict) else {}
+                        )
+                        error_context.setdefault(
+                            "expected_claim_count", len(batch_semantic_inputs)
+                        )
+                        error_context.setdefault(
+                            "expected_public_item_count",
+                            len(batch_spec[0].get("public_factual_items") or []),
+                        )
+                        error_context.setdefault("phase", "batch")
+                        error_context.setdefault("batch_index", batch_index)
+                        exc.context = error_context
+                        raise
+
                 recovery = execute_structured_output(
                     StructuredOutputExecutionRequest(
                         schema_version="1.0",
@@ -1091,12 +1287,11 @@ def run_grounding_check(
                     ),
                     batch_ctx,
                     call_model=call_model,
-                    normalize_payload=lambda payload: (
-                        dict(payload) if isinstance(payload, dict) else payload
-                    ),
+                    normalize_payload=normalize_batch_payload,
                     validate_payload=validate_recovery_payload,
                     is_substantive=lambda payload: (
-                        isinstance(payload, dict) and "unsupported" in payload
+                        isinstance(payload, dict)
+                        and isinstance(payload.get("checks"), list)
                     ),
                     model_pricing=settings.model_pricing,
                 )
@@ -1388,7 +1583,7 @@ def run_grounding_check(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
-                    processing_version="validation_rule_v7",
+                    processing_version="validation_rule_v8",
                     output_payload=response_payload,
                     system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
                     user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
@@ -1497,6 +1692,7 @@ def run_grounding_check(
                     verified_mode
                     and public_item is not None
                     and classification == "factual_claim"
+                    and outcome == "entailed"
                     and not public_item.get("evidence_ids")
                 ):
                     text = s(entry.get("text"))
@@ -1511,7 +1707,7 @@ def run_grounding_check(
                             severity="error",
                             section=section,
                             violation_type="missing_material_evidence",
-                            entity_id=item_id
+                            entity_id=retained_entity_ids.get(item_id, item_id)
                             if canonical_item
                             else _public_item_id_for_failure(
                                 section, text, public_item_ids
@@ -1561,7 +1757,7 @@ def run_grounding_check(
                 )
                 reason = s(entry.get("reason") or "Unsupported factual claim")
                 entity_id = (
-                    item_id
+                    retained_entity_ids.get(item_id, item_id)
                     if canonical_item
                     else _public_item_id_for_failure(section, text, public_item_ids)
                 )
@@ -1603,6 +1799,10 @@ def run_grounding_check(
                 )
                 reason = s(entry.get("reason") or "Unsupported sentence")
                 current_policy = section_policy(section)
+                comparison = ProtectedFactComparison.from_payload(
+                    entry.get("protected_facts"),
+                    proposition_status=s(entry.get("proposition_status")),
+                )
                 classification = normalize_claim_classification(
                     s(entry.get("classification"))
                 )
@@ -1643,6 +1843,12 @@ def run_grounding_check(
                     and violation_type in {"", "unsupported_factual_claim"}
                 ):
                     violation_type = "not_established"
+                dimension_text = (
+                    " Protected dimensions: "
+                    f"{', '.join(comparison.incompatible_dimensions)}."
+                    if comparison.incompatible_dimensions
+                    else ""
+                )
                 severity = grounding_issue_severity(
                     section_policy_value=current_policy,
                     classification=classification,
@@ -1653,7 +1859,7 @@ def run_grounding_check(
                     continue
                 if text:
                     entity_id = (
-                        item_id
+                        retained_entity_ids.get(item_id, item_id)
                         if canonical_item
                         else _public_item_id_for_failure(section, text, public_item_ids)
                     )
@@ -1662,7 +1868,7 @@ def run_grounding_check(
                             rule_id=RULE_ID,
                             message=(
                                 f"[{classification}|{violation_type}] "
-                                f"{reason}: {text[:200]}"
+                                f"{reason}.{dimension_text}: {text[:200]}"
                             ),
                             severity=severity,
                             section=section,
@@ -2072,6 +2278,13 @@ def _grounding_semantic_field_defects(
         invalid_fields.append("classification")
     if s(entry.get("entailment_outcome")) not in valid_outcomes:
         invalid_fields.append("entailment_outcome")
+    outcome = s(entry.get("entailment_outcome"))
+    violation_type = s(entry.get("violation_type") or entry.get("failure_type"))
+    if outcome == "entailed":
+        if violation_type.casefold() not in _GROUNDING_NO_VIOLATION_VALUES:
+            invalid_fields.append("violation_type")
+    elif outcome in valid_outcomes and not normalize_violation_type(violation_type):
+        invalid_fields.append("violation_type")
     if s(entry.get("proposition_status")) not in {
         "compatible",
         "incompatible",
@@ -3615,6 +3828,7 @@ def _grounding_item_inventory(payload: Mapping[str, Any]) -> dict[str, dict[str,
                 continue
             indexed[item_id] = {
                 "section": s(entry.get("section")) or "grounding",
+                "text": s(entry.get("text")),
                 "evidence_ids": _artifact_evidence_ids(entry),
                 "kind": "retained" if field_name.startswith("retained") else "public",
             }

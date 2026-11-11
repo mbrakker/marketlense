@@ -2423,6 +2423,96 @@ def editorial_plan_has_overlapping_theme_evidence(
     return any(count > 1 for count in evidence_theme_count.values())
 
 
+def _derive_editorial_theme_recovery_action(
+    *,
+    diagnosis: str,
+    report_completeness: str,
+) -> str:
+    """Derive workflow control from the model's semantic assessment only."""
+
+    if diagnosis in {"planned_theme_execution", "material_report_completeness"}:
+        return (
+            "none"
+            if diagnosis == "planned_theme_execution"
+            and report_completeness == "complete"
+            else "targeted_rewrite"
+        )
+    if diagnosis in {"redundant_optional_theme", "infeasible_plan"}:
+        return (
+            "none"
+            if diagnosis == "redundant_optional_theme"
+            and report_completeness == "complete"
+            else "replan"
+        )
+    if diagnosis == "insufficient_evidence":
+        return "quarantine"
+    return ""
+
+
+def normalize_editorial_theme_coverage_assessment(
+    *,
+    payload: Any,
+    editorial_plan: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Attach deterministic workflow controls to the raw semantic assessment.
+
+    The provider owns theme status and explanations.  Resolution and recovery
+    action are derived here so the model cannot turn a semantic negative into
+    an accepted workflow decision.  Existing retained payloads that already
+    contain those internal fields remain readable while new provider responses
+    need not emit them.
+    """
+
+    if not isinstance(payload, dict):
+        return payload
+    normalized = deepcopy(payload)
+    bindings = editorial_plan_theme_bindings(editorial_plan)
+    bindings_by_key = {
+        normalize_for_lookup(binding.get("theme")): binding
+        for binding in bindings
+        if normalize_for_lookup(binding.get("theme"))
+    }
+    raw_assessments = normalized.get("theme_coverage")
+    if isinstance(raw_assessments, list):
+        derived_assessments: list[dict[str, Any]] = []
+        for raw_assessment in raw_assessments:
+            if not isinstance(raw_assessment, dict):
+                derived_assessments.append(raw_assessment)
+                continue
+            assessment = dict(raw_assessment)
+            status = _s(assessment.get("status")).strip().casefold()
+            theme_key = normalize_for_lookup(assessment.get("theme"))
+            binding = bindings_by_key.get(theme_key)
+            raw_resolution = assessment.get("resolution")
+            if status == "redundant_optional":
+                assessment["status"] = "uncovered"
+                assessment["resolution"] = "omitted"
+            elif raw_resolution is None:
+                assessment["resolution"] = (
+                    "retained" if status == "covered" else "unresolved"
+                )
+            elif _s(raw_resolution).strip().casefold() not in (
+                EDITORIAL_PLAN_RESOLUTION_VALUES
+            ):
+                assessment["resolution"] = _s(raw_resolution).strip().casefold()
+            if binding is not None:
+                assessment["importance"] = binding["importance"]
+            derived_assessments.append(assessment)
+        normalized["theme_coverage"] = derived_assessments
+
+    report_completeness = _s(normalized.get("report_completeness")).strip().casefold()
+    diagnosis = _s(normalized.get("diagnosis")).strip().casefold()
+    existing_action = _s(normalized.get("recovery_action")).strip().casefold()
+    if existing_action:
+        normalized["recovery_action"] = existing_action
+    elif diagnosis:
+        normalized["recovery_action"] = _derive_editorial_theme_recovery_action(
+            diagnosis=diagnosis,
+            report_completeness=report_completeness,
+        )
+    return normalized
+
+
 def validate_substantive_editorial_theme_coverage(
     *,
     payload: Any,
@@ -2440,6 +2530,10 @@ def validate_substantive_editorial_theme_coverage(
     insight identities.
     """
 
+    payload = normalize_editorial_theme_coverage_assessment(
+        payload=payload,
+        editorial_plan=editorial_plan,
+    )
     raw_assessments = (
         payload.get("theme_coverage") if isinstance(payload, dict) else None
     )
@@ -2465,13 +2559,13 @@ def validate_substantive_editorial_theme_coverage(
     if verified_adaptive:
         if not isinstance(payload, dict) or any(
             field not in payload
-            for field in ("report_completeness", "diagnosis", "recovery_action")
+            for field in ("report_completeness", "diagnosis")
         ):
             raise AppError(
                 code="artifact_final_insight_coverage_invalid",
                 message=(
                     "Verified semantic coverage requires report completeness, "
-                    "diagnosis, and recovery action"
+                    "and diagnosis"
                 ),
                 retryable=False,
                 context={"assessment_contract_failure": True},
@@ -2689,8 +2783,7 @@ def validate_substantive_editorial_theme_coverage(
                 if _s(insight_id).strip()
             ]
             if (
-                not normalized_supporting_ids
-                or len(normalized_supporting_ids) != len(supporting_ids)
+                len(normalized_supporting_ids) != len(supporting_ids)
                 or len(normalized_supporting_ids) != len(set(normalized_supporting_ids))
                 or not set(normalized_supporting_ids).issubset(final_ids)
             ):
@@ -2701,7 +2794,13 @@ def validate_substantive_editorial_theme_coverage(
                         "final insight IDs"
                     ),
                     retryable=False,
-                    context={"theme": obligation_theme},
+                    context={
+                        "assessment_contract_failure": True,
+                        "theme": obligation_theme,
+                        "invalid_insight_ids": sorted(
+                            set(normalized_supporting_ids) - final_ids
+                        ),
+                    },
                 )
             obligation_evidence_keys = {
                 _fallback_evidence_key(evidence_id) for evidence_id in obligation_ids
@@ -2713,7 +2812,9 @@ def validate_substantive_editorial_theme_coverage(
                     final_facts.get(insight_id, {})
                 )
             }
-            if not obligation_evidence_keys.issubset(supporting_evidence_keys):
+            if status == "covered" and not obligation_evidence_keys.issubset(
+                supporting_evidence_keys
+            ):
                 raise AppError(
                     code="artifact_final_insight_coverage_invalid",
                     message=(
@@ -2722,9 +2823,29 @@ def validate_substantive_editorial_theme_coverage(
                     ),
                     retryable=False,
                     context={
+                        "assessment_contract_failure": True,
                         "theme": obligation_theme,
                         "missing_evidence_ids": sorted(
                             obligation_evidence_keys - supporting_evidence_keys
+                        ),
+                    },
+                )
+            if (
+                status in {"partial", "uncovered"}
+                and not supporting_evidence_keys.issubset(obligation_evidence_keys)
+            ):
+                raise AppError(
+                    code="artifact_final_insight_coverage_invalid",
+                    message=(
+                        "Original essential obligation includes unsupported final "
+                        "evidence"
+                    ),
+                    retryable=False,
+                    context={
+                        "assessment_contract_failure": True,
+                        "theme": obligation_theme,
+                        "unsupported_evidence_ids": sorted(
+                            supporting_evidence_keys - obligation_evidence_keys
                         ),
                     },
                 )
@@ -2804,7 +2925,6 @@ def validate_substantive_editorial_theme_coverage(
                 raw_resolution is not None
                 and resolution not in EDITORIAL_PLAN_RESOLUTION_VALUES
             )
-            or (verified_adaptive and raw_resolution is None)
             or not explanation
             or not isinstance(raw_supporting_ids, list)
         ):
@@ -2853,7 +2973,11 @@ def validate_substantive_editorial_theme_coverage(
                     "Covered semantic themes require a retained or merged resolution"
                 ),
                 retryable=False,
-                context={"theme": theme, "resolution": resolution},
+                context={
+                    "theme": theme,
+                    "resolution": resolution,
+                    "assessment_contract_failure": True,
+                },
             )
         if status == "partial" and resolution != "unresolved":
             raise AppError(
@@ -2964,6 +3088,7 @@ def validate_substantive_editorial_theme_coverage(
                         "supporting_insight_ids": supporting_ids,
                         "theme_evidence_ids": sorted(theme_evidence_keys),
                         "supporting_evidence_ids": sorted(supporting_evidence_keys),
+                        "assessment_contract_failure": True,
                     },
                 )
         if status == "uncovered" and supporting_ids:
@@ -2995,7 +3120,10 @@ def validate_substantive_editorial_theme_coverage(
             code="artifact_final_insight_coverage_invalid",
             message="Semantic theme coverage omits planned themes",
             retryable=False,
-            context={"missing_themes": missing_themes},
+            context={
+                "missing_themes": missing_themes,
+                "assessment_contract_failure": True,
+            },
         )
 
     priorities = [

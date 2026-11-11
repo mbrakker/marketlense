@@ -361,6 +361,65 @@ def test_verified_editorial_plan_preserves_adaptive_theme_contract() -> None:
     assert plan["themes"][1]["merge_group"] == "core"
 
 
+def test_verified_theme_assessment_derives_internal_controls_from_status() -> None:
+    plan = normalize_artifact_editorial_plan(
+        {
+            "report_thesis": "The report shows a bounded commercial shift.",
+            "material_limitation_evidence_ids": ["verified-fact:limitation"],
+            "themes": [
+                {
+                    "theme": "Core shift",
+                    "priority": 1,
+                    "importance": "essential",
+                    "coverage_obligation": "Develop the directional change.",
+                    "evidence_ids": ["verified-fact:f1"],
+                },
+                {
+                    "theme": "Optional context",
+                    "priority": 2,
+                    "importance": "optional",
+                    "coverage_obligation": "Add context only when distinct.",
+                    "evidence_ids": ["verified-fact:f2"],
+                },
+            ],
+        }
+    )
+    result = validate_substantive_editorial_theme_coverage(
+        payload={
+            "theme_coverage": [
+                {
+                    "theme": "Core shift",
+                    "status": "covered",
+                    "supporting_insight_ids": ["i1"],
+                    "explanation": "The final insight develops the core shift.",
+                },
+                {
+                    "theme": "Optional context",
+                    "status": "redundant_optional",
+                    "supporting_insight_ids": [],
+                    "explanation": "The optional context is genuinely redundant.",
+                },
+            ],
+            "report_completeness": "complete",
+            "diagnosis": "redundant_optional_theme",
+            "material_gaps": [],
+            "original_essential_obligation_assessments": [],
+        },
+        editorial_plan=plan,
+        final_insights=[
+            {
+                "id": "i1",
+                "text": "The core shift changes planning.",
+                "evidence_id": "verified-fact:f1",
+            }
+        ],
+    )
+
+    assert result["theme_assessments"][0]["resolution"] == "retained"
+    assert result["theme_assessments"][1]["resolution"] == "omitted"
+    assert result["recovery_action"] == "none"
+
+
 def test_verified_adaptive_target_counts_essential_merge_units_with_floor() -> None:
     assert (
         adaptive_final_insight_target_count(

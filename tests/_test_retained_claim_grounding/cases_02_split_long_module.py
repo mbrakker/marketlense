@@ -101,14 +101,13 @@ def test_large_grounding_inventory_is_split_without_losing_claim_coverage(
             batch_index = int(batch_token.split("_", 1)[0])
             expected_claims = groups[batch_index - 1]
             response_payload = {
-                "unsupported": [],
-                "checks": _grounding_checks_for_payload(
+                "checks": _raw_grounding_checks_for_payload(
                     {"retained_claims_to_ground": expected_claims}
                 ),
             }
             if batch_index == 1:
                 response_payload["checks"] = (
-                    _grounding_checks_for_payload(
+                    _raw_grounding_checks_for_payload(
                         {
                             "public_factual_items": payload["public_factual_items"],
                         }
@@ -256,8 +255,7 @@ def test_grounding_batches_overlap_refill_and_merge_in_batch_order(tmp_path) -> 
                     batch_three_started.set()
                 batch_payload = json.loads(req.user_prompt[len("user ") :])
                 payload = {
-                    "unsupported": [],
-                    "checks": _grounding_checks_for_payload(batch_payload),
+                    "checks": _raw_grounding_checks_for_payload(batch_payload),
                 }
                 return OpenAIResponseResult(
                     schema_version="1.0",
@@ -410,8 +408,7 @@ def test_grounding_batch_failure_discards_sibling_results_and_stops_refill(
                     retryable=False,
                 )
             payload = {
-                "unsupported": [],
-                "checks": _grounding_checks_for_payload(
+                "checks": _raw_grounding_checks_for_payload(
                     {
                         "public_factual_items": audit_payload["public_factual_items"],
                         "retained_claims_to_ground": groups[0],
@@ -530,18 +527,17 @@ def test_grounding_shared_cap_bounds_two_simultaneous_reports(tmp_path) -> None:
             try:
                 assert release_calls.wait(timeout=2)
                 claim_entries = entries[batch_index - 1]
-                checks = _grounding_checks_for_payload(
+                checks = _raw_grounding_checks_for_payload(
                     {"retained_claims_to_ground": claim_entries}
                 )
                 if batch_index == 1:
                     checks = (
-                        _grounding_checks_for_payload(
+                        _raw_grounding_checks_for_payload(
                             {"public_factual_items": public_items}
                         )
                         + checks
                     )
                 payload = {
-                    "unsupported": [],
                     "checks": checks,
                 }
                 return OpenAIResponseResult(

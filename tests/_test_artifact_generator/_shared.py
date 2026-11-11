@@ -317,9 +317,42 @@ class FakeOpenAI:
         try:
             if self.sleep_seconds > 0:
                 time.sleep(self.sleep_seconds)
-            return self._complete_soft_copy_contract(step, self._next(step, ctx))
+            payload = self._next(step, ctx)
+            if step == "editorial_theme_coverage":
+                payload = self._complete_legacy_theme_coverage_contract(payload)
+            return self._complete_soft_copy_contract(step, payload)
         finally:
             self._mark_completed(step)
+
+    @staticmethod
+    def _complete_legacy_theme_coverage_contract(payload):
+        """Translate retained pre-contract fixtures without hiding malformed cases."""
+
+        if not isinstance(payload, dict) or not isinstance(
+            payload.get("theme_coverage"), list
+        ):
+            return payload
+        assessments = payload["theme_coverage"]
+        has_legacy_controls = "recovery_action" in payload or any(
+            isinstance(item, dict) and "resolution" in item for item in assessments
+        )
+        if not has_legacy_controls:
+            return payload
+        translated = deepcopy(payload)
+        translated["theme_coverage"] = []
+        for raw_item in assessments:
+            if not isinstance(raw_item, dict):
+                translated["theme_coverage"].append(raw_item)
+                continue
+            item = dict(raw_item)
+            resolution = str(item.pop("resolution", "")).strip().casefold()
+            if resolution == "omitted" and item.get("status") == "uncovered":
+                item["status"] = "redundant_optional"
+            translated["theme_coverage"].append(item)
+        translated.pop("recovery_action", None)
+        translated.setdefault("material_gaps", [])
+        translated.setdefault("original_essential_obligation_assessments", [])
+        return translated
 
     @staticmethod
     def _complete_soft_copy_contract(step, payload):

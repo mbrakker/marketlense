@@ -6,5 +6,8 @@ text: |
   Legacy source context for corroborating those listed items (JSON):
   {{ evidence_json }}
 
-  Return only the schema-valid JSON required by the grounding system prompt,
-  with exactly one verdict for every listed public item and retained claim.
+  Return one schema-valid `checks` verdict for every listed public item and
+  retained claim. Include `item_id`, `classification`, `entailment_outcome`,
+  `violation_type`, `proposition_status`, the complete `protected_facts` object,
+  and a substantive `reason`. Use `violation_type` `none` only for entailed
+  verdicts. Do not return `unsupported`, `section`, or `text` fields.

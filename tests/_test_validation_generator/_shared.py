@@ -187,12 +187,6 @@ def _grounding_contract_payload(request, payload: dict) -> dict:
             item.setdefault("entailment_outcome", "not_established")
             item.setdefault("violation_type", "unsupported_factual_claim")
             item.setdefault("reason", "The test response marks this item unsupported.")
-    existing_ids = {
-        str(item.get("item_id") or "").strip()
-        for item in checks + unsupported
-        if str(item.get("item_id") or "").strip()
-    }
-
     def protected_facts(status: str) -> dict[str, dict[str, object]]:
         return {
             dimension: {
@@ -208,6 +202,100 @@ def _grounding_contract_payload(request, payload: dict) -> dict:
         for item in unsupported
         if str(item.get("item_id") or "").strip()
     }
+    normalized_checks: list[dict] = []
+    existing_ids: set[str] = set()
+    for raw_check in checks:
+        item_id = str(raw_check.get("item_id") or "").strip()
+        if not item_id:
+            continue
+        outcome = str(raw_check.get("entailment_outcome") or "").strip()
+        failed = unsupported_by_id.get(item_id)
+        if outcome not in {"entailed", "contradicted", "not_established"}:
+            outcome = (
+                str(failed.get("entailment_outcome") or "")
+                if failed
+                else "entailed"
+            )
+        if outcome not in {"entailed", "contradicted", "not_established"}:
+            outcome = "not_established"
+        source = dict(raw_check)
+        source.pop("section", None)
+        source.pop("text", None)
+        source["item_id"] = item_id
+        source["entailment_outcome"] = outcome
+        source["violation_type"] = (
+            "none"
+            if outcome == "entailed"
+            else str(
+                source.get("violation_type")
+                or (failed or {}).get("violation_type")
+                or "unsupported_factual_claim"
+            )
+        )
+        source.setdefault(
+            "classification",
+            classification((failed or {}).get("classification") or "factual_claim"),
+        )
+        source.setdefault(
+            "proposition_status",
+            "compatible"
+            if outcome == "entailed"
+            else "incompatible"
+            if outcome == "contradicted"
+            else "unknown",
+        )
+        source.setdefault(
+            "protected_facts",
+            protected_facts(
+                "compatible"
+                if outcome == "entailed"
+                else "incompatible"
+                if outcome == "contradicted"
+                else "unknown"
+            ),
+        )
+        source.setdefault(
+            "reason",
+            str(
+                (failed or {}).get("reason")
+                or "The test response accepts this item against its retained evidence."
+            ),
+        )
+        normalized_checks.append(source)
+        existing_ids.add(item_id)
+
+    # Older fixtures may provide an unsupported row without a paired check.
+    # It is still converted to the single provider-owned verdict contract.
+    for item in unsupported:
+        item_id = str(item.get("item_id") or "").strip()
+        if not item_id or item_id in existing_ids:
+            continue
+        outcome = str(item.get("entailment_outcome") or "not_established")
+        if outcome not in {"contradicted", "not_established"}:
+            outcome = "not_established"
+        normalized_checks.append(
+            {
+                "item_id": item_id,
+                "classification": classification(
+                    item.get("classification") or "factual_claim"
+                ),
+                "entailment_outcome": outcome,
+                "violation_type": str(
+                    item.get("violation_type") or "unsupported_factual_claim"
+                ),
+                "proposition_status": (
+                    "incompatible" if outcome == "contradicted" else "unknown"
+                ),
+                "protected_facts": protected_facts(
+                    "incompatible" if outcome == "contradicted" else "unknown"
+                ),
+                "reason": str(
+                    item.get("reason") or "The test response marks this item unsupported."
+                ),
+            }
+        )
+        existing_ids.add(item_id)
+
     for expected_item in expected:
         item_id = str(expected_item["item_id"])
         if item_id in existing_ids:
@@ -216,11 +304,9 @@ def _grounding_contract_payload(request, payload: dict) -> dict:
         outcome = str(failed.get("entailment_outcome") or "") if failed else ""
         if outcome not in {"contradicted", "not_established"}:
             outcome = "entailed"
-        checks.append(
+        normalized_checks.append(
             {
                 "item_id": item_id,
-                "section": str(expected_item.get("section") or "grounding"),
-                "text": str(expected_item.get("text") or ""),
                 "classification": (
                     classification(failed.get("classification") or "factual_claim")
                     if failed
@@ -229,6 +315,9 @@ def _grounding_contract_payload(request, payload: dict) -> dict:
                     )
                 ),
                 "entailment_outcome": outcome,
+                "violation_type": (
+                    "none" if outcome == "entailed" else "unsupported_factual_claim"
+                ),
                 "proposition_status": (
                     "incompatible"
                     if outcome == "contradicted"
@@ -253,7 +342,7 @@ def _grounding_contract_payload(request, payload: dict) -> dict:
                 ),
             }
         )
-    return {"checks": checks, "unsupported": unsupported}
+    return {"checks": normalized_checks}
 
 
 def _semantic_contract_payload(request, payload: dict) -> dict:

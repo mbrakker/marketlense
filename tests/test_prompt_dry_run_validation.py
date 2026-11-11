@@ -224,7 +224,8 @@ def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> N
     findings_text = " ".join(findings.system.text.split())
 
     assert (
-        "use numbers only when its excerpt states the full value-subject-period relationship"
+        "use numbers only when its excerpt states the full value-subject-period "
+        "relationship"
         in candidates_text.lower()
     )
     assert "A quote ID is allowed only when its text states the exact value" in (
@@ -401,7 +402,8 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     assert "even alongside aggregates" in doc_map_text
     assert "preserve paired measures, causes, mechanisms, and periods" in doc_map_text
     assert (
-        "primary pass: search file_search by section/title/page and each key-point metric"
+        "primary pass: search file_search by section/title/page and each key-point "
+        "metric"
         in findings_text
     )
     assert "seek directional body outcomes" in findings_text

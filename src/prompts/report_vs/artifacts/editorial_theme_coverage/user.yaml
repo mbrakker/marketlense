@@ -8,65 +8,31 @@ text: |
   Complete canonical visually verified fact roster:
   {{ verified_facts_json }}
 
-  Original essential obligations that must remain substantively developed during a replan:
+  Original essential obligations that must remain substantively developed during
+  a replan:
   {{ original_essential_obligations_json|default("[]") }}
 
-  Return exactly this JSON object:
-  {
-    "report_completeness": "complete|incomplete|uncertain",
-    "diagnosis": "planned_theme_execution|material_report_completeness|redundant_optional_theme|infeasible_plan|insufficient_evidence",
-    "recovery_action": "none|targeted_rewrite|replan|quarantine",
-    "material_gaps": [
-      {
-        "verified_fact_ids": ["<exact admitted verified fact IDs>"],
-        "evidence_ids": ["<exact canonical evidence IDs bound to those facts>"],
-        "final_insight_ids": ["<exact final insight IDs, if applicable>"],
-        "explanation": "<specific source-grounded material proposition not developed>"
-      }
-    ],
-    "original_essential_obligation_assessments": [
-      {
-        "theme": "<exact original essential obligation theme>",
-        "evidence_ids": ["<exact original canonical evidence IDs>"],
-        "status": "covered|partial|uncovered",
-        "supporting_insight_ids": ["<exact final insight IDs>"],
-        "explanation": "<whether the original material proposition remains substantively developed>"
-      }
-    ],
-    "theme_coverage": [
-      {
-        "theme": "<exact planned theme name>",
-        "status": "covered|partial|uncovered",
-        "resolution": "retained|merged|omitted|unresolved|quarantined",
-        "supporting_insight_ids": ["<exact final insight id>"],
-        "explanation": "<concise explanation grounded in the intended proposition and actual final wording>"
-      }
-    ]
-  }
+  Return one JSON object with these fields:
+  - `theme_coverage`: one entry for every planned theme, exactly once. Each entry
+    has the exact `theme`, one `status` (`covered`, `partial`, `uncovered`, or
+    `redundant_optional`), exact `supporting_insight_ids`, and a substantive
+    `explanation`.
+  - `report_completeness`: `complete`, `incomplete`, or `uncertain`.
+  - `diagnosis`: `planned_theme_execution`, `material_report_completeness`,
+    `redundant_optional_theme`, `infeasible_plan`, or `insufficient_evidence`.
+  - `material_gaps`: exact admitted `verified_fact_ids`, canonical `evidence_ids`,
+    exact `final_insight_ids` when applicable, and a specific explanation. Use an
+    empty list for a complete report.
+  - `original_essential_obligation_assessments`: one exact entry for every supplied
+    original obligation, with its immutable theme/evidence IDs, status
+    (`covered`, `partial`, or `uncovered`), exact supporting insight IDs, and
+    explanation. An honestly uncovered obligation may have an empty supporting
+    insight list.
 
-  Include every planned theme exactly once. Use only exact final insight IDs. Set resolution to retained when the theme is developed directly, merged when one final insight genuinely develops multiple planned themes, omitted only for an optional redundant theme, and quarantined when an essential proposition cannot be represented. Use `report_completeness` to assess the whole article independently of the plan organization. Choose `targeted_rewrite` when supported evidence is available but the prose is incomplete, `replan` only when the plan is redundant or infeasible, and `quarantine` when material verified evidence is insufficient.
-  Use these control combinations coherently: `planned_theme_execution` with `none` for a complete plan execution; `redundant_optional_theme` with `none` when a redundant optional theme is safely omitted from a complete report, or with `replan` when the plan must be reorganized; `material_report_completeness` or `planned_theme_execution` with `targeted_rewrite` only when completeness is `incomplete` or `uncertain`; `infeasible_plan` with `replan`; and `insufficient_evidence` with `quarantine` when completeness is `incomplete` or `uncertain`. Do not use a recovery action to convert an incomplete report into a complete verdict.
-  `covered` means the final prose develops the theme's intended proposition;
-  `partial` means it is materially related but incomplete; `uncovered` means
-  the final roster does not substantively address it. A shared fact or source
-  page is not enough. A single final insight may support more than one planned
-  theme when its actual wording develops each theme's intended proposition;
-  list that exact insight ID under each applicable theme instead of demanding
-  a redundant one-to-one insight for every theme. Inspect each supplied metric object and
-  metric_public_copy when present: a theme is partial when the final wording
-  drops a material value relationship, segment, timeframe, qualifier, or
-  subrelationship from the admitted fact. Use the complete fact roster to
-  notice material admitted propositions or subrelationships that are not
-  substantively treated by any planned theme, and mark the nearest affected
-  theme partial or uncovered with a concise explanation. For a replan, explicitly
-  assess every original essential obligation supplied above in
-  original_essential_obligation_assessments against the revised plan and final
-  wording; do not mark the report complete if any obligation is dropped or only
-  weakly implied. When report_completeness is incomplete or uncertain while every
-  planned theme is covered, return at least one material_gaps item for each
-  source-bound admitted proposition or relationship that remains materially
-  undeveloped. Each item must use exact verified_fact_ids and canonical evidence_ids
-  from the supplied roster, exact final_insight_ids when the gap concerns existing
-  prose (or an empty list when no final insight applies), and a specific explanation
-  of the missing relationship. Return an empty material_gaps array for a complete
-  report. Do not rewrite the insights or add evidence.
+  Judge actual metric relationships, qualifications, denominators, populations,
+  timeframes and forecast/observation status. A shared source page or fact ID is
+  not enough. A single final insight may support more than one planned theme only
+  when its wording develops each proposition. A single final insight may support
+  multiple themes only when its wording develops each proposition, instead of
+  demanding a redundant one-to-one insight. Do not return `resolution` or
+  `recovery_action`; those are deterministic internal projections.

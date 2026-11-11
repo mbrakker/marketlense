@@ -2,42 +2,58 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["unsupported", "checks"],
+  "required": ["checks"],
   "properties": {
-    "unsupported": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["item_id", "section", "text", "classification", "entailment_outcome", "violation_type", "reason"],
-        "properties": {
-          "item_id": {"type": "string", "minLength": 1},
-          "section": {"type": "string"},
-          "text": {"type": "string"},
-          "classification": {"type": "string", "enum": ["factual_claim", "analyst_interpretation", "prescriptive_recommendation"]},
-          "entailment_outcome": {"type": "string", "enum": ["contradicted", "not_established"]},
-          "violation_type": {"type": "string", "minLength": 1},
-          "reason": {"type": "string"}
-        }
-      }
-    },
     "checks": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["item_id", "section", "text", "classification", "entailment_outcome", "proposition_status", "protected_facts", "reason"],
+        "required": [
+          "item_id",
+          "classification",
+          "entailment_outcome",
+          "violation_type",
+          "proposition_status",
+          "protected_facts",
+          "reason"
+        ],
         "properties": {
           "item_id": {"type": "string", "minLength": 1},
-          "section": {"type": "string"},
-          "text": {"type": "string"},
-          "classification": {"type": "string", "enum": ["factual_claim", "analyst_interpretation", "prescriptive_recommendation"]},
-          "entailment_outcome": {"type": "string", "enum": ["entailed", "contradicted", "not_established"]},
-          "proposition_status": {"type": "string", "enum": ["compatible", "incompatible", "unknown"]},
+          "classification": {
+            "type": "string",
+            "enum": [
+              "factual_claim",
+              "analyst_interpretation",
+              "prescriptive_recommendation"
+            ]
+          },
+          "entailment_outcome": {
+            "type": "string",
+            "enum": ["entailed", "contradicted", "not_established"]
+          },
+          "violation_type": {"type": "string", "minLength": 1},
+          "proposition_status": {
+            "type": "string",
+            "enum": ["compatible", "incompatible", "unknown"]
+          },
           "protected_facts": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["value", "unit_currency", "magnitude", "direction", "timeframe", "geography", "population", "comparison", "observation_status", "attribution", "certainty", "causality"],
+            "required": [
+              "value",
+              "unit_currency",
+              "magnitude",
+              "direction",
+              "timeframe",
+              "geography",
+              "population",
+              "comparison",
+              "observation_status",
+              "attribution",
+              "certainty",
+              "causality"
+            ],
             "properties": {
               "value": {"$ref": "#/$defs/protected_fact_dimension"},
               "unit_currency": {"$ref": "#/$defs/protected_fact_dimension"},
@@ -53,7 +69,7 @@
               "causality": {"$ref": "#/$defs/protected_fact_dimension"}
             }
           },
-          "reason": {"type": "string"}
+          "reason": {"type": "string", "minLength": 1}
         }
       }
     }
@@ -66,7 +82,10 @@
       "properties": {
         "claim_value": {"type": ["string", "null"]},
         "evidence_value": {"type": ["string", "null"]},
-        "status": {"type": "string", "enum": ["compatible", "incompatible", "unknown"]}
+        "status": {
+          "type": "string",
+          "enum": ["compatible", "incompatible", "unknown"]
+        }
       }
     }
   }

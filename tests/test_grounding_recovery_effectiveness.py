@@ -91,10 +91,9 @@ def _claim_request(count: int = 5):
 def _check(item_id: str, text: str) -> dict[str, object]:
     return {
         "item_id": item_id,
-        "section": "summary.claim_evidence_map",
-        "text": text,
         "classification": "factual_claim",
         "entailment_outcome": "entailed",
+        "violation_type": "none",
         "proposition_status": "compatible",
         "protected_facts": {
             dimension: {
@@ -139,7 +138,6 @@ class _SubdivisionProvider:
         else:
             raise AssertionError(f"unexpected grounding task: {task_id}")
         response = {
-            "unsupported": [],
             "checks": [
                 *[_check(entry["item_id"], entry["text"]) for entry in selected],
                 *(
@@ -183,7 +181,6 @@ class _RecursiveSubdivisionProvider(_SubdivisionProvider):
         else:
             raise AssertionError(f"unexpected grounding task: {task_id}")
         response = {
-            "unsupported": [],
             "checks": [
                 *[_check(entry["item_id"], entry["text"]) for entry in selected],
                 *(
@@ -216,7 +213,7 @@ class _PersistentCoverageFailureProvider:
 
     def openai_chat_json(self, request, ctx):
         self.calls.append((str(ctx.task_id), str(request.stage)))
-        response = {"unsupported": [], "checks": []}
+        response = {"checks": []}
         return OpenAIResponseResult(
             schema_version="1.0",
             text=json.dumps(response),
@@ -331,6 +328,8 @@ def test_grounding_coverage_accepts_authorized_retained_classification():
             "checks": [
                 {
                     **_check(item_id, claim.text),
+                    "section": "summary.claim_evidence_map",
+                    "text": claim.text,
                     "classification": "analyst_interpretation",
                 }
             ],

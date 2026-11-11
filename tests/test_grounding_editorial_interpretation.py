@@ -104,11 +104,16 @@ def _issues(tmp_path, *, section: str, entry: dict | None = None):
         )
         check = {
             "item_id": item_id,
-            "section": item_section,
-            "text": str(item["text"]),
             "classification": classification,
             "entailment_outcome": outcome,
-            "proposition_status": "compatible",
+            "violation_type": (
+                str(item_entry.get("violation_type") or "")
+                if item_entry is not None
+                else "none"
+            ),
+            "proposition_status": (
+                "compatible" if outcome == "entailed" else "unknown"
+            ),
             "protected_facts": {
                 dimension: {
                     "claim_value": None,
@@ -119,26 +124,16 @@ def _issues(tmp_path, *, section: str, entry: dict | None = None):
             },
             "reason": reason,
         }
+        if not check["violation_type"]:
+            check["violation_type"] = (
+                "none" if outcome == "entailed" else "not_established"
+            )
         checks.append(check)
         if is_target and entry is not None and outcome != "entailed":
-            unsupported_entry = dict(entry)
-            unsupported_entry.update(
-                {
-                    "item_id": item_id,
-                    "section": item_section,
-                    "text": str(item["text"]),
-                    "classification": classification,
-                    "entailment_outcome": outcome,
-                    "reason": reason,
-                }
-            )
-            if "violation_type" not in unsupported_entry and classification:
-                unsupported_entry["violation_type"] = (
-                    "not_established"
-                    if classification == "factual_claim"
-                    else "not_established"
-                )
-            unsupported.append(unsupported_entry)
+            unsupported.append({"item_id": item_id})
+    # The provider owns one raw verdict per item.  Section/text and the
+    # derived unsupported projection are attached only by production code.
+    unsupported.clear()
     return run_grounding_check(
         request=request,
         settings=_settings(tmp_path),
@@ -147,7 +142,7 @@ def _issues(tmp_path, *, section: str, entry: dict | None = None):
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
-            grounding_payload={"unsupported": unsupported, "checks": checks},
+            grounding_payload={"checks": checks},
             complete_grounding_contract=False,
         ),
         ctx=_ctx(),
