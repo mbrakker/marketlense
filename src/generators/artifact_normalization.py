@@ -2157,7 +2157,14 @@ def validate_final_insight_candidate_lineage(
     if missing_id:
         context["missing_insight_id"] = True
     if unauthorized_evidence:
-        context["unauthorized_evidence_ids"] = unauthorized_evidence
+        context["unauthorized_evidence_ids"] = sorted(
+            {
+                evidence_id
+                for evidence_ids in unauthorized_evidence.values()
+                for evidence_id in evidence_ids
+            }
+        )
+        context["unauthorized_evidence_insight_ids"] = sorted(unauthorized_evidence)
     if mismatched_primary:
         context["mismatched_primary_evidence_ids"] = sorted(mismatched_primary)
     raise AppError(

@@ -140,7 +140,12 @@ def test_recovery_feedback_names_invalid_final_insight_ids() -> None:
             code="artifact_final_insight_lineage_invalid",
             message="Final insight identity is not bound to a candidate",
             retryable=False,
-            context={"invalid_insight_ids": ["unmatched-final-id"]},
+            context={
+                "invalid_insight_ids": ["unmatched-final-id"],
+                "mismatched_primary_evidence_ids": ["insight-1"],
+                "unauthorized_evidence_ids": ["evidence-unknown"],
+                "unauthorized_evidence_insight_ids": ["insight-2"],
+            },
         )
 
     with pytest.raises(StructuredOutputFailure) as exc_info:
@@ -163,6 +168,18 @@ def test_recovery_feedback_names_invalid_final_insight_ids() -> None:
 
     assert any(
         "invalid insight ids: unmatched-final-id" in error
+        for error in seen_schema_errors
+    )
+    assert any(
+        "mismatched primary evidence ids: insight-1" in error
+        for error in seen_schema_errors
+    )
+    assert any(
+        "unauthorized evidence ids: evidence-unknown" in error
+        for error in seen_schema_errors
+    )
+    assert any(
+        "unauthorized evidence insight ids: insight-2" in error
         for error in seen_schema_errors
     )
     assert exc_info.value.context["invalid_insight_ids"] == ["unmatched-final-id"]

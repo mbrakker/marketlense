@@ -363,3 +363,29 @@ def test_final_lineage_validation_reports_missing_identity() -> None:
 
     assert captured.value.code == "artifact_final_insight_lineage_invalid"
     assert captured.value.context["missing_insight_id"] is True
+
+
+def test_final_lineage_validation_reports_unauthorized_evidence_ids() -> None:
+    candidate = _insight(
+        "behavior-cross-check",
+        "f1",
+        "The eligible candidate survives final admission.",
+        score=0.4,
+    )
+    final = _insight(
+        "behavior-cross-check",
+        "f9",
+        "A final rewrite with a different primary binding.",
+        score=0.99,
+    )
+
+    with pytest.raises(AppError) as captured:
+        validate_final_insight_candidate_lineage(
+            final_insights=[final], candidate_insights=[candidate]
+        )
+
+    assert captured.value.code == "artifact_final_insight_lineage_invalid"
+    assert captured.value.context["unauthorized_evidence_ids"] == ["f9"]
+    assert captured.value.context["unauthorized_evidence_insight_ids"] == [
+        "behavior-cross-check"
+    ]
