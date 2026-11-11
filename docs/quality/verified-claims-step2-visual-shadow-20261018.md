@@ -12344,3 +12344,45 @@ failed closed. Adjust and the remaining frozen-five members were not started,
 because the required first report did not reach readiness PASS. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. No canonical promotion or publication was performed.
+
+### Grounding-batch, semantic-identity, editorial-handover, and regeneration-integrity correction — 2026-11-11
+
+The implementation correction is recorded in commits `fcba011d6008ca298f9aaa633dee1dba184650cd` and `1cece18445bbdd7aa107fcc57526178c62e18206` on `codex/fix-retained-insight-evidence-validation`. The change is bounded to existing contracts and recovery paths:
+
+* Grounding schema/processing identity advanced to `1.7`/`validation_rule_v7`. Retained non-entailed checks now require one matching model-owned unsupported entry in the same aggregate, with a valid violation type and substantive reason; entailed checks cannot carry a contradictory unsupported entry. Public and retained coverage are checked separately and the existing fail-closed rules remain authoritative.
+* Reused grounding results are bound to each claim's actual successful primary, recovery, or split batch execution context: prompt hash, execution identity, provider, model, and configuration policy. A first-batch identity cannot be assigned to all claims, and a missing per-claim context cannot be reused.
+* Grounding issue routing uses the canonical retained/public inventory rather than the model's non-authoritative section label. Unknown or ambiguous item identities continue to fail closed.
+* Public-editorial review scope carries the final insight roster, public item IDs, evidence IDs, and verified-fact IDs. Obligation/review diagnostics expose missing, duplicate, unknown, unbound, or unauthorized evidence and supporting IDs through the existing structured-output recovery channel. Final-lineage diagnostics are bounded lists, not raw unbounded maps.
+* Verified mode is propagated explicitly into regeneration planning and strict promotion loading. Required source, candidate-artifact, and evidence-pack context cannot be omitted or cause a verified run to fall back to a legacy repair target.
+
+The focused cross-module regression suite passed **238 tests**. Changed-file Ruff and formatting passed; the full repository mypy gate passed with zero tracked errors; prompt-fixture regression passed; contract-schema, architecture-import, role-I/O, service-boundary, backlog-source, documentation, and repository-hygiene gates passed. A direct all-repository Ruff/format invocation remains non-green on inherited baseline findings (4,262 Ruff findings and 160 files that would be reformatted); no unrelated files were changed to manufacture a green result.
+
+#### Provider-backed evidence
+
+The exact frozen source manifest and existing retained PDFs were used. No WordPress, canonical-claim, or publication write occurred.
+
+| Run | Terminal result | Calls | Input / output tokens | Cost | Repairs | Readiness / validation |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Isolated Activate, commit `1cece184`, `live2` | `awaiting_review`; source-verified architecture passed | 522 | 2,638,956 / 534,895 | `$0.546897` | 9 structured, 3 automatic | pass / pass |
+| Adjust attempt 1, `live4` | failed `artifact_final_insight_coverage_invalid` | 153 | 953,460 / 158,758 | `$0.197224` | 3 structured | fail / fail |
+| Adjust attempt 2, `live5` | failed `validation_failed` | 356 | 4,585,392 / 850,579 | `$0.851874` | 45 structured, 3 automatic | fail / fail |
+
+The isolated Activate result admitted **10/10** verified source facts, had zero unsupported and zero unresolved retained factual claims, and produced the accepted HTML artifact:
+
+`C:\ml-e18-current-20261111-live2\frozen-reliability-cnwk09k1\members\cohort-cbb6e7df67412186b8bc\ias-first-attempt-ztwzo0c2\output\d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf.html`
+
+The HTML is 62,373 bytes and contains no `verified-fact:`, `soft_copy:`, or insight evidence identifiers. The accepted run still had a non-blocking `quotes_missing` abstention; its validation and readiness result is therefore not evidence that every optional family was populated.
+
+Adjust attempt 1 failed after the final roster contained seven rows but the independent semantic coverage review judged `cross-platform-satisfaction` materially undeveloped, even after one targeted rewrite. The deterministic coverage gate correctly rejected the report. Attempt 2 reached rendering but failed validation with **44 unresolved** and **0 unsupported** retained claims. Its grounding response first returned two checks for one expected public item (`soft_copy:linkedin_post:cf85ed213d1ca1d4`) and no matching unsupported entry, with `violation_type` missing; a later response similarly omitted `violation_type` for `insight:mobile-tech-gdp-projection:so_what`. These are malformed/incomplete model-owned verdicts and remain fail-closed; no prompt or validator relaxation was made.
+
+The exact frozen-five replay was started from fresh isolated state at `C:\ml-e18-current-20261111-live6-frozen-five\frozen-reliability-ezg9or2q`. It did not complete the five-report cohort and must not be represented as a five-report pass. Terminal member records were:
+
+| Report | Terminal result | Calls | Input / output tokens | Cost | Root cause |
+| --- | --- | ---: | ---: | ---: | --- |
+| Capgemini | failed `artifact_structured_output_invalid` | 95 | 614,943 / 111,725 | `$0.137232` | `theme_coverage` schema enum mismatch after two bounded repair attempts |
+| KPMG | failed `validation_failed` | 130 | 1,463,449 / 270,525 | `$0.338331` | material coverage omitted source qualifications for buyer expectations, qualitative AI diligence, and execution capability |
+| Activate | failed `artifact_structured_output_invalid` | 460 | 1,137,811 / 260,194 | `$0.261259` | `theme_coverage` schema enum mismatch after two bounded repair attempts; the in-flight regeneration was stopped after exceeding the run's intended duration |
+| Reuters Institute | not started | — | — | — | controlled stop before member dispatch |
+| Adjust | not started | — | — | — | controlled stop before member dispatch |
+
+The partial cohort therefore demonstrates real late-stage provider/schema and semantic-quality failures, not a corrected five-report outcome. The current implementation has deterministic contract coverage and a successful isolated Activate run, but Adjust is not stable across fresh provider attempts and the frozen-five replay is incomplete. The measured verdict is **implementation PASS / live acceptance PARTIAL / Step 3 NO-GO**. E18 remains **Active/PARTIAL**; Step 3 must not begin until a fresh, complete cohort establishes terminal grounding, editorial-review, and readiness outcomes without weakening these guards.
