@@ -966,8 +966,7 @@ def test_verified_grounding_adapts_raw_single_verdicts_and_derives_negative_proj
         item_id = str(item["item_id"])
         is_negative_item = item_id == negative_item_id
         is_editorial_item = (
-            str(item.get("declared_classification") or "")
-            == "analyst_interpretation"
+            str(item.get("declared_classification") or "") == "analyst_interpretation"
         )
         raw_checks.append(
             {
@@ -981,9 +980,7 @@ def test_verified_grounding_adapts_raw_single_verdicts_and_derives_negative_proj
                 "violation_type": (
                     "unsupported_factual_claim" if is_negative_item else "none"
                 ),
-                "proposition_status": (
-                    "unknown" if is_negative_item else "compatible"
-                ),
+                "proposition_status": ("unknown" if is_negative_item else "compatible"),
                 "protected_facts": protected_facts,
                 "reason": (
                     "The linked canonical evidence does not establish the claim."
