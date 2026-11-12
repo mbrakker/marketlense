@@ -12625,3 +12625,68 @@ not rerun at this SHA. The implementation verdict is **PASS**; live editorial
 acceptance remains **PARTIAL / NO-GO**, E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** pending
 an accepted provider-backed cohort.
+
+### Scoped repair follow-up and corrected Capgemini replay — 2026-11-12 (`97849c8f`)
+
+Commit `9b895cda699b295d9f80ecde1c2f08220d74bebe` implements the scoped repair
+contract. A semantic material gap now produces a bounded repair scope containing
+only the affected admitted candidate/fact/evidence identities, theme obligations,
+and authoritative metric/qualifier context. The existing patch validator and
+full post-merge semantic coverage check remain authoritative; the scoped result
+is neither persisted as a canonical roster nor reused as an unrestricted full
+generation. The prompt has mutually exclusive full-roster and localized-patch
+branches, so a repair cannot silently replace unrelated insights or relax the
+existing publication-quality gates.
+
+The first isolated Capgemini replay at that implementation SHA reached the
+scoped path but failed closed on a structured contract violation: the provider
+returned `evidence_ids: null` for an optional array. This was not converted into
+a usable artifact. The follow-up prompt-only correction in
+`97849c8f5b33c165c0a9f8aa86933d504c0e5633` states that unavailable optional
+fields must be omitted and optional arrays must be JSON arrays, and carries the
+same rule into the existing structured-output recovery/regeneration prompts.
+No schema, validator, retry limit, or quality threshold was changed.
+
+| Run | Terminal result | Calls | Input / output tokens | Cost | Duration | Repair / output |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `9b895cda` — `C:\ml-scoped-repair-20261112-capgemini-live2\frozen-reliability-j5xt3cr7` | `schema_type_mismatch` (`evidence_ids` null) | 136 | 1,843,445 / 255,417 | `$0.327141` | 1,909.953 s | 11 structured; no final artifact/readiness/HTML |
+| `97849c8f` — `C:\ml-scoped-repair-20261112-capgemini-live3\frozen-reliability-k3y9oail` | `artifact_final_insight_coverage_invalid` / `semantic_theme_repair_exhausted` | 94 | 770,906 / 109,563 | `$0.146749` | 1,190.781 s | 1 scoped rewrite; no final artifact/readiness/HTML |
+
+The second run used the exact Capgemini source identity and PDF SHA-256
+`612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e`.
+Its terminal diagnostic identified one material gap,
+`verified-fact:insight-04`, with a ten-row final roster and ten eligible
+candidate IDs. The repair was authorized and bounded, but the merged result
+still failed the existing semantic-theme completeness check. The report-level
+fidelity artifact contained 36 supported rows whose semantic outcomes were
+`entailed`; this confirms that the failure was not caused by loss of the source
+evidence pack. It is a provider semantic-completeness miss, and the pipeline
+correctly abstained instead of manufacturing a claim or adding an unbounded
+third attempt. The runner could not collect the verified-facts architecture
+artifact after this early terminal failure (`FileNotFoundError`), so no current
+run admission or readiness pass is claimed.
+
+The prompt/recovery correction is demonstrated by the changed terminal stage:
+the known optional-array contract failure did not recur, while the remaining
+semantic gap stayed fail-closed. The lower call/cost totals versus the prior
+Capgemini attempt are not attributed as an optimization because the runs have
+different provider paths and output volumes. No HTML, canonical artifact,
+publication-readiness pass, WordPress write, or operator intervention occurred;
+Activate, KPMG, Reuters Institute, and Adjust were not run after Capgemini
+failed, so there is no current-SHA frozen-five result.
+
+The post-correction focused suite passed **159 tests** and the prompt-fixture
+gate remained green without baseline or threshold changes:
+
+| Fixture family | Old tokens | Current tokens | Delta | Old cost | Current cost | Delta |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Total | 118,469 | 118,634 | +165 (+0.14%) | `$0.025502` | `$0.025519` | +`$0.000017` |
+| Publishing | 48,827 | 48,988 | +161 (+0.33%) | `$0.009244` | `$0.009260` | +`$0.000016` |
+| Report | 23,531 | 23,589 | +58 (+0.25%) | `$0.008638` | `$0.008644` | +`$0.000006` |
+| Validation | 12,864 | 12,810 | -54 (-0.42%) | `$0.002199` | `$0.002194` | -`$0.000005` |
+
+The implementation and malformed-output correction are **PASS** against their
+focused deterministic regressions. Live editorial acceptance is **PARTIAL /
+NO-GO**: the fresh Capgemini report still lacks an accepted final roster and
+HTML, and no five-report cohort was completed. E18 remains **Active/PARTIAL**,
+Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
