@@ -45,7 +45,7 @@ def test_verified_generation_repairs_completeness_only_failure_without_omitted_t
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
     responses["insights_final"] = [
         {"insights_final": final},
-        {"insights_final": repaired},
+        {"insights_final": [repaired[0]]},
     ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"

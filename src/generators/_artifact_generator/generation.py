@@ -383,16 +383,18 @@ def _build_semantic_repair_scope(
         binding_evidence_ids = list(dict.fromkeys(binding_evidence_ids))
         authorized_evidence_ids.extend(binding_evidence_ids)
         targeted_ids.extend(binding_target_ids)
-        # An uncovered theme with no existing supporting entry is the only
-        # localized path that may append a new candidate.  A partial existing
-        # entry remains the sole editable roster slot.
+        # An uncovered theme with no model-supported IDs may authorize both
+        # revision of an existing feasible row and addition of feasible rows
+        # that are not in the current roster.  The scoped patch validator and
+        # merge preserve every other row and let the model choose which of
+        # these source-bound alternatives is needed.
         binding_additions = (
             [
                 candidate_id
                 for candidate_id in binding_candidate_ids
                 if candidate_id not in current_id_set
             ]
-            if status == "uncovered" and not binding_target_ids
+            if status == "uncovered" and not supporting_ids
             else []
         )
         additions.extend(binding_additions)

@@ -33,7 +33,7 @@ def test_verified_material_gap_is_handed_to_bounded_targeted_rewrite(tmp_path):
     ]
     responses["insights_final"] = [
         {"insights_final": final_candidates},
-        {"insights_final": final_candidates},
+        {"insights_final": [final_candidates[0]]},
     ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[0]['id']}"
@@ -390,7 +390,7 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
     responses["editorial_plan"] = [discovery_plan, verified_plan]
     responses["insights_final"] = [
         {"insights_final": narrow_final},
-        {"insights_final": repaired_final},
+        {"insights_final": [repaired_final[-1]]},
     ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
@@ -463,6 +463,7 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
         "insight-f2-0.98",
         "insight-f3-0.97",
         "insight-f4-0.96",
+        "insight-f5-0.95",
         "insight-f6-0.94",
     ]
     assert (
