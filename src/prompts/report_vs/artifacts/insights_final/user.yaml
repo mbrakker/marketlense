@@ -30,11 +30,16 @@ text: |
   Scoped semantic repair scope JSON: {{ semantic_theme_repair_scope_json }}
   Exact stable IDs permitted in this patch: {{ semantic_theme_allowed_patch_ids_json|default("[]") }}
   Independent semantic theme-coverage feedback JSON: {{ semantic_theme_coverage_feedback_json|default("{}") }}
+  {% if semantic_theme_focal_facts_json|default("") %}
+  Focal verified-fact repair context JSON: {{ semantic_theme_focal_facts_json }}
+  Reconstruct the exact material proposition identified by each focal fact. The focal fact statement, complete metric, qualifiers, primary evidence ID, and authorized candidate IDs are the authoritative repair context; do not replace them with a topic summary or a nearby source fact. Put the factual proposition in `text`, including every material comparison, direction, population, denominator, period, forecast/observation status, and limitation required by the focal gap. Keep `so_what` interpretive and `now_what` conditional; do not hide a missing factual clause in either field.
+  {% endif %}
   This is a scoped patch, not a complete roster response. Return a non-empty, substantive patch containing only corrected entries for authorized existing IDs and/or explicitly authorized addition IDs. Preserve every unchanged final insight exactly: do not echo, reorder, delete, or mutate unaffected entries. Use only the exact stable IDs and authoritative evidence bindings supplied in the scope and candidate alternatives. Address only the supplied scoped theme gaps. Do not apply full-roster selection, minimum-count, or unrelated-theme requirements. An empty or unchanged patch is not a successful correction.
   {% else %}
   {% if verified_editorial_obligations_json|default("") %}
   Executable verified editorial obligations JSON: {{ verified_editorial_obligations_json }}
-  In verified full generation, treat every essential obligation in this context as a required proposition to develop. Select only its exact feasible admitted candidate IDs, use the listed authoritative evidence IDs, and preserve the complete source-backed relationships, comparisons, direction, scope, timeframe, qualifiers, counter-signals, and limitations represented by the bound verified facts. A theme is not covered by a topic mention or source-ID selection alone. Themes may share an insight only when that wording genuinely develops both obligations; do not force one insight per theme or add redundant filler.
+  In verified full generation, treat `verified_editorial_obligations_json` as the authoritative checklist and make a complete source-backed proposition the primary writing objective, not merely correct candidate selection. Treat every essential obligation as a required proposition to develop. Select only its exact feasible admitted candidate IDs, use the listed authoritative evidence IDs, and preserve the complete source-backed relationships, comparisons, direction, scope, timeframe, qualifiers, counter-signals, and limitations represented by the bound verified facts. The factual proposition belongs in `text`: do not leave a material clause only in `so_what`, `now_what`, or `metric_public_copy`. Keep `so_what` as interpretation, `now_what` as a conditional implication, and `metric_public_copy` as reader-facing wording for the exact retained metric tuple. Do not emit generic trend, topic-only, or source-ID-only text, and do not mistake selecting the correct `evidence_id` for adequately writing the source proposition. If one concise insight cannot faithfully develop an obligation, use an additional distinct admitted candidate-backed insight rather than dropping a material relationship. Keep the language natural, analytical, and commercially useful. A theme is not covered by a topic mention or source-ID selection alone. Themes may share an insight only when that wording genuinely develops both obligations; do not force one insight per theme or add redundant filler.
+  Before returning JSON, privately self-check every selected entry against its authoritative obligation: are all essential propositions and material admitted facts meaningfully represented, does `text` actually state each claimed finding and preserve every comparison and qualifier, is the primary `evidence_id` exact and non-empty, do protected metric fields remain source-supported, and does no interpretation or public metric copy introduce a missing fact?
   {% endif %}
   {% if semantic_theme_coverage_feedback_json|default("") %}
   Independent semantic theme-coverage feedback JSON: {{ semantic_theme_coverage_feedback_json }}
@@ -54,10 +59,14 @@ text: |
   Preserve the primary `evidence_id` per insight and, when the prose materially combines multiple supplied findings, include an `evidence_ids` array with the exact primary-first IDs for every necessary finding. Return JSON with an `insights_final` array of candidate-shaped entries containing scores, coverage_role, so_what, now_what, metric_public_copy, and report_type_lens.
   Return only the requested JSON object and final insight entries. Do not repeat the candidate roster, evidence text, schema, editorial plan, or canonical fact objects in the response. Keep `so_what` and `now_what` to one or two concise sentences tied to the selected finding; preserve exact values, comparisons, qualifiers, and scope rather than shortening them into a misleading summary.
   Reuse selected candidate IDs; keep IDs unique.
+  {% if verified_mode|default(false) %}
+  In verified mode, write a complete source-backed factual proposition in `text`, preferably in one or two complete sentences and with more length only when needed for accuracy. Preserve every material comparison, both sides, direction, population, denominator, period, forecast/observation status, qualifier, and limitation from the authoritative candidate and obligation. Never shorten a proposition into a generic trend or topic-only statement.
+  {% else %}
   For compact cards, aim for one complete, source-backed insight sentence at
   18 words or fewer only when all material scope fits. If the proposition needs
   more words to preserve a comparison, qualifier, or subrelationship, retain
   the complete multi-sentence wording rather than clipping or omitting it.
+  {% endif %}
   For numeric insights, keep the finding/quote ID and page. Its direct evidence
   must state value, subject, and period/status; do not expand scope. DocMap IDs
   are not numeric evidence.
@@ -82,7 +91,12 @@ text: |
   if the candidate does not establish a detail, omit it.
   In `so_what` and `now_what`, avoid repeating numbers or ranked-group labels
   from `text`, and omit counts absent from the linked evidence.
-  Do not output arrays/comma-separated values inside evidence_id. `evidence_ids` is optional and may contain only exact IDs present in the supplied candidate insights, with the primary `evidence_id` first; do not add an ID merely because it shares a topic or source page. If uncertain, use an empty string for the primary ID.
+  Do not output arrays/comma-separated values inside evidence_id. `evidence_ids` is optional and may contain only exact IDs present in the supplied candidate insights, with the primary `evidence_id` first; do not add an ID merely because it shares a topic or source page.
+  {% if verified_mode|default(false) %}
+  In verified mode, `evidence_id` is required, must be a non-empty exact primary ID from the selected candidate, and must remain the authoritative binding for the factual proposition. Never invent, omit, or replace it with a topic, page, or source identifier.
+  {% else %}
+  If uncertain, use an empty string for the primary ID.
+  {% endif %}
   Optional fields that are not available must be omitted, never set to null; if an optional array is present, emit a JSON array of its allowed values.
   Prefer insights that can carry a clear metric, claim-level evidence, or public-safe proof point into final editorial artifacts.
   Retain at most one public primary metric per insight: `metric.value` must be one complete human-readable metric or one coherent comparison/range, never a semicolon-separated list. When `metric.value` is present, retain or supply `metric.label` as a concise human-readable description of that exact metric; do not use a general multi-metric insight sentence or a different metric's subject. `metric.unit` must be one semantic unit and must not repeat currency symbols or magnitude words already in `metric.value`. Keep any additional supporting numbers in `text` and `evidence`.

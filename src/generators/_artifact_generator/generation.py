@@ -279,10 +279,19 @@ def _scoped_candidate_binding_ids(candidate: Dict[str, Any]) -> set[str]:
 def _scoped_material_gap_bindings(error_context: Dict[str, Any]) -> list[set[str]]:
     """Return only validated, source-bound material gap identities."""
 
+    return [
+        record["identities"]
+        for record in _scoped_material_gap_records(error_context)
+    ]
+
+
+def _scoped_material_gap_records(error_context: Dict[str, Any]) -> list[Dict[str, Any]]:
+    """Preserve validated gap bindings for deterministic scoped repair context."""
+
     raw_gaps = error_context.get("material_gaps")
     if not isinstance(raw_gaps, list):
         return []
-    bindings: list[set[str]] = []
+    records: list[Dict[str, Any]] = []
     for gap in raw_gaps:
         if not isinstance(gap, dict) or not _s(gap.get("explanation")).strip():
             continue
@@ -306,8 +315,135 @@ def _scoped_material_gap_bindings(error_context: Dict[str, Any]) -> list[set[str
             if _repair_evidence_identity(value)
         )
         if identities:
-            bindings.append(identities)
-    return bindings
+            records.append(
+                {
+                    "identities": identities,
+                    "verified_fact_ids": [
+                        _s(value).strip() for value in fact_ids if _s(value).strip()
+                    ],
+                    "evidence_ids": [
+                        _s(value).strip()
+                        for value in evidence_ids
+                        if _s(value).strip()
+                    ],
+                    "final_insight_ids": [
+                        _s(value).strip()
+                        for value in gap.get("final_insight_ids", [])
+                        if _s(value).strip()
+                    ],
+                    "explanation": _s(gap.get("explanation")).strip(),
+                }
+            )
+    return records
+
+
+def _verified_semantic_repair_focal_facts(
+    *,
+    material_gaps: Any,
+    repair_scope: Dict[str, Any],
+    verified_facts: Sequence[Dict[str, Any]],
+    candidate_insights: Sequence[Dict[str, Any]],
+    current_insights: Sequence[Dict[str, Any]],
+) -> list[Dict[str, Any]]:
+    """Build compact source-bound fact context for one scoped repair."""
+
+    if not isinstance(material_gaps, list):
+        return []
+    authorized_ids = {
+        _s(value).strip()
+        for value in repair_scope.get("authorized_candidate_ids", [])
+        if _s(value).strip()
+    }
+    current_ids = {
+        _s(insight.get("id")).strip()
+        for insight in current_insights
+        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+    }
+    candidates = [
+        candidate
+        for candidate in candidate_insights
+        if isinstance(candidate, dict)
+        and _s(candidate.get("id")).strip() in authorized_ids
+    ]
+
+    facts_by_identity = {
+        _repair_verified_fact_identity(fact.get("fact_id")): fact
+        for fact in verified_facts
+        if isinstance(fact, dict)
+        and _repair_verified_fact_identity(fact.get("fact_id"))
+        and _s(fact.get("statement")).strip()
+    }
+    focal_facts: list[Dict[str, Any]] = []
+    for gap in material_gaps:
+        if not isinstance(gap, dict):
+            continue
+        fact_ids = gap.get("verified_fact_ids")
+        evidence_ids = gap.get("evidence_ids")
+        explanation = _s(gap.get("explanation")).strip()
+        if (
+            not isinstance(fact_ids, list)
+            or not isinstance(evidence_ids, list)
+            or not explanation
+        ):
+            continue
+        gap_identities = {
+            _repair_verified_fact_identity(value)
+            for value in fact_ids
+            if _repair_verified_fact_identity(value)
+        }
+        gap_identities.update(
+            _repair_evidence_identity(value)
+            for value in evidence_ids
+            if _repair_evidence_identity(value)
+        )
+        if not gap_identities:
+            continue
+        gap_evidence_identities = {
+            _repair_evidence_identity(value)
+            for value in evidence_ids
+            if _repair_evidence_identity(value)
+        }
+        affected_final_ids = [
+            _s(value).strip()
+            for value in gap.get("final_insight_ids", [])
+            if _s(value).strip() in current_ids
+        ]
+        for fact_identity, matching_fact in facts_by_identity.items():
+            if fact_identity not in gap_identities:
+                continue
+            matching_candidates = [
+                candidate
+                for candidate in candidates
+                if _scoped_candidate_binding_ids(candidate).intersection(
+                    {fact_identity, *gap_evidence_identities}
+                )
+                and _s(candidate.get("evidence_id")).strip()
+                and _repair_evidence_identity(candidate.get("evidence_id"))
+                in gap_evidence_identities
+            ]
+            if not matching_candidates:
+                continue
+            primary_candidate = matching_candidates[0]
+            primary_evidence_id = _s(primary_candidate.get("evidence_id")).strip()
+            exact_candidate_ids = [
+                _s(candidate.get("id")).strip() for candidate in matching_candidates
+            ]
+            exact_candidate_ids = list(
+                dict.fromkeys(value for value in exact_candidate_ids if value)
+            )
+            focal_facts.append(
+                {
+                    "fact_id": _s(matching_fact.get("fact_id")).strip(),
+                    "statement": _s(matching_fact.get("statement")).strip(),
+                    "metric": deepcopy(matching_fact.get("metric")),
+                    "qualifiers": deepcopy(matching_fact.get("qualifiers")),
+                    "evidence_id": primary_evidence_id,
+                    "authorized_candidate_ids": exact_candidate_ids,
+                    "affected_final_insight_ids": affected_final_ids,
+                    "gap_explanation": explanation,
+                }
+            )
+    return focal_facts
 
 
 def _build_semantic_repair_scope(
@@ -335,6 +471,7 @@ def _build_semantic_repair_scope(
             "authorized_evidence_ids": [],
             "affected_themes": [],
             "theme_scopes": [],
+            "material_gap_scopes": [],
         }
 
     current_ids = [
@@ -384,16 +521,26 @@ def _build_semantic_repair_scope(
         for value in error_context.get("omitted_essential_themes", [])
         if _s(value).strip()
     )
-    material_gap_bindings = _scoped_material_gap_bindings(error_context)
+    material_gap_records = _scoped_material_gap_records(error_context)
 
     targeted_ids: list[str] = []
     additions: list[str] = []
     authorized_evidence_ids: list[str] = []
     affected_themes: list[str] = []
     theme_scopes: list[Dict[str, Any]] = []
+    planned_theme_identity_sets: list[set[str]] = []
     for binding in editorial_plan_theme_bindings(editorial_plan):
         theme = _s(binding.get("theme")).strip()
         theme_key = normalize_text(theme)
+        theme_identity_set = {
+            _repair_evidence_identity(value)
+            for value in (
+                *binding.get("reference_keys", set()),
+                *binding.get("coverage_keys", set()),
+            )
+            if _repair_evidence_identity(value)
+        }
+        planned_theme_identity_sets.append(theme_identity_set)
         assessment_item = assessment_by_theme.get(theme_key)
         status = _s((assessment_item or {}).get("status")).strip().casefold()
         supporting_ids = {
@@ -410,7 +557,13 @@ def _build_semantic_repair_scope(
             insight_id
             for insight_id in current_ids
             if insight_id in binding_candidate_ids
-            and (insight_id in supporting_ids or insight_id in context_target_ids)
+            and (
+                insight_id in context_target_ids
+                or (
+                    status in {"partial", "uncovered"}
+                    and insight_id in supporting_ids
+                )
+            )
         ]
         if status in {"partial", "uncovered"} and not binding_target_ids:
             binding_target_ids = [
@@ -425,7 +578,45 @@ def _build_semantic_repair_scope(
                 for insight_id in current_ids
                 if insight_id in binding_candidate_ids
             ]
-        is_affected = bool(binding_target_ids) or status in {"partial", "uncovered"}
+        # A validated material gap may identify a source-bound candidate even
+        # when the model marked its planned theme as covered.  Keep the
+        # authorization exact: revise the matching current ID or add the
+        # matching unselected candidate only.
+        binding_additions: list[str] = []
+        theme_evidence_ids = {
+            _repair_evidence_identity(value)
+            for value in binding.get("reference_keys", set())
+            if _repair_evidence_identity(value)
+        }
+        theme_evidence_ids.update(
+            _repair_evidence_identity(value)
+            for value in binding.get("coverage_keys", set())
+            if _repair_evidence_identity(value)
+        )
+        if material_gap_records:
+            for gap_record in material_gap_records:
+                gap_ids = gap_record["identities"]
+                if not gap_ids.intersection(theme_evidence_ids):
+                    continue
+                for candidate_id in binding_candidate_ids:
+                    candidate_ids = _scoped_candidate_binding_ids(
+                        eligible_by_id[candidate_id]
+                    )
+                    if not (
+                        candidate_ids.intersection(gap_ids)
+                        and candidate_ids.intersection(theme_evidence_ids)
+                    ):
+                        continue
+                    if candidate_id in current_id_set:
+                        if candidate_id not in binding_target_ids:
+                            binding_target_ids.append(candidate_id)
+                    else:
+                        binding_additions.append(candidate_id)
+        is_affected = (
+            bool(binding_target_ids)
+            or bool(binding_additions)
+            or status in {"partial", "uncovered"}
+        )
         if not is_affected and theme_key in omitted_themes:
             status = "uncovered"
             is_affected = True
@@ -455,39 +646,12 @@ def _build_semantic_repair_scope(
         # that are not in the current roster.  The scoped patch validator and
         # merge preserve every other row and let the model choose which of
         # these source-bound alternatives is needed.
-        binding_additions = (
-            [
+        if status == "uncovered" and not supporting_ids:
+            binding_additions.extend(
                 candidate_id
                 for candidate_id in binding_candidate_ids
                 if candidate_id not in current_id_set
-            ]
-            if status == "uncovered" and not supporting_ids
-            else []
-        )
-        if status == "partial" and material_gap_bindings:
-            theme_evidence_ids = {
-                _repair_evidence_identity(value)
-                for value in binding.get("reference_keys", set())
-                if _repair_evidence_identity(value)
-            }
-            theme_evidence_ids.update(
-                _repair_evidence_identity(value)
-                for value in binding.get("coverage_keys", set())
-                if _repair_evidence_identity(value)
             )
-            for gap_ids in material_gap_bindings:
-                if not gap_ids.intersection(theme_evidence_ids):
-                    continue
-                for candidate_id in binding_candidate_ids:
-                    if candidate_id in current_id_set:
-                        continue
-                    candidate_ids = _scoped_candidate_binding_ids(
-                        eligible_by_id[candidate_id]
-                    )
-                    if candidate_ids.intersection(
-                        gap_ids
-                    ) and candidate_ids.intersection(theme_evidence_ids):
-                        binding_additions.append(candidate_id)
         binding_additions = list(dict.fromkeys(binding_additions))
         additions.extend(binding_additions)
         theme_scopes.append(
@@ -500,6 +664,72 @@ def _build_semantic_repair_scope(
                 "feasible_candidate_ids": binding_candidate_ids,
                 "targeted_insight_ids": list(dict.fromkeys(binding_target_ids)),
                 "allowed_addition_candidate_ids": binding_additions,
+            }
+        )
+
+    material_gap_scopes: list[Dict[str, Any]] = []
+    for gap_record in material_gap_records:
+        gap_ids = gap_record["identities"]
+        if any(
+            gap_ids.intersection(theme_ids)
+            for theme_ids in planned_theme_identity_sets
+        ):
+            continue
+        gap_evidence_ids = {
+            _repair_evidence_identity(value)
+            for value in gap_record["evidence_ids"]
+            if _repair_evidence_identity(value)
+        }
+        exact_candidates = [
+            candidate
+            for candidate in eligible_by_id.values()
+            if _scoped_candidate_binding_ids(candidate).intersection(gap_ids)
+            and _s(candidate.get("evidence_id")).strip()
+            and _repair_evidence_identity(candidate.get("evidence_id"))
+            in gap_evidence_ids
+        ]
+        exact_candidate_ids = [
+            _s(candidate.get("id")).strip()
+            for candidate in exact_candidates
+            if _s(candidate.get("id")).strip()
+        ]
+        exact_candidate_ids = list(dict.fromkeys(exact_candidate_ids))
+        gap_final_ids = set(gap_record["final_insight_ids"])
+        gap_target_ids = [
+            insight_id
+            for insight_id in current_ids
+            if insight_id in exact_candidate_ids
+            and (not gap_final_ids or insight_id in gap_final_ids)
+        ]
+        gap_additions = [
+            candidate_id
+            for candidate_id in exact_candidate_ids
+            if candidate_id not in current_id_set
+        ]
+        gap_authorized_ids = list(dict.fromkeys(gap_target_ids + gap_additions))
+        gap_authorized_evidence_ids = [
+            _s(candidate.get("evidence_id")).strip()
+            for candidate in exact_candidates
+            if _s(candidate.get("id")).strip() in gap_authorized_ids
+            and _s(candidate.get("evidence_id")).strip()
+        ]
+        targeted_ids.extend(gap_target_ids)
+        additions.extend(gap_additions)
+        authorized_evidence_ids.extend(gap_authorized_evidence_ids)
+        material_gap_scopes.append(
+            {
+                "theme": "",
+                "scope_type": "material_report_completeness",
+                "status": "unmapped",
+                "importance": "report",
+                "coverage_obligation": gap_record["explanation"],
+                "evidence_ids": list(gap_record["evidence_ids"]),
+                "verified_fact_ids": list(gap_record["verified_fact_ids"]),
+                "gap_explanation": gap_record["explanation"],
+                "feasible_candidate_ids": exact_candidate_ids,
+                "targeted_insight_ids": gap_target_ids,
+                "allowed_addition_candidate_ids": gap_additions,
+                "authorized_candidate_ids": gap_authorized_ids,
             }
         )
 
@@ -519,7 +749,12 @@ def _build_semantic_repair_scope(
     targeted_ids = list(dict.fromkeys(targeted_ids))
     additions = list(dict.fromkeys(additions))
     authorized_evidence_ids = list(dict.fromkeys(authorized_evidence_ids))
-    if recovery_action != "targeted_rewrite" or not theme_scopes:
+    scopes = [*theme_scopes, *material_gap_scopes]
+    if (
+        recovery_action != "targeted_rewrite"
+        or not scopes
+        or not (targeted_ids or additions)
+    ):
         return {
             "mode": "fail_closed",
             "targeted_insight_ids": targeted_ids,
@@ -528,6 +763,7 @@ def _build_semantic_repair_scope(
             "authorized_evidence_ids": authorized_evidence_ids,
             "affected_themes": list(dict.fromkeys(affected_themes)),
             "theme_scopes": theme_scopes,
+            "material_gap_scopes": material_gap_scopes,
         }
     return {
         "mode": "targeted_rewrite",
@@ -537,6 +773,7 @@ def _build_semantic_repair_scope(
         "authorized_evidence_ids": authorized_evidence_ids,
         "affected_themes": list(dict.fromkeys(affected_themes)),
         "theme_scopes": theme_scopes,
+        "material_gap_scopes": material_gap_scopes,
     }
 
 
@@ -3813,6 +4050,13 @@ def generate_artifacts(
             semantic_theme_repair["targeted_insight_ids"] = targeted_insight_ids
             semantic_theme_repair["repair_scope"] = deepcopy(repair_scope)
             scoped_candidate_ids = set(repair_scope.get("authorized_candidate_ids", []))
+            semantic_theme_focal_facts = _verified_semantic_repair_focal_facts(
+                material_gaps=error.context.get("material_gaps", []),
+                repair_scope=repair_scope,
+                verified_facts=visual_authority_verified_facts,
+                candidate_insights=insights_candidates,
+                current_insights=insights_final,
+            )
             repair_feedback = {
                 "failure": {
                     "code": error.code,
@@ -3832,7 +4076,6 @@ def generate_artifacts(
                     if _s(insight.get("id")).strip() in set(targeted_insight_ids)
                 ],
                 "selection_diagnostics": error.context["coverage_diagnostics"],
-                "supported_verified_facts": relevant_verified_facts,
                 "eligible_admitted_candidate_alternatives": [
                     {
                         key: candidate[key]
@@ -3890,6 +4133,9 @@ def generate_artifacts(
                             repair_feedback["targeted_final_insights"]
                         ),
                         "semantic_theme_repair_scope_json": _dump_json(repair_scope),
+                        "semantic_theme_focal_facts_json": _dump_json(
+                            semantic_theme_focal_facts
+                        ),
                         "semantic_theme_allowed_patch_ids_json": _dump_json(
                             repair_scope.get("authorized_candidate_ids", [])
                         ),

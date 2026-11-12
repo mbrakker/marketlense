@@ -13,6 +13,7 @@ from src.generators._artifact_generator.generation import (
     _merge_scoped_insight_repair,
     _validate_scoped_insight_patch,
     _verified_editorial_obligation_context,
+    _verified_semantic_repair_focal_facts,
     generate_artifacts,
 )
 from src.generators.artifact_normalization import (
@@ -196,6 +197,90 @@ def test_verified_first_pass_prompt_receives_executable_obligations(tmp_path) ->
     assert all(theme["feasible_candidate_ids"] for theme in obligations["themes"])
 
 
+def test_verified_first_pass_prompt_requires_complete_factual_propositions() -> None:
+    full_prompt = _render_final_insight_user_prompt(
+        verified_editorial_obligations_json=json.dumps(
+            {
+                "themes": [
+                    {
+                        "theme": "Demand comparison",
+                        "coverage_obligation": (
+                            "Develop both populations and direction."
+                        ),
+                        "feasible_candidate_ids": ["candidate-1"],
+                        "evidence_ids": ["verified-fact:f1"],
+                    }
+                ],
+                "authoritative_facts": [
+                    {
+                        "fact_id": "f1",
+                        "statement": (
+                            "All buyers reached 42%; repeat buyers reached 58%."
+                        ),
+                        "metric": {
+                            "value": "42%",
+                            "observations": [{"cohort": "all buyers"}],
+                        },
+                        "qualifiers": ["Survey estimates exclude non-respondents."],
+                    }
+                ],
+            }
+        )
+    )
+    legacy_prompt = _render_final_insight_user_prompt(verified_mode=False)
+
+    assert "complete source-backed proposition" in full_prompt
+    assert "factual proposition" in full_prompt
+    assert "authoritative checklist" in full_prompt
+    assert "text" in full_prompt and "so_what" in full_prompt
+    assert "metric_public_copy" in full_prompt
+    assert "Before returning JSON" in full_prompt
+    assert "do not force one insight per theme" in full_prompt
+    assert "additional distinct admitted candidate-backed insight" in full_prompt
+    assert "18 words or fewer" not in full_prompt
+    assert "empty string for the primary ID" not in full_prompt
+    assert "18 words or fewer" in legacy_prompt
+    assert "empty string for the primary ID" in legacy_prompt
+
+
+def test_scoped_prompt_exposes_only_focal_verified_fact_context() -> None:
+    focal_context = [
+        {
+            "fact_id": "f2",
+            "statement": "Repeat buyers reached 58% while all buyers reached 42%.",
+            "metric": {
+                "value": "58%",
+                "unit": "%",
+                "observations": [{"cohort": "repeat buyers", "value": "58%"}],
+            },
+            "qualifiers": ["Survey estimates exclude non-respondents."],
+            "evidence_id": "verified-fact:f2",
+            "authorized_candidate_ids": ["candidate-2"],
+            "affected_final_insight_ids": ["candidate-1"],
+            "gap_explanation": "The second population is absent from the proposition.",
+        }
+    ]
+    prompt = _render_final_insight_user_prompt(
+        semantic_theme_repair_scope_json=json.dumps(
+            {
+                "mode": "targeted_rewrite",
+                "authorized_candidate_ids": ["candidate-1", "candidate-2"],
+            }
+        ),
+        semantic_theme_allowed_patch_ids_json='["candidate-1", "candidate-2"]',
+        semantic_theme_focal_facts_json=json.dumps(focal_context),
+        semantic_theme_coverage_feedback_json='{"diagnosis":"planned_theme_execution"}',
+    )
+
+    assert "Focal verified-fact repair context JSON" in prompt
+    assert "Repeat buyers reached 58%" in prompt
+    assert "Survey estimates exclude non-respondents." in prompt
+    assert "candidate-2" in prompt
+    assert "The second population is absent" in prompt
+    assert "exact material proposition" in prompt
+    assert "Executable verified editorial obligations JSON" not in prompt
+
+
 def test_partial_repair_scope_replaces_only_the_authorized_existing_entry() -> None:
     candidates = [
         _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
@@ -309,6 +394,14 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
             covered_evidence_ids={"f1", "f2"},
         ),
     ]
+    responses["editorial_theme_coverage"][0]["material_gaps"] = [
+        {
+            "verified_fact_ids": [initial[1]["id"]],
+            "evidence_ids": [f"verified-fact:{initial[1]['id']}"],
+            "final_insight_ids": [initial[1]["id"]],
+            "explanation": "The second source proposition is not developed.",
+        }
+    ]
     prompt_client = CapturingPromptClient()
     payload = generate_artifacts(
         report_id="verified-transient-editorial-repair",
@@ -347,10 +440,13 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
         repair_variables["final_insight_allowed_candidate_ids_json"]
     )
     repair_candidates = json.loads(repair_variables["insights_candidates_json"])
+    focal_facts = json.loads(repair_variables["semantic_theme_focal_facts_json"])
     assert authorized_ids == json.loads(
         repair_variables["semantic_theme_allowed_patch_ids_json"]
     )
     assert {item["id"] for item in repair_candidates} <= set(authorized_ids)
+    assert [item["fact_id"] for item in focal_facts] == [initial[1]["id"]]
+    assert focal_facts[0]["authorized_candidate_ids"] == [initial[1]["id"]]
     assert repair_variables["verified_editorial_obligations_json"] == ""
 
 
@@ -551,6 +647,104 @@ def test_missing_material_qualifier_remains_a_semantic_repair_gap() -> None:
         )
 
 
+def test_changed_scoped_wording_still_fails_when_material_gap_remains() -> None:
+    plan = {
+        "material_limitation_evidence_ids": [],
+        "themes": [
+            {
+                "theme": "Qualified signal",
+                "importance": "essential",
+                "coverage_obligation": "Retain the source limitation.",
+                "evidence_ids": ["verified-fact:f1"],
+                "feasible_candidate_ids": ["candidate-1"],
+            }
+        ],
+    }
+    candidate = {
+        "id": "candidate-1",
+        "text": "A source-backed signal.",
+        "evidence_id": "verified-fact:f1",
+        "verified_fact_id": "f1",
+        "verified_fact": {
+            "fact_id": "f1",
+            "statement": "The signal is present only among survey respondents.",
+            "qualifiers": ["Only respondents were surveyed."],
+        },
+    }
+    patch = {
+        "theme_coverage": [
+            {
+                "theme": "Qualified signal",
+                "status": "covered",
+                "supporting_insight_ids": ["candidate-1"],
+                "explanation": (
+                    "The wording mentions the signal but not its limitation."
+                ),
+            }
+        ],
+        "report_completeness": "incomplete",
+        "diagnosis": "material_report_completeness",
+        "recovery_action": "targeted_rewrite",
+        "material_gaps": [
+            {
+                "verified_fact_ids": ["f1"],
+                "evidence_ids": ["verified-fact:f1"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The respondent-only limitation is still missing.",
+            }
+        ],
+    }
+
+    with pytest.raises(AppError, match="complete material-report"):
+        validate_substantive_editorial_theme_coverage(
+            payload=patch,
+            editorial_plan=plan,
+            final_insights=[
+                {
+                    "id": "candidate-1",
+                    "text": "The signal matters for planning decisions.",
+                    "evidence_id": "verified-fact:f1",
+                }
+            ],
+            candidate_insights=[candidate],
+        )
+
+
+def test_evidence_insufficiency_never_enters_editorial_repair() -> None:
+    candidates = [
+        _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
+    ]
+    scope = _build_semantic_repair_scope(
+        editorial_plan=_plan(),
+        assessment={
+            "theme_coverage": [
+                {
+                    "theme": "Qualified signal",
+                    "status": "uncovered",
+                    "supporting_insight_ids": [],
+                    "explanation": "The source is insufficient.",
+                }
+            ],
+            "diagnosis": "insufficient_evidence",
+            "recovery_action": "quarantine",
+        },
+        error_context={
+            "material_gaps": [
+                {
+                    "verified_fact_ids": ["f3"],
+                    "evidence_ids": ["verified-fact:f3"],
+                    "final_insight_ids": [],
+                    "explanation": "No source support remains.",
+                }
+            ]
+        },
+        current_insights=[],
+        candidate_insights=candidates,
+    )
+
+    assert scope["mode"] == "fail_closed"
+
+
 def test_report_wide_failure_is_not_localized() -> None:
     candidates = [
         _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
@@ -585,6 +779,7 @@ def _render_final_insight_user_prompt(**overrides: object) -> str:
         "semantic_theme_targeted_insight_ids_json": "[]",
         "semantic_theme_targeted_insights_json": "[]",
         "semantic_theme_repair_scope_json": "",
+        "semantic_theme_focal_facts_json": "[]",
         "semantic_theme_allowed_patch_ids_json": "[]",
         "doc_map_json": "{}",
         "evidence_json": "{}",
@@ -800,6 +995,270 @@ def test_partial_theme_authorized_addition_merges_without_mutating_current_roste
     )
 
     assert [item["id"] for item in merged] == ["candidate-1", "candidate-2"]
+
+
+def test_material_gap_can_repair_exact_unselected_fact_when_themes_are_covered(
+) -> None:
+    candidates = [
+        _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
+    ]
+    current = [
+        {
+            "id": "candidate-1",
+            "text": "Demand comparison.",
+            "evidence_id": "verified-fact:f1",
+        },
+        {
+            "id": "candidate-3",
+            "text": "Qualified signal.",
+            "evidence_id": "verified-fact:f3",
+        },
+        {
+            "id": "candidate-4",
+            "text": "Optional context.",
+            "evidence_id": "verified-fact:f4",
+        },
+    ]
+    scope = _build_semantic_repair_scope(
+        editorial_plan=_plan(),
+        assessment={
+            "theme_coverage": [
+                {
+                    "theme": "Demand comparison",
+                    "status": "covered",
+                    "supporting_insight_ids": ["candidate-1"],
+                    "explanation": "Only the first population is developed.",
+                },
+                {
+                    "theme": "Qualified signal",
+                    "status": "covered",
+                    "supporting_insight_ids": ["candidate-3"],
+                    "explanation": "The limitation is developed.",
+                },
+                {
+                    "theme": "Optional context",
+                    "status": "covered",
+                    "supporting_insight_ids": ["candidate-4"],
+                    "explanation": "The context is distinct.",
+                },
+            ],
+            "report_completeness": "incomplete",
+            "diagnosis": "material_report_completeness",
+            "recovery_action": "targeted_rewrite",
+        },
+        error_context={
+            "material_gaps": [
+                {
+                    "verified_fact_ids": ["f2"],
+                    "evidence_ids": ["verified-fact:f2"],
+                    "final_insight_ids": [],
+                    "explanation": "The second population is absent.",
+                }
+            ]
+        },
+        current_insights=current,
+        candidate_insights=candidates,
+    )
+
+    assert scope["mode"] == "targeted_rewrite"
+    assert scope["targeted_insight_ids"] == []
+    assert scope["allowed_addition_candidate_ids"] == ["candidate-2"]
+    assert scope["affected_themes"] == ["Demand comparison"]
+    patch = [
+        {
+            "id": "candidate-2",
+            "text": "Repeat buyers move differently from all buyers.",
+            "evidence_id": "verified-fact:f2",
+        }
+    ]
+    _validate_scoped_insight_patch(
+        {"insights_final": patch},
+        repair_scope=scope,
+        candidate_insights=candidates,
+    )
+    merged = _merge_scoped_insight_repair(
+        current_insights=current,
+        repaired_insights=patch,
+        repair_scope=scope,
+    )
+    assert [item["id"] for item in merged] == [
+        "candidate-1",
+        "candidate-3",
+        "candidate-4",
+        "candidate-2",
+    ]
+
+
+def test_report_level_material_gap_authorizes_only_exact_bound_candidate() -> None:
+    candidates = [
+        _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
+    ]
+    candidates.append(_candidate("candidate-5", "f5"))
+    current = [
+        {
+            "id": "candidate-1",
+            "text": "Demand comparison.",
+            "evidence_id": "verified-fact:f1",
+        },
+        {
+            "id": "candidate-3",
+            "text": "Qualified signal.",
+            "evidence_id": "verified-fact:f3",
+        },
+        {
+            "id": "candidate-4",
+            "text": "Optional context.",
+            "evidence_id": "verified-fact:f4",
+        },
+    ]
+    assessment = {
+        "theme_coverage": [
+            {
+                "theme": theme["theme"],
+                "status": "covered",
+                "supporting_insight_ids": [candidate_id],
+                "explanation": "The planned theme is developed.",
+            }
+            for theme, candidate_id in zip(
+                _plan()["themes"],
+                ["candidate-1", "candidate-3", "candidate-4"],
+                strict=True,
+            )
+        ],
+        "report_completeness": "incomplete",
+        "diagnosis": "material_report_completeness",
+        "recovery_action": "targeted_rewrite",
+    }
+    scope = _build_semantic_repair_scope(
+        editorial_plan=_plan(),
+        assessment=assessment,
+        error_context={
+            "material_gaps": [
+                {
+                    "verified_fact_ids": ["f5"],
+                    "evidence_ids": ["verified-fact:f5"],
+                    "final_insight_ids": [],
+                    "explanation": "A report-level source proposition is absent.",
+                }
+            ]
+        },
+        current_insights=current,
+        candidate_insights=candidates,
+    )
+
+    assert scope["mode"] == "targeted_rewrite"
+    assert scope["affected_themes"] == []
+    assert scope["allowed_addition_candidate_ids"] == ["candidate-5"]
+    assert scope["material_gap_scopes"][0]["theme"] == ""
+    assert scope["material_gap_scopes"][0]["authorized_candidate_ids"] == [
+        "candidate-5"
+    ]
+
+
+@pytest.mark.parametrize(
+    "gap",
+    [
+        {
+            "verified_fact_ids": ["f9"],
+            "evidence_ids": ["verified-fact:f9"],
+            "final_insight_ids": [],
+            "explanation": "No admitted candidate supports this proposition.",
+        },
+        {
+            "verified_fact_ids": ["f2"],
+            "evidence_ids": [],
+            "final_insight_ids": [],
+            "explanation": "The evidence binding is incomplete.",
+        },
+    ],
+)
+def test_unrepairable_material_gap_fails_closed(gap: dict) -> None:
+    candidates = [
+        _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
+    ]
+    current = [
+        {
+            "id": "candidate-1",
+            "text": "Demand.",
+            "evidence_id": "verified-fact:f1",
+        },
+        {
+            "id": "candidate-3",
+            "text": "Signal.",
+            "evidence_id": "verified-fact:f3",
+        },
+        {
+            "id": "candidate-4",
+            "text": "Context.",
+            "evidence_id": "verified-fact:f4",
+        },
+    ]
+    scope = _build_semantic_repair_scope(
+        editorial_plan=_plan(),
+        assessment={
+            "theme_coverage": [
+                {
+                    "theme": theme["theme"],
+                    "status": "covered",
+                    "supporting_insight_ids": [candidate_id],
+                    "explanation": "Covered.",
+                }
+                for theme, candidate_id in zip(
+                    _plan()["themes"],
+                    ["candidate-1", "candidate-3", "candidate-4"],
+                    strict=True,
+                )
+            ],
+            "report_completeness": "incomplete",
+            "diagnosis": "material_report_completeness",
+            "recovery_action": "targeted_rewrite",
+        },
+        error_context={"material_gaps": [gap]},
+        current_insights=current,
+        candidate_insights=candidates,
+    )
+
+    assert scope["mode"] == "fail_closed"
+    assert scope["allowed_addition_candidate_ids"] == []
+
+
+def test_focal_context_preserves_complete_fact_and_exact_bindings() -> None:
+    candidate = _candidate("candidate-2", "f2")
+    facts = [_fact("f2", "Repeat buyers reached 58%.", qualifier="Observed in 2026.")]
+    scope = {
+        "authorized_candidate_ids": ["candidate-2"],
+        "targeted_insight_ids": ["candidate-1"],
+        "allowed_addition_candidate_ids": ["candidate-2"],
+    }
+    focal = _verified_semantic_repair_focal_facts(
+        material_gaps=[
+            {
+                "verified_fact_ids": ["f2"],
+                "evidence_ids": ["verified-fact:f2"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The repeat-buyer proposition is missing.",
+            }
+        ],
+        repair_scope=scope,
+        verified_facts=facts,
+        candidate_insights=[candidate],
+        current_insights=[
+            {"id": "candidate-1", "evidence_id": "verified-fact:f2"}
+        ],
+    )
+
+    assert focal == [
+        {
+            "fact_id": "f2",
+            "statement": "Repeat buyers reached 58%.",
+            "metric": facts[0]["metric"],
+            "qualifiers": ["Observed in 2026."],
+            "evidence_id": "verified-fact:f2",
+            "authorized_candidate_ids": ["candidate-2"],
+            "affected_final_insight_ids": ["candidate-1"],
+            "gap_explanation": "The repeat-buyer proposition is missing.",
+        }
+    ]
 
 
 def test_scoped_repair_rejections_have_bounded_actionable_context() -> None:
