@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import pytest
+
 from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.generators.claim_validation_generator import (
     retained_claim_semantic_inputs,
     validate_retained_claims,
 )
-from src.generators.validation.grounding import grounding_payload, run_grounding_check
+from src.generators.validation.grounding import (
+    _adapt_grounding_model_payload,
+    _split_grounding_batch,
+    grounding_payload,
+    run_grounding_check,
+)
+from src.utils.errors import AppError
 from tests._test_validation_generator._shared import (
     FakeOpenAI,
 )
@@ -21,6 +29,25 @@ from tests._test_validation_generator._shared import (
 from tests.test_verified_grounding_contract_corrections import (
     _verified_editorial_request,
 )
+
+
+def _raw_check(item_id: str, *, outcome: str, violation_type: str) -> dict:
+    return {
+        "item_id": item_id,
+        "classification": "factual_claim",
+        "entailment_outcome": outcome,
+        "violation_type": violation_type,
+        "proposition_status": "compatible" if outcome == "entailed" else "unknown",
+        "protected_facts": {
+            dimension: {
+                "claim_value": None,
+                "evidence_value": None,
+                "status": "unknown",
+            }
+            for dimension in PROTECTED_FACT_DIMENSIONS
+        },
+        "reason": "The provider supplied a complete model-owned verdict.",
+    }
 
 
 def test_verified_grounding_adapts_raw_single_verdicts_and_derives_negative_projection(
@@ -109,3 +136,76 @@ def test_verified_grounding_adapts_raw_single_verdicts_and_derives_negative_proj
     assert issues[0].rule_id == "grounding"
     assert "[factual_claim|not_established]" in issues[0].message
     assert "validation_grounding_invalid_json" not in issues[0].message
+
+
+@pytest.mark.parametrize(
+    ("outcome", "violation_type"),
+    [("entailed", "unsupported_factual_claim"), ("not_established", "none")],
+)
+def test_raw_grounding_rejects_inconsistent_model_owned_violation(
+    outcome: str, violation_type: str
+):
+    with pytest.raises(AppError) as exc_info:
+        _adapt_grounding_model_payload(
+            {
+                "checks": [
+                    _raw_check(
+                        "public-item",
+                        outcome=outcome,
+                        violation_type=violation_type,
+                    )
+                ]
+            },
+            audit_payload={
+                "public_factual_items": [
+                    {
+                        "item_id": "public-item",
+                        "section": "section",
+                        "text": "A claim",
+                        "evidence_ids": [],
+                    }
+                ],
+                "retained_claims_to_ground": [],
+            },
+            semantic_inputs=[],
+            retained_item_ids={},
+            expected_public_items=[{"item_id": "public-item"}],
+            ctx=validation_ctx(),
+        )
+
+    assert exc_info.value.code == "grounding_claim_check_coverage_invalid"
+    assert "violation_type" in str(exc_info.value.context)
+
+
+def test_raw_grounding_rejects_item_without_canonical_inventory_binding():
+    with pytest.raises(AppError) as exc_info:
+        _adapt_grounding_model_payload(
+            {
+                "checks": [
+                    _raw_check("public-item", outcome="entailed", violation_type="none")
+                ]
+            },
+            audit_payload={"public_factual_items": [], "retained_claims_to_ground": []},
+            semantic_inputs=[],
+            retained_item_ids={},
+            expected_public_items=[{"item_id": "public-item"}],
+            ctx=validation_ctx(),
+        )
+
+    assert exc_info.value.code == "grounding_claim_check_coverage_invalid"
+    assert "canonical inventory" in exc_info.value.message
+
+
+def test_grounding_batch_split_fails_closed_on_mismatched_semantic_scope():
+    assert (
+        _split_grounding_batch(
+            (
+                {
+                    "retained_claims_to_ground": [{"item_id": "claim-item"}],
+                    "public_factual_items": [],
+                },
+                [],
+            )
+        )
+        == []
+    )
