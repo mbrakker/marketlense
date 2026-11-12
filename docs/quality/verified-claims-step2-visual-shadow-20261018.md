@@ -12386,3 +12386,90 @@ The exact frozen-five replay was started from fresh isolated state at `C:\ml-e18
 | Adjust | not started | — | — | — | controlled stop before member dispatch |
 
 The partial cohort therefore demonstrates real late-stage provider/schema and semantic-quality failures, not a corrected five-report outcome. The current implementation has deterministic contract coverage and a successful isolated Activate run, but Adjust is not stable across fresh provider attempts and the frozen-five replay is incomplete. The measured verdict is **implementation PASS / live acceptance PARTIAL / Step 3 NO-GO**. E18 remains **Active/PARTIAL**; Step 3 must not begin until a fresh, complete cohort establishes terminal grounding, editorial-review, and readiness outcomes without weakening these guards.
+
+### Semantic contract simplification and current-SHA reliability replay — 2026-11-12
+
+The implementation at `5c88111c` (with the focused raw-contract regression
+added after the replay) makes the provider boundary authoritative for the
+semantic contracts:
+
+* `grounding_validation_output` now accepts exactly one model-owned `checks`
+  verdict per canonical item. The adapter validates exact IDs and protected
+  fields, restores canonical text/section/evidence IDs, and derives the legacy
+  internal `unsupported` projection only after the raw response has passed.
+  Non-entailed verdicts still require a model-owned valid violation type; an
+  entailed verdict still requires an explicit no-violation value.
+* Editorial theme coverage now has the reduced raw schema (`status`, supporting
+  IDs, explanation, report completeness, diagnosis, material gaps and original
+  obligation assessments). Existing `resolution` and `recovery_action` values
+  are deterministic internal projections. The complete normalized assessment is
+  retained in the existing family-output cache and revalidated on reuse.
+* Grounding and theme prompt/cache identities advanced (`v6`/`1.8` and
+  `v6`/`validation_rule_v8` paths), so incompatible prior provider outputs are
+  not reused. No new service, validator, LLM stage, publication path or
+  WordPress write was introduced.
+
+Focused verification after the implementation passed **155 tests** (grounding
+contract, raw single-verdict adaptation, protected dimensions, recovery,
+schema and prompt regressions). Changed-file Ruff and `git diff --check` passed.
+The prior complete Python 3.12 repository run at the same production commits
+passed **8,699 tests, 2 skipped, 48 deselected and 24 subtests**; full mypy,
+schema, architecture, prompt-fixture and repository hygiene gates passed before
+this test-only addition. The prompt fixture gate remained unchanged at
+**118,375 tokens / `$0.025493`** total and **12,810 / `$0.002194`** for
+validation, versus **118,469 / `$0.025502`** and **12,864 / `$0.002199`**
+baselines.
+
+#### Current-SHA provider-backed frozen-five attempts
+
+The retained PDFs were processed with isolated fresh state, provider-side
+caching only, no publication flags, and no WordPress writes. The five reports
+were attempted across the retained cohort roots below; this is not a single
+successful five-report cohort and is not reported as one.
+
+| Report / attempt | Terminal result | Calls | Input / output tokens | Cost | Search / structured / automatic repairs | Readiness |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Capgemini | `artifact_final_insight_coverage_invalid` after semantic repair exhaustion | 98 | 655,827 / 118,237 | `$0.137079` | 5 / 3 / 0 | fail |
+| Activate | `artifact_final_insight_coverage_invalid` after semantic repair exhaustion | 465 | 1,196,095 / 281,579 | `$0.287787` | 11 / 2 / 0 | fail |
+| KPMG | `validation_failed` at grounding | 179 | 2,344,266 / 390,325 | `$0.426876` | 14 / 14 / 3 | fail |
+| Reuters Institute | `artifact_final_insight_coverage_invalid` after semantic repair exhaustion | 105 | 826,803 / 123,339 | `$0.156728` | 5 / 4 / 0 | fail |
+| Adjust | `artifact_final_insight_coverage_invalid` after semantic repair exhaustion | 147 | 862,762 / 146,712 | `$0.176881` | 7 / 3 / 0 | fail |
+
+Additional controlled attempts were retained for Reuters (`96` calls,
+`$0.158314`, `artifact_structured_output_invalid` in `insights_final`) and
+Adjust (`144` calls, `$0.136906`, `artifact_structured_output_invalid` in the
+verified editorial-plan limitation-evidence binding). They are separate
+attempts, not extra successful cohort members. The runner's partial duration
+fields are not used as latency measurements because the controlled stops did
+not emit reliable terminal wall-clock values.
+
+The per-report root causes are distinct and fail closed:
+
+* Capgemini's semantic assessment retained nine final rows but did not develop
+  the admitted `impulse-purchases-change` fact after one bounded targeted
+  rewrite.
+* Activate's semantic assessment retained eight rows and still left the
+  `global-media-revenue-growth`, `revenue-model-mix-forecast` and
+  `top-creator-platform-view-shares` relationships materially incomplete after
+  one targeted rewrite.
+* KPMG reached grounding with 10/10 visual facts admitted. Its failure was an
+  entailed protected-fact conflict/incomplete model verdict for the public
+  LinkedIn item, followed by a report-wide semantic-redundancy review failure;
+  no unsupported factual claim was promoted.
+* Reuters' first terminal attempt left `social-platform-friend-family-time`
+  materially undeveloped; the separate attempt exhausted `insights_final`
+  structured recovery on the same class of final-roster failure.
+* Adjust's first attempt left
+  `cross-platform-measurement-approaches` materially undeveloped; the separate
+  attempt failed closed earlier at the verified editorial-plan
+  `material_limitation_evidence_ids` binding.
+
+These outcomes demonstrate that malformed or semantically conflicting model
+responses remain blocked and that the new raw contract is exercised by local
+regression. They do **not** demonstrate improved live editorial quality: none
+of these current-SHA attempts reached accepted readiness, and the raw provider
+responses are not retained for retrospective reinterpretation. The complete
+current-SHA frozen-five acceptance verdict is therefore **PARTIAL / NO-GO**;
+Step 3 remains unstarted/not ready. Remaining limitations are provider
+variability in semantic theme coverage, the KPMG protected-fact conflict, and
+the absence of a terminal accepted current-SHA five-report HTML cohort.

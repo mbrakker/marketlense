@@ -2456,3 +2456,15 @@ WordPress write occurred. Because Activate did not reach readiness PASS, Adjust
 and the remaining frozen-five acceptance members were not started. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+### 2026-11-12 semantic contract simplification replay
+
+The verified semantic-contract implementation is regression-complete at
+`5c88111c` with the focused raw-provider-contract regression recorded in the
+Step 2 quality report. Current-SHA provider-backed attempts across Capgemini,
+Activate, KPMG, Reuters Institute, and Adjust remained fail-closed and did not
+form an accepted five-report cohort: each attempted member stopped at semantic
+coverage, grounding, or structured-contract validation. No unsupported factual
+claim was promoted and no publication write occurred. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready** pending an accepted fresh cohort.
