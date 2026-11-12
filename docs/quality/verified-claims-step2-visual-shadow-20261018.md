@@ -12500,3 +12500,84 @@ implementation verdict remains **PASS**; current-SHA live editorial
 acceptance remains **PARTIAL / NO-GO**, and Step 3 remains unstarted/not ready
 because the retained five-report attempts documented above did not form an
 accepted cohort.
+
+### Verified editorial completeness and scoped repair correction — 2026-11-12 (`b91b9c1b`)
+
+Commit `b91b9c1b0ead812b278650c0c469c01c9403aa0a` implements the first-pass
+editorial-completeness and targeted-repair slice. The existing accepted
+editorial-plan bindings, admitted candidates, and canonical verified facts are
+materialized into transient executable obligations for `insights_final`:
+theme, coverage obligation, evidence IDs, feasible candidate IDs, merge group,
+verified-fact IDs, and complete authoritative metric/qualifier objects. The
+prompt asks the model to develop those relationships and qualifications, but
+does not impose a one-insight-per-theme or minimum-count quota. Local semantic
+repair now receives a bounded patch scope derived from the semantic assessment
+and those obligations; it may replace authorized rows or add feasible
+candidate-backed rows, while preserving the existing roster and order. The
+partial patch is not persisted or reused as canonical `insights_final` output.
+Full lineage, protected-field, reference, count, and semantic validation still
+runs after the merge. No new service, validator, LLM stage, persisted contract,
+or publication path was introduced.
+
+The focused new regression module passed **12 tests**. The combined prompt,
+obligation, semantic, and editorial-contract slice passed **188 tests**; the
+affected artifact, evidence-binding, checkpoint, and regeneration slice passed
+**309 tests**. The type gate passed with zero tracked errors; changed-file
+Ruff, formatting, diff-check, architecture, role-I/O, service-boundary,
+forbidden-patching, repository-hygiene, backlog, documentation, and contract
+schema gates passed. The prompt fixture baseline was intentionally unchanged:
+
+| Fixture family | Old tokens | Current tokens | Delta | Old cost | Current cost | Delta |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Total | 118,469 | 118,497 | +28 (+0.02%) | `$0.025502` | `$0.025505` | +`$0.000003` |
+| Publishing | 48,827 | 48,909 | +82 (+0.17%) | `$0.009244` | `$0.009252` | +`$0.000008` |
+| Validation | 12,864 | 12,810 | -54 (-0.42%) | `$0.002199` | `$0.002194` | -`$0.000005` |
+
+The unchanged fixture gate passed. The small publishing increase is the
+intentional obligation/prose-completeness wording; validation decreased. No
+threshold, pricing, schema, or baseline was changed.
+
+#### Isolated provider-backed evidence
+
+One fresh isolated member of the exact frozen-five manifest was run at the
+implementation SHA with provider-side calls allowed and no publication flags:
+
+| Report | Source identity / PDF | Terminal result | Calls | Input / output tokens | Cost | Repairs | Readiness / HTML |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| Capgemini | `source:f584854bc13cdca0b0d86327c85f71ff`; MD5 `81af3890cd84ece81ef16e1aabda8027`; SHA-256 `612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e` | `artifact_structured_output_invalid` / `artifact_final_insight_repair_invalid` | 99 | 924,764 / 104,336 | `$0.164519` | 3 structured, 0 automatic | fail / none |
+
+Run root: `C:\ml-editorial-completeness-20261112-live\frozen-reliability-u36ej66a`.
+The source and analysis PDFs matched the frozen MD5, and the selection
+checkpoint completed with **79** figure candidates. Its five `insights` values
+were source-selection placeholders, not a final insight roster; there is no
+evidence of an unexplained empty final-candidate checkpoint. The first
+`insights_final` provider response was recorded as parsed, followed by the
+semantic repair path and exactly two bounded structured recovery attempts. The
+terminal record identifies the failure as final-insight repair/contract
+rejection after the third recovery call; the retained terminal artifact does
+not include the raw invalid field, so a more specific model-error diagnosis
+would be speculative. No final `artifacts.json`, validation result, readiness
+pass, or HTML was emitted. The run made 8 file-search calls, required no
+operator intervention, performed no automatic workflow repair, and made no
+canonical or WordPress write.
+
+Against the latest retained Capgemini current-SHA comparison (`5c88111c`),
+the run changed from 98 calls / 655,827 input and 118,237 output tokens /
+`$0.137079` / `artifact_final_insight_coverage_invalid` to 99 calls /
+924,764 input and 104,336 output tokens / `$0.164519` /
+`artifact_structured_output_invalid`. This is **not** evidence of live quality
+improvement: the input/cost increase is provider-run variability plus the
+larger executable obligation context, and the report still failed closed
+before editorial inspection. It does show that the new first-pass prompt and
+scoped-repair path were exercised and that malformed/incomplete final output
+was not promoted.
+
+The exact frozen five was not rerun after this member failed before readiness;
+therefore no current-SHA results are claimed for Activate, KPMG, Reuters
+Institute, or Adjust, and no five-report editorial-quality comparison is
+available. The deterministic implementation verdict is **PASS**; live
+editorial acceptance for this correction is **PARTIAL / NO-GO**. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. The retained run artifacts and `cohort_result.json`
+are the evidence for this bounded result; no fabricated or cached final report
+was substituted.

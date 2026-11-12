@@ -2480,3 +2480,24 @@ implementation/CI acceptance for this slice, but does not change the
 provider-backed live verdict: the current-SHA attempts remain
 **PARTIAL/NO-GO**, E18 remains **Active/PARTIAL**, and Step 3 remains
 **unstarted/not ready** because no accepted fresh five-report cohort exists.
+
+**Evidence update — 2026-11-12 (first-pass editorial completeness and scoped
+repair):** Commit `b91b9c1b0ead812b278650c0c469c01c9403aa0a` adds executable
+obligations from accepted editorial-plan bindings, admitted candidates, and
+canonical verified facts, plus bounded patch-only semantic repair. Focused
+regressions passed 12; the combined prompt/editorial slice passed 188 and the
+affected artifact/evidence/regeneration slice passed 309. Type, Ruff,
+formatting, architecture, documentation, contract-schema, and repository
+hygiene gates passed. The prompt fixture gate remained green without a
+baseline or threshold change (118,497 total tokens / `$0.025505`; validation
+12,810 / `$0.002194`).
+
+A fresh isolated Capgemini member of the frozen manifest at this SHA completed
+selection with 79 candidates but failed closed at `insights_final` repair
+exhaustion: 99 provider calls, 924,764 input / 104,336 output tokens,
+`$0.164519`, three structured recovery calls, zero automatic repairs, no
+HTML, and no publication write. The run did not produce an accepted final
+roster, so it is not evidence of improved live editorial quality and the other
+four frozen members were not started. E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full
+details and the retained artifact path are in the [Step 2 evidence report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
