@@ -650,6 +650,14 @@ def test_scoped_final_prompt_omits_full_roster_requirements() -> None:
     assert "every essential theme" not in scoped_prompt
 
 
+def test_final_insight_prompt_does_not_allow_null_optional_arrays() -> None:
+    prompt = _render_final_insight_user_prompt().lower()
+
+    assert "optional fields that are not available must be omitted" in prompt
+    assert "never set to null" in prompt
+    assert "optional array is present" in prompt
+
+
 def _partial_scope(
     *,
     material_gaps: list[dict] | None,
