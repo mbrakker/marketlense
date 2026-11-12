@@ -100,3 +100,53 @@ def test_verified_replan_requires_the_complete_original_fact_union() -> None:
     assert result["original_essential_obligation_assessments"][0]["status"] == (
         "covered"
     )
+
+
+@pytest.mark.parametrize(
+    ("status", "supporting_ids"),
+    [("partial", ["i1"]), ("uncovered", [])],
+)
+def test_post_replan_preserves_partial_or_uncovered_obligation_as_substantive_negative(
+    status: str, supporting_ids: list[str]
+) -> None:
+    obligations = [
+        {
+            "theme": "Theme 1",
+            "evidence_ids": ["verified-fact:f1"],
+            "importance": "essential",
+            "coverage_obligation": "Develop proposition 1.",
+        }
+    ]
+    payload = {
+        "theme_coverage": [
+            _assessment("Theme 1", status="covered", resolution="retained", ids=["i1"]),
+            _assessment("Theme 2", status="covered", resolution="retained", ids=["i2"]),
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
+        "original_essential_obligation_assessments": [
+            {
+                "theme": "Theme 1",
+                "evidence_ids": ["verified-fact:f1"],
+                "status": status,
+                "supporting_insight_ids": supporting_ids,
+                "explanation": "The original obligation is not fully developed.",
+            }
+        ],
+    }
+
+    with pytest.raises(AppError) as caught:
+        validate_substantive_editorial_theme_coverage(
+            payload=payload,
+            editorial_plan=_coverage_plan(),
+            final_insights=[
+                {"id": "i1", "text": "Signal one.", "evidence_id": "verified-fact:f1"},
+                {"id": "i2", "text": "Signal two.", "evidence_id": "verified-fact:f2"},
+            ],
+            original_essential_obligations=obligations,
+            require_original_obligation_assessment=True,
+        )
+
+    assert caught.value.context.get("original_obligations_unresolved") is True
+    assert not caught.value.context.get("assessment_contract_failure", False)

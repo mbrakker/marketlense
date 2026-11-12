@@ -393,9 +393,7 @@ def test_verified_final_selection_repairs_a_noncentral_theme_omission(tmp_path):
         }
         for index in (0, 1, 2, 3, 4)
     ]
-    repaired_final[0]["text"] = (
-        "An unrelated rewrite must not replace the first signal."
-    )
+    repaired_final[0]["text"] = "Unrelated rewrite."
     responses["insights_final"] = [
         {"insights_final": initial_final},
         {"insights_final": repaired_final},
@@ -739,14 +737,10 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
         )
         == "The second decision signal governs the response."
     )
-    assert (
-        next(
-            item["text"]
-            for item in payload["insights_final"]
-            if item["id"] == candidates[0]["id"]
-        )
-        == candidates[0]["text"]
+    unaffected = next(
+        item for item in payload["insights_final"] if item["id"] == candidates[0]["id"]
     )
+    assert unaffected["text"] == candidates[0]["text"]
 
 
 def test_verified_theme_repair_does_not_backfill_a_short_authored_roster(tmp_path):

@@ -72,6 +72,9 @@ def _grounding_check(
         "text": text,
         "classification": classification,
         "entailment_outcome": outcome,
+        "violation_type": (
+            "none" if outcome == "entailed" else "unsupported_factual_claim"
+        ),
         "proposition_status": (
             "compatible"
             if outcome == "entailed" and classification == "factual_claim"

@@ -893,7 +893,7 @@ def test_material_grounding_classifications_always_block_publish_readiness(
             schema_version="1.0",
             report_id=f"r-grounding-{violation_type}",
             report=report,
-            artifacts={},
+            artifacts={"expert_comment": "Material report claim."},
             evidence_packs={},
         ),
         _settings(tmp_path, report_worker_limit=1),

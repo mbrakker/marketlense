@@ -402,6 +402,9 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
     responses["grounding_validation_output_v5"] = responses[
         "grounding_validation_output_v3"
     ]
+    responses["grounding_validation_output_v6"] = responses[
+        "grounding_validation_output_v3"
+    ]
     if schema_name in {
         "public_editorial_quality_review_v3",
         "public_editorial_quality_review_v4",
@@ -550,11 +553,7 @@ def _full_chain_response_factory(
             for section, claim, code in unsupported_claims
             if claim in json.dumps(call, default=str)
         ]
-        if schema_name in {
-            "grounding_validation_output_v2",
-            "grounding_validation_output_v3",
-            "grounding_validation_output_v5",
-        }:
+        if schema_name.startswith("grounding_validation_output"):
             if detected_unsupported_claims is not None:
                 detected_unsupported_claims.extend(
                     claim for _section, claim, _code in seen_unsupported_claims
@@ -584,7 +583,6 @@ def _full_chain_grounding_response(
         text: (section, code) for section, text, code in unsupported_claims
     }
     checks: list[dict[str, object]] = []
-    unsupported: list[dict[str, str]] = []
     protected_fact_dimensions = (
         "value",
         "unit_currency",
@@ -604,7 +602,6 @@ def _full_chain_grounding_response(
             continue
         item_id = str(claim.get("item_id") or "")
         text = str(claim.get("text") or "")
-        section = str(claim.get("section") or claim.get("artifact") or "")
         classification = str(claim.get("classification") or "").strip()
         if classification not in {
             "factual_claim",
@@ -632,10 +629,9 @@ def _full_chain_grounding_response(
             checks.append(
                 {
                     "item_id": item_id,
-                    "section": section,
-                    "text": text,
                     "classification": classification,
                     "entailment_outcome": "not_established",
+                    "violation_type": "unsupported_factual_claim",
                     "proposition_status": "unknown",
                     "protected_facts": {
                         name: {
@@ -648,25 +644,13 @@ def _full_chain_grounding_response(
                     "reason": reason,
                 }
             )
-            unsupported.append(
-                {
-                    "item_id": item_id,
-                    "section": section,
-                    "text": text,
-                    "classification": classification,
-                    "entailment_outcome": "not_established",
-                    "violation_type": "unsupported_factual_claim",
-                    "reason": reason,
-                }
-            )
             continue
         checks.append(
             {
                 "item_id": item_id,
-                "section": section,
-                "text": text,
                 "classification": classification,
                 "entailment_outcome": "entailed",
+                "violation_type": "none",
                 "proposition_status": "compatible",
                 "protected_facts": {
                     name: {
@@ -681,7 +665,7 @@ def _full_chain_grounding_response(
                 ),
             }
         )
-    return {"unsupported": unsupported, "checks": checks}
+    return {"checks": checks}
 
 
 def _report_json_from_responses_call(call: dict) -> dict[str, object]:
@@ -870,11 +854,7 @@ def _full_chain_chat_response_factory(
                 for section, claim, code in unsupported_claims
                 if claim in json.dumps(call, default=str)
             ]
-            if schema_name in {
-                "grounding_validation_output_v2",
-                "grounding_validation_output_v3",
-                "grounding_validation_output_v5",
-            }:
+            if schema_name.startswith("grounding_validation_output"):
                 if detected_unsupported_claims is not None:
                     detected_unsupported_claims.extend(
                         claim for _section, claim, _code in seen_unsupported_claims

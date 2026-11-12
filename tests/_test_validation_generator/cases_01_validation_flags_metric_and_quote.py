@@ -370,7 +370,7 @@ def test_validation_detects_new_numbers_and_grounding(tmp_path):
     )
     assert result.status == "fail"
     assert any(issue.affected_section == "expert_comment" for issue in result.issues)
-    assert not any("No evidence" in issue.message for issue in result.issues)
+    assert any("No evidence" in issue.message for issue in result.issues)
     assert not any("Number" in issue.message for issue in result.issues)
 
 

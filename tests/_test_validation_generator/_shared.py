@@ -1,12 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
-from pathlib import Path as _SplitPath
-
-__file__ = str(
-    _SplitPath(__file__).resolve().parent.parent / "test_validation_generator.py"
-)
-
 import json
 import logging
 import threading
@@ -17,13 +11,13 @@ import pytest
 
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
-from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.contracts.prompts import (
     PromptDependency,
     PromptDependencyManifest,
     PromptSet,
     PromptTemplate,
 )
+from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
@@ -39,6 +33,8 @@ from src.generators.validation.registry import build_validation_rule_registry
 from src.generators.validation_generator import validate_report
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
+
+__file__ = str(Path(__file__).resolve().parent.parent / "test_validation_generator.py")
 
 
 class FakePromptClient:
@@ -290,7 +286,8 @@ def _grounding_contract_payload(request, payload: dict) -> dict:
                     "incompatible" if outcome == "contradicted" else "unknown"
                 ),
                 "reason": str(
-                    item.get("reason") or "The test response marks this item unsupported."
+                    item.get("reason")
+                    or "The test response marks this item unsupported."
                 ),
             }
         )
@@ -338,7 +335,10 @@ def _grounding_contract_payload(request, payload: dict) -> dict:
                         or "The test response marks this item unsupported."
                     )
                     if failed
-                    else "The test response accepts this item against its retained evidence."
+                    else (
+                        "The test response accepts this item against its retained "
+                        "evidence."
+                    )
                 ),
             }
         )
