@@ -217,11 +217,11 @@ def test_verified_final_selection_recovers_when_a_central_theme_is_omitted(
         {
             "insights_final": [
                 {
-                    **deepcopy(candidate),
-                    "evidence_id": f"verified-fact:{candidate['id']}",
+                    **deepcopy(candidates[0]),
+                    "evidence_id": f"verified-fact:{candidates[0]['id']}",
                     "evidence_spans": [],
+                    "text": "The first decision signal is fully developed.",
                 }
-                for candidate in candidates
             ]
         },
     ]
@@ -280,15 +280,24 @@ def test_verified_generation_fails_closed_without_authored_theme_repair(tmp_path
         _insight("f6", score=0.94),
     ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
-    responses["insights_final"] = {
-        "insights_final": [
-            {
-                **candidate,
-                "evidence_id": f"verified-fact:{candidate['id']}",
-            }
-            for candidate in candidates[:5]
-        ]
-    }
+    initial_final = [
+        {
+            **candidate,
+            "evidence_id": f"verified-fact:{candidate['id']}",
+        }
+        for candidate in candidates[:5]
+    ]
+    responses["insights_final"] = [
+        {"insights_final": initial_final},
+        {
+            "insights_final": [
+                {
+                    **deepcopy(initial_final[0]),
+                    "text": "The first decision signal remains underdeveloped.",
+                }
+            ]
+        },
+    ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[1]['id']}"
     )
@@ -396,7 +405,15 @@ def test_verified_final_selection_repairs_a_noncentral_theme_omission(tmp_path):
     repaired_final[0]["text"] = "Unrelated rewrite."
     responses["insights_final"] = [
         {"insights_final": initial_final},
-        {"insights_final": repaired_final},
+        {
+            "insights_final": [
+                {
+                    **deepcopy(candidates[0]),
+                    "evidence_id": f"verified-fact:{candidates[0]['id']}",
+                    "text": "The first decision signal is fully developed.",
+                }
+            ]
+        },
     ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
@@ -626,21 +643,10 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
     ]
     repaired_final = [
         {
-            **deepcopy(candidates[0]),
-            "evidence_id": f"verified-fact:{candidates[0]['id']}",
-        },
-        {
             **deepcopy(candidates[1]),
             "evidence_id": f"verified-fact:{candidates[1]['id']}",
             "text": "The second decision signal governs the response.",
-        },
-        *[
-            {
-                **deepcopy(candidate),
-                "evidence_id": f"verified-fact:{candidate['id']}",
-            }
-            for candidate in candidates[2:]
-        ],
+        }
     ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
     responses["insights_final"] = [
@@ -676,9 +682,7 @@ def test_verified_generation_repairs_a_semantically_incomplete_central_theme(
             "material_gaps": [
                 {
                     "verified_fact_ids": [candidates[1]["id"]],
-                    "evidence_ids": [
-                        f"verified-fact:{candidates[1]['id']}"
-                    ],
+                    "evidence_ids": [f"verified-fact:{candidates[1]['id']}"],
                     "final_insight_ids": [candidates[1]["id"]],
                     "explanation": (
                         "The second final proposition omits the central relationship."
@@ -756,8 +760,8 @@ def test_verified_theme_repair_does_not_backfill_a_short_authored_roster(tmp_pat
         for candidate in candidates
     ]
     bad_final[1]["text"] = "The first decision signal also governs the response."
-    repaired_final = deepcopy(bad_final[:4])
-    repaired_final[1]["text"] = "The second decision signal governs the response."
+    repaired_final = [deepcopy(bad_final[1])]
+    repaired_final[0]["text"] = "The second decision signal governs the response."
 
     responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
     responses["insights_final"] = [
@@ -828,7 +832,7 @@ def test_verified_theme_repair_does_not_backfill_a_short_authored_roster(tmp_pat
             shortlisted, digest="c" * 64
         ),
     )
-    assert len(payload["insights_final"]) == 4
+    assert len(payload["insights_final"]) == 5
 
 
 def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion(
@@ -851,7 +855,14 @@ def test_verified_generation_fails_closed_after_semantic_theme_repair_exhaustion
     responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
     responses["insights_final"] = [
         {"insights_final": final_insights},
-        {"insights_final": final_insights},
+        {
+            "insights_final": [
+                {
+                    **deepcopy(final_insights[1]),
+                    "text": "The second decision signal remains incomplete.",
+                }
+            ]
+        },
     ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[1]['id']}"
@@ -943,7 +954,14 @@ def test_verified_generation_fails_closed_without_source_bound_editorial_fallbac
     responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
     responses["insights_final"] = [
         {"insights_final": narrow_final},
-        {"insights_final": narrow_final},
+        {
+            "insights_final": [
+                {
+                    **deepcopy(narrow_final[1]),
+                    "text": "The second signal remains too narrow.",
+                }
+            ]
+        },
     ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         f"verified-fact:{candidates[1]['id']}"

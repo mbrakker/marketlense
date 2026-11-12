@@ -14,9 +14,18 @@ text: |
   - Exact final insight IDs authorized for localized semantic repair: {{ semantic_theme_targeted_insight_ids_json }}
   - Current wording for those affected insights: {{ semantic_theme_targeted_insights_json|default("[]") }}
   {% endif %}
+  {% if semantic_theme_repair_scope_json|default("") %}
+  - Authoritative localized repair scope JSON: {{ semantic_theme_repair_scope_json }}
+  - Exact IDs permitted in the patch: {{ semantic_theme_allowed_patch_ids_json|default("[]") }}
+  This is a scoped patch, not a complete roster response. Return only corrected entries for authorized existing IDs and/or newly authored entries for explicitly authorized addition IDs. Do not echo, reorder, delete, or mutate unaffected final insights. Preserve each patched entry's stable ID and exact primary evidence binding; use only evidence IDs authorized by the repair scope. An empty or unchanged patch is not a successful correction.
+  {% endif %}
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
+  {% if verified_editorial_obligations_json|default("") %}
+  - Executable verified editorial obligations JSON: {{ verified_editorial_obligations_json }}
+  In verified mode, treat every essential obligation in this context as a required proposition to develop. Select only its exact feasible admitted candidate IDs, use the listed authoritative evidence IDs, and preserve the complete source-backed relationships, comparisons, direction, scope, timeframe, qualifiers, counter-signals, and limitations represented by the bound verified facts. A theme is not covered by a topic mention or source-ID selection alone. Themes may share an insight only when that wording genuinely develops both obligations; do not force one insight per theme or add redundant filler.
+  {% endif %}
   {% if semantic_theme_coverage_feedback_json|default("") %}
   - Independent semantic theme-coverage feedback JSON: {{ semantic_theme_coverage_feedback_json }}
   Revise the current final insights to address the supported planned-theme failure in that feedback. For an essential theme or a targeted rewrite, make at least one final insight substantively develop the full intended proposition, including its material sub-clauses, using only the supplied canonical fact(s); a generic mention or narrow restatement is insufficient. Treat the omitted-theme list as a hard acceptance checklist for essential and targeted-rewrite themes, while an optional theme may remain merged or omitted only when the independent feedback explicitly supports that resolution and the article remains complete. When exact localized-repair IDs are supplied, preserve every other final insight deterministically and change only those affected entries, unless the feedback identifies a report-wide structural failure. Keep the exact stable IDs and authoritative evidence bindings; change only the editorial wording or select another admitted candidate when it better develops the intended theme. If the theme is supported by multiple supplied facts, an exact primary-first `evidence_ids` array may combine those facts. Do not add facts, metrics, evidence IDs, or insights outside the supplied candidate set.

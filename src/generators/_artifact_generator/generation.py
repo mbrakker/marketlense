@@ -67,6 +67,7 @@ from src.generators.artifact_normalization import (
     normalize_editorial_theme_coverage_assessment,
     normalize_expert_domain,
     preserve_public_source_displays,
+    restore_artifact_insight_factual_fields,
     select_artifact_insights,
     soft_copy_context_evidence_anchors,
     strip_linkedin_inline_reference_ids,
@@ -97,7 +98,7 @@ from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
 from src.utils.structured_output import StructuredOutputFailure
 from src.utils.text_normalization import normalize_text
-from src.utils.verified_facts import validated_verified_facts
+from src.utils.verified_facts import PROTECTED_METRIC_FIELDS, validated_verified_facts
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
@@ -127,6 +128,530 @@ def _classify_verified_semantic_recovery(
     }:
         return "targeted_rewrite"
     return "fail_closed"
+
+
+def _verified_editorial_obligation_context(
+    editorial_plan: Dict[str, Any],
+    candidate_insights: Sequence[Dict[str, Any]],
+    verified_facts: Sequence[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Build compact, deterministic obligations for verified final writing.
+
+    The plan remains the source of editorial meaning and candidate feasibility;
+    verified facts contribute only the source-backed proposition context that is
+    needed to develop an obligation without repeating the full evidence packs.
+    """
+
+    candidate_by_id = {
+        _s(candidate.get("id")).strip(): candidate
+        for candidate in candidate_insights
+        if isinstance(candidate, dict) and _s(candidate.get("id")).strip()
+    }
+    fact_by_id = {
+        _s(fact.get("fact_id")).strip(): fact
+        for fact in verified_facts
+        if isinstance(fact, dict) and _s(fact.get("fact_id")).strip()
+    }
+    fact_ids_in_order: list[str] = []
+    candidate_bindings: dict[str, Dict[str, Any]] = {}
+    themes: list[Dict[str, Any]] = []
+    plan_themes = (
+        editorial_plan.get("themes") if isinstance(editorial_plan, dict) else []
+    )
+    plan_themes = plan_themes if isinstance(plan_themes, list) else []
+    bindings = editorial_plan_theme_bindings(editorial_plan)
+
+    for index, binding in enumerate(bindings):
+        raw_theme = (
+            plan_themes[index]
+            if index < len(plan_themes) and isinstance(plan_themes[index], dict)
+            else {}
+        )
+        feasible_ids = [
+            candidate_id
+            for candidate_id in binding.get("feasible_candidate_ids", [])
+            if candidate_id in candidate_by_id
+        ]
+        exact_evidence_ids = [
+            _s(evidence_id).strip()
+            for evidence_id in raw_theme.get("evidence_ids", [])
+            if _s(evidence_id).strip()
+            and normalize_text(evidence_id) in binding.get("reference_keys", set())
+        ]
+        if not exact_evidence_ids:
+            exact_evidence_ids = sorted(
+                _s(evidence_id).strip()
+                for evidence_id in binding.get("reference_keys", set())
+                if _s(evidence_id).strip()
+            )
+        theme_fact_ids: list[str] = []
+        for candidate_id in feasible_ids:
+            candidate = candidate_by_id[candidate_id]
+            evidence_ids = [
+                _s(candidate.get("evidence_id")).strip(),
+                *[
+                    _s(value).strip()
+                    for value in candidate.get("evidence_ids", [])
+                    if _s(value).strip()
+                ],
+            ]
+            evidence_ids = list(dict.fromkeys(value for value in evidence_ids if value))
+            fact_id = _s(candidate.get("verified_fact_id")).strip()
+            verified_fact = candidate.get("verified_fact")
+            if not fact_id and isinstance(verified_fact, dict):
+                fact_id = _s(verified_fact.get("fact_id")).strip()
+            if not fact_id:
+                for evidence_id in evidence_ids:
+                    if evidence_id.startswith("verified-fact:"):
+                        fact_id = evidence_id.removeprefix("verified-fact:")
+                        break
+            if fact_id and fact_id in fact_by_id:
+                theme_fact_ids.append(fact_id)
+                if fact_id not in fact_ids_in_order:
+                    fact_ids_in_order.append(fact_id)
+            candidate_bindings[candidate_id] = {
+                "candidate_id": candidate_id,
+                "evidence_ids": evidence_ids,
+                "verified_fact_id": fact_id,
+            }
+        themes.append(
+            {
+                "theme": _s(binding.get("theme")).strip(),
+                "importance": _s(binding.get("importance")).strip(),
+                "coverage_obligation": _s(binding.get("coverage_obligation")).strip(),
+                "evidence_ids": list(dict.fromkeys(exact_evidence_ids)),
+                "feasible_candidate_ids": feasible_ids,
+                "merge_group": _s(binding.get("merge_group")).strip(),
+                "verified_fact_ids": list(dict.fromkeys(theme_fact_ids)),
+            }
+        )
+
+    authoritative_facts = []
+    for fact_id in fact_ids_in_order:
+        fact = fact_by_id[fact_id]
+        authoritative_facts.append(
+            {
+                "fact_id": fact_id,
+                "statement": _s(fact.get("statement")).strip(),
+                "metric": deepcopy(fact.get("metric") or {}),
+                "qualifiers": deepcopy(fact.get("qualifiers") or []),
+            }
+        )
+    return {
+        "themes": themes,
+        "candidate_bindings": list(candidate_bindings.values()),
+        "authoritative_facts": authoritative_facts,
+    }
+
+
+def _build_semantic_repair_scope(
+    *,
+    editorial_plan: Dict[str, Any],
+    assessment: Any,
+    error_context: Dict[str, Any],
+    current_insights: Sequence[Dict[str, Any]],
+    candidate_insights: Sequence[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Bind a semantic negative assessment to the smallest repairable roster."""
+
+    payload = assessment if isinstance(assessment, dict) else {}
+    diagnosis = _s(payload.get("diagnosis")).strip().casefold()
+    recovery_action = _s(payload.get("recovery_action")).strip().casefold()
+    if recovery_action == "replan" and diagnosis in {
+        "redundant_optional_theme",
+        "infeasible_plan",
+    }:
+        return {
+            "mode": "replan",
+            "targeted_insight_ids": [],
+            "allowed_addition_candidate_ids": [],
+            "authorized_candidate_ids": [],
+            "authorized_evidence_ids": [],
+            "affected_themes": [],
+            "theme_scopes": [],
+        }
+
+    current_ids = [
+        _s(insight.get("id")).strip()
+        for insight in current_insights
+        if isinstance(insight, dict) and _s(insight.get("id")).strip()
+    ]
+    current_id_set = set(current_ids)
+    eligible_by_id = {
+        _s(candidate.get("id")).strip(): candidate
+        for candidate in eligible_final_insight_candidates(list(candidate_insights))
+        if _s(candidate.get("id")).strip()
+    }
+    assessments = payload.get("theme_coverage")
+    assessments = assessments if isinstance(assessments, list) else []
+    assessment_by_theme = {
+        normalize_text(item.get("theme")): item
+        for item in assessments
+        if isinstance(item, dict) and normalize_text(item.get("theme"))
+    }
+    gap_insight_ids = {
+        _s(value).strip()
+        for gap in error_context.get("material_gaps", [])
+        if isinstance(gap, dict)
+        for value in gap.get("final_insight_ids", [])
+        if _s(value).strip()
+    }
+    context_target_ids: set[str] = set()
+    for key in (
+        "affected_insight_ids",
+        "supporting_insight_ids",
+        "invalid_insight_ids",
+    ):
+        values = error_context.get(key)
+        if isinstance(values, list):
+            context_target_ids.update(
+                _s(value).strip() for value in values if _s(value).strip()
+            )
+    context_target_ids.update(gap_insight_ids)
+    omitted_themes = {
+        normalize_text(value)
+        for value in error_context.get("omitted_themes", [])
+        if _s(value).strip()
+    }
+    omitted_themes.update(
+        normalize_text(value)
+        for value in error_context.get("omitted_essential_themes", [])
+        if _s(value).strip()
+    )
+
+    targeted_ids: list[str] = []
+    additions: list[str] = []
+    authorized_evidence_ids: list[str] = []
+    affected_themes: list[str] = []
+    theme_scopes: list[Dict[str, Any]] = []
+    for binding in editorial_plan_theme_bindings(editorial_plan):
+        theme = _s(binding.get("theme")).strip()
+        theme_key = normalize_text(theme)
+        assessment_item = assessment_by_theme.get(theme_key)
+        status = _s((assessment_item or {}).get("status")).strip().casefold()
+        supporting_ids = {
+            _s(value).strip()
+            for value in (assessment_item or {}).get("supporting_insight_ids", [])
+            if _s(value).strip()
+        }
+        binding_candidate_ids = [
+            candidate_id
+            for candidate_id in binding.get("feasible_candidate_ids", [])
+            if candidate_id in eligible_by_id
+        ]
+        binding_target_ids = [
+            insight_id
+            for insight_id in current_ids
+            if insight_id in binding_candidate_ids
+            and (insight_id in supporting_ids or insight_id in context_target_ids)
+        ]
+        if status in {"partial", "uncovered"} and not binding_target_ids:
+            binding_target_ids = [
+                insight_id
+                for insight_id in current_ids
+                if insight_id in context_target_ids
+                and insight_id in binding_candidate_ids
+            ]
+        if status == "uncovered" and not supporting_ids and not binding_target_ids:
+            binding_target_ids = [
+                insight_id
+                for insight_id in current_ids
+                if insight_id in binding_candidate_ids
+            ]
+        is_affected = bool(binding_target_ids) or status in {"partial", "uncovered"}
+        if not is_affected and theme_key in omitted_themes:
+            status = "uncovered"
+            is_affected = True
+        if not is_affected:
+            continue
+        affected_themes.append(theme)
+        binding_evidence_ids = [
+            _s(value).strip()
+            for value in binding.get("reference_keys", set())
+            if _s(value).strip()
+        ]
+        for candidate_id in binding_candidate_ids:
+            candidate = eligible_by_id[candidate_id]
+            binding_evidence_ids.extend(
+                _s(value).strip()
+                for value in (
+                    candidate.get("evidence_id"),
+                    *(candidate.get("evidence_ids") or []),
+                )
+                if _s(value).strip()
+            )
+        binding_evidence_ids = list(dict.fromkeys(binding_evidence_ids))
+        authorized_evidence_ids.extend(binding_evidence_ids)
+        targeted_ids.extend(binding_target_ids)
+        # An uncovered theme with no existing supporting entry is the only
+        # localized path that may append a new candidate.  A partial existing
+        # entry remains the sole editable roster slot.
+        binding_additions = (
+            [
+                candidate_id
+                for candidate_id in binding_candidate_ids
+                if candidate_id not in current_id_set
+            ]
+            if status == "uncovered" and not binding_target_ids
+            else []
+        )
+        additions.extend(binding_additions)
+        theme_scopes.append(
+            {
+                "theme": theme,
+                "status": status,
+                "importance": _s(binding.get("importance")).strip(),
+                "coverage_obligation": _s(binding.get("coverage_obligation")).strip(),
+                "evidence_ids": sorted(set(binding_evidence_ids)),
+                "feasible_candidate_ids": binding_candidate_ids,
+                "targeted_insight_ids": list(dict.fromkeys(binding_target_ids)),
+                "allowed_addition_candidate_ids": binding_additions,
+            }
+        )
+
+    # Assessment diagnostics can identify an affected existing entry without
+    # repeating the theme row.  Keep it local only when it is source-bound to a
+    # feasible candidate in the accepted plan.
+    for insight_id in context_target_ids:
+        if (
+            insight_id in current_id_set
+            and insight_id not in targeted_ids
+            and any(
+                insight_id in scope["feasible_candidate_ids"] for scope in theme_scopes
+            )
+        ):
+            targeted_ids.append(insight_id)
+
+    targeted_ids = list(dict.fromkeys(targeted_ids))
+    additions = list(dict.fromkeys(additions))
+    authorized_evidence_ids = list(dict.fromkeys(authorized_evidence_ids))
+    if recovery_action != "targeted_rewrite" or not theme_scopes:
+        return {
+            "mode": "fail_closed",
+            "targeted_insight_ids": targeted_ids,
+            "allowed_addition_candidate_ids": additions,
+            "authorized_candidate_ids": list(dict.fromkeys(targeted_ids + additions)),
+            "authorized_evidence_ids": authorized_evidence_ids,
+            "affected_themes": list(dict.fromkeys(affected_themes)),
+            "theme_scopes": theme_scopes,
+        }
+    return {
+        "mode": "targeted_rewrite",
+        "targeted_insight_ids": targeted_ids,
+        "allowed_addition_candidate_ids": additions,
+        "authorized_candidate_ids": list(dict.fromkeys(targeted_ids + additions)),
+        "authorized_evidence_ids": authorized_evidence_ids,
+        "affected_themes": list(dict.fromkeys(affected_themes)),
+        "theme_scopes": theme_scopes,
+    }
+
+
+def _validate_scoped_insight_patch(
+    payload: Dict[str, Any],
+    *,
+    repair_scope: Dict[str, Any],
+    candidate_insights: Sequence[Dict[str, Any]],
+) -> None:
+    """Validate only the identity/provenance contract of a localized patch."""
+
+    patch = payload.get("insights_final") if isinstance(payload, dict) else None
+    if not isinstance(patch, list) or not patch:
+        raise AppError(
+            code="artifact_final_insight_repair_invalid",
+            message="Localized final-insight repair must return a non-empty patch",
+            retryable=False,
+            context={"repair_scope": repair_scope},
+        )
+    for item in patch:
+        if (
+            not isinstance(item, dict)
+            or not _s(item.get("id")).strip()
+            or not _s(item.get("text")).strip()
+        ):
+            raise AppError(
+                code="artifact_final_insight_repair_invalid",
+                message=(
+                    "Localized final-insight repair entries require stable IDs and text"
+                ),
+                retryable=False,
+                context={"repair_scope": repair_scope},
+            )
+    validate_final_insight_candidate_lineage(
+        final_insights=patch,
+        candidate_insights=list(candidate_insights),
+    )
+    ids = [_s(item.get("id")).strip() for item in patch]
+    if len(ids) != len(set(ids)):
+        raise AppError(
+            code="artifact_final_insight_repair_invalid",
+            message="Localized final-insight repair contains duplicate IDs",
+            retryable=False,
+            context={
+                "duplicate_ids": sorted({item for item in ids if ids.count(item) > 1})
+            },
+        )
+    targeted_ids = {
+        _s(value).strip()
+        for value in repair_scope.get("targeted_insight_ids", [])
+        if _s(value).strip()
+    }
+    additions = {
+        _s(value).strip()
+        for value in repair_scope.get("allowed_addition_candidate_ids", [])
+        if _s(value).strip()
+    }
+    authorized_ids = targeted_ids | additions
+    candidate_by_id = {
+        _s(candidate.get("id")).strip(): candidate
+        for candidate in eligible_final_insight_candidates(list(candidate_insights))
+        if _s(candidate.get("id")).strip()
+    }
+    allowed_evidence_ids = {
+        normalize_text(value)
+        for value in repair_scope.get("authorized_evidence_ids", [])
+        if _s(value).strip()
+    }
+    for item_id, item in zip(ids, patch, strict=True):
+        if item_id not in authorized_ids:
+            raise AppError(
+                code="artifact_final_insight_repair_invalid",
+                message="Localized final-insight repair changed an unauthorized ID",
+                retryable=False,
+                context={
+                    "insight_id": item_id,
+                    "authorized_ids": sorted(authorized_ids),
+                },
+            )
+        candidate = candidate_by_id.get(item_id)
+        if candidate is None:
+            raise AppError(
+                code="artifact_final_insight_repair_invalid",
+                message=(
+                    "Localized final-insight repair selected an ineligible candidate"
+                ),
+                retryable=False,
+                context={"insight_id": item_id},
+            )
+        primary = _s(item.get("evidence_id")).strip()
+        candidate_primary = _s(candidate.get("evidence_id")).strip()
+        if normalize_text(primary) != normalize_text(candidate_primary):
+            raise AppError(
+                code="artifact_final_insight_repair_invalid",
+                message=(
+                    "Localized final-insight repair changed the primary evidence "
+                    "binding"
+                ),
+                retryable=False,
+                context={"insight_id": item_id},
+            )
+        evidence_ids = [primary, *(item.get("evidence_ids") or [])]
+        if any(
+            normalize_text(value) not in allowed_evidence_ids for value in evidence_ids
+        ):
+            raise AppError(
+                code="artifact_final_insight_repair_invalid",
+                message=(
+                    "Localized final-insight repair used evidence outside its scope"
+                ),
+                retryable=False,
+                context={"insight_id": item_id},
+            )
+        raw_metric = item.get("metric")
+        if isinstance(raw_metric, dict):
+            authoritative = restore_artifact_insight_factual_fields(
+                item,
+                list(candidate_insights),
+                preserve_unknown_metric_fields=True,
+            )
+            authoritative_metric = authoritative.get("metric")
+            if isinstance(authoritative_metric, dict):
+                conflicts = {
+                    field_name: raw_metric[field_name]
+                    for field_name in PROTECTED_METRIC_FIELDS
+                    if field_name in raw_metric
+                    and raw_metric[field_name] not in (None, "", [], {})
+                    and raw_metric[field_name] != authoritative_metric.get(field_name)
+                }
+                if conflicts:
+                    raise AppError(
+                        code="artifact_final_insight_repair_invalid",
+                        message=(
+                            "Localized final-insight repair changed protected factual "
+                            "fields"
+                        ),
+                        retryable=False,
+                        context={
+                            "insight_id": item_id,
+                            "conflicting_fields": sorted(conflicts),
+                        },
+                    )
+
+
+def _merge_scoped_insight_repair(
+    *,
+    current_insights: Sequence[Dict[str, Any]],
+    repaired_insights: Sequence[Dict[str, Any]],
+    repair_scope: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Apply a validated patch without changing unrelated roster entries."""
+
+    current = [deepcopy(item) for item in current_insights]
+    patch = [deepcopy(item) for item in repaired_insights]
+    current_ids = [
+        _s(item.get("id")).strip() for item in current if isinstance(item, dict)
+    ]
+    patch_ids = [_s(item.get("id")).strip() for item in patch if isinstance(item, dict)]
+    if len(current_ids) != len(set(current_ids)) or len(patch_ids) != len(
+        set(patch_ids)
+    ):
+        raise AppError(
+            code="artifact_final_insight_repair_invalid",
+            message="Localized final-insight repair cannot merge duplicate IDs",
+            retryable=False,
+        )
+    targeted_ids = {
+        _s(value).strip()
+        for value in repair_scope.get("targeted_insight_ids", [])
+        if _s(value).strip()
+    }
+    additions = {
+        _s(value).strip()
+        for value in repair_scope.get("allowed_addition_candidate_ids", [])
+        if _s(value).strip()
+    }
+    current_id_set = set(current_ids)
+    for item_id in patch_ids:
+        if item_id in current_id_set and item_id not in targeted_ids:
+            raise AppError(
+                code="artifact_final_insight_repair_invalid",
+                message="Localized final-insight repair mutated an unaffected entry",
+                retryable=False,
+                context={"insight_id": item_id},
+            )
+        if item_id not in current_id_set and item_id not in additions:
+            raise AppError(
+                code="artifact_final_insight_repair_invalid",
+                message="Localized final-insight repair added an unauthorized entry",
+                retryable=False,
+                context={"insight_id": item_id},
+            )
+    patch_by_id = dict(zip(patch_ids, patch, strict=True))
+    merged = [
+        patch_by_id.get(item_id, item)
+        for item_id, item in zip(current_ids, current, strict=True)
+    ]
+    merged.extend(
+        item
+        for item_id, item in zip(patch_ids, patch, strict=True)
+        if item_id not in current_id_set
+    )
+    if merged == current:
+        raise AppError(
+            code="artifact_final_insight_repair_invalid",
+            message="Localized final-insight repair did not change the roster",
+            retryable=False,
+        )
+    return merged
 
 
 ArtifactTaskRenderer = Callable[[ArtifactRenderTask], Dict[str, Any]]
@@ -803,6 +1328,8 @@ def generate_artifacts(
     family_reuse: dict[str, dict[str, object]] = {}
     producing_prompt_identities: dict[str, dict[str, object]] = {}
     family_outputs: dict[str, object] = {}
+    transient_prompt_identities: dict[str, dict[str, object]] = {}
+    transient_family_reuse: dict[str, dict[str, object]] = {}
     soft_copy_claim_bindings: dict[str, list[dict[str, object]]] = {}
     soft_copy_prompt_identities: dict[str, dict[str, object]] = {}
     soft_copy_generation_attempts: dict[str, int] = {}
@@ -832,9 +1359,16 @@ def generate_artifacts(
             authoritative_facts=authoritative_facts,
         )
 
-    def update_family_reuse(namespace: str, **fields: object) -> None:
+    def update_family_reuse(
+        namespace: str, *, transient: bool = False, **fields: object
+    ) -> None:
         with family_state_lock:
-            family_reuse[namespace].update(fields)
+            target = (
+                transient_family_reuse.setdefault(namespace, {})
+                if transient
+                else family_reuse[namespace]
+            )
+            target.update(fields)
 
     def record_family_output(namespace: str, payload: object) -> None:
         with family_state_lock:
@@ -932,6 +1466,8 @@ def generate_artifacts(
         repair_namespace: str = "",
         response_contract_name: str = "",
         response_contract_identity_version: str = "v1",
+        allow_reuse: bool = True,
+        persist_family_output: bool = True,
     ) -> Dict[str, Any]:
         """Resolve one exact retained family before entering model recovery."""
         root_key = _ARTIFACT_FAMILY_ROOTS[namespace]
@@ -996,12 +1532,18 @@ def generate_artifacts(
         model_provider = str(identity["model_provider"])
         model_policy_namespace = str(identity["model_policy_namespace"])
         with family_state_lock:
-            family_reuse[namespace] = identity
-            producing_prompt_identities[namespace] = dict(identity)
+            if persist_family_output or namespace not in family_reuse:
+                family_reuse[namespace] = identity
+                producing_prompt_identities[namespace] = dict(identity)
+            else:
+                transient_prompt_identities[namespace] = dict(identity)
+                transient_family_reuse.setdefault(namespace, {}).update(
+                    {"prompt_identity": dict(identity)}
+                )
             requested = family_reuse_telemetry["requested_families"]
             assert isinstance(requested, list)
             requested.append(namespace)
-        if source_identity_id and vector_provenance_verified:
+        if allow_reuse and source_identity_id and vector_provenance_verified:
             reuse = prompt_family_reuse_reader(
                 PromptFamilyReuseRequest(
                     schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -1045,6 +1587,7 @@ def generate_artifacts(
             reuse = None
             update_family_reuse(
                 namespace,
+                transient=not persist_family_output,
                 soft_copy_reuse_rejected=True,
                 soft_copy_reuse_rejection_reason="soft_copy_provenance_missing",
             )
@@ -1062,6 +1605,7 @@ def generate_artifacts(
             reuse = None
             update_family_reuse(
                 namespace,
+                transient=not persist_family_output,
                 soft_copy_reuse_rejected=True,
                 soft_copy_reuse_rejection_reason="soft_copy_provenance_incompatible",
             )
@@ -1096,8 +1640,7 @@ def generate_artifacts(
                 else:
                     public_output = (
                         cached_payload
-                        if response_contract_name
-                        == "editorial_theme_coverage_output"
+                        if response_contract_name == "editorial_theme_coverage_output"
                         else cached_payload.get(root_key)
                     )
                     if response_contract_name == "editorial_theme_coverage_output":
@@ -1124,12 +1667,13 @@ def generate_artifacts(
                     artifact_id=reuse.artifact_id,
                     output_hash=reuse.output_hash,
                 )
-            record_family_output(
-                namespace,
-                public_output
-                if response_contract_name == "editorial_theme_coverage_output"
-                else reuse.output_payload,
-            )
+            if persist_family_output:
+                record_family_output(
+                    namespace,
+                    public_output
+                    if response_contract_name == "editorial_theme_coverage_output"
+                    else reuse.output_payload,
+                )
             if soft_copy_family and retained_soft_copy is not None:
                 with family_state_lock:
                     soft_copy_claim_bindings[soft_copy_family] = [
@@ -1154,28 +1698,32 @@ def generate_artifacts(
                 return cast(dict[str, Any], public_output)
             return {root_key: public_output}
         reason = (
-            (
-                str(
-                    family_reuse[namespace].get("soft_copy_reuse_rejection_reason")
-                    or "soft_copy_provenance_missing"
-                )
-                if family_reuse[namespace].get("soft_copy_reuse_rejected")
-                else str(
-                    family_reuse[namespace].get("cache_reuse_rejection_reason")
-                    or "cached_payload_validation_failed"
-                )
-                if family_reuse[namespace].get("cache_reuse_rejected")
-                else reuse.reason
-            )
-            if (
-                reuse is not None
-                or family_reuse[namespace].get("soft_copy_reuse_rejected")
-                or family_reuse[namespace].get("cache_reuse_rejected")
-            )
+            "transient_repair_no_reuse"
+            if not allow_reuse
             else (
-                "vector_store_provenance_missing"
-                if not vector_provenance_verified
-                else "source_identity_missing"
+                (
+                    str(
+                        family_reuse[namespace].get("soft_copy_reuse_rejection_reason")
+                        or "soft_copy_provenance_missing"
+                    )
+                    if family_reuse[namespace].get("soft_copy_reuse_rejected")
+                    else str(
+                        family_reuse[namespace].get("cache_reuse_rejection_reason")
+                        or "cached_payload_validation_failed"
+                    )
+                    if family_reuse[namespace].get("cache_reuse_rejected")
+                    else reuse.reason
+                )
+                if (
+                    reuse is not None
+                    or family_reuse[namespace].get("soft_copy_reuse_rejected")
+                    or family_reuse[namespace].get("cache_reuse_rejected")
+                )
+                else (
+                    "vector_store_provenance_missing"
+                    if not vector_provenance_verified
+                    else "source_identity_missing"
+                )
             )
         )
         with family_state_lock:
@@ -1188,12 +1736,19 @@ def generate_artifacts(
             f"{prepared.system_prompt}\n{prepared.user_prompt}"
         )
         update_family_reuse(
-            namespace, decision="regenerated", regeneration_reason=reason
+            namespace,
+            transient=not persist_family_output,
+            decision="regenerated",
+            regeneration_reason=reason,
         )
 
         def observe_response(response, elapsed_ms: float, mode: str) -> None:
             if mode != "primary":
-                update_family_reuse(namespace, recovery_attempted=True)
+                update_family_reuse(
+                    namespace,
+                    transient=not persist_family_output,
+                    recovery_attempted=True,
+                )
             actual_input = int(getattr(response, "input_tokens", 0) or 0)
             actual_output = int(getattr(response, "output_tokens", 0) or 0)
             tool_calls = int(getattr(response, "tool_calls", 0) or 0)
@@ -1277,7 +1832,8 @@ def generate_artifacts(
                 soft_copy_claim_bindings[soft_copy_family] = claim_bindings
                 soft_copy_prompt_identities[soft_copy_family] = prompt_identity
                 soft_copy_generation_attempts[soft_copy_family] = generation_attempt
-        record_family_output(namespace, rendered_family_output)
+        if persist_family_output:
+            record_family_output(namespace, rendered_family_output)
         return rendered
 
     logger.info(
@@ -2391,6 +2947,15 @@ def generate_artifacts(
                     )
                 )
 
+    verified_editorial_obligations = (
+        _verified_editorial_obligation_context(
+            editorial_plan,
+            insights_candidates,
+            visual_authority_verified_facts,
+        )
+        if visual_authority_admitter is not None
+        else {}
+    )
     insights_final_vars = {
         **base_vars,
         **editorial_plan_dependency_vars,
@@ -2407,6 +2972,11 @@ def generate_artifacts(
         "verified_mode": visual_authority_admitter is not None,
         "final_insight_allowed_candidate_ids_json": _dump_json(
             final_insight_allowed_candidate_ids
+        ),
+        "verified_editorial_obligations_json": (
+            _dump_json(verified_editorial_obligations)
+            if visual_authority_admitter is not None
+            else ""
         ),
     }
 
@@ -2493,112 +3063,6 @@ def generate_artifacts(
                 ("material_gap_insight_ids", "final_insight_ids"),
             )
         }
-
-    def semantic_targeted_insight_ids(
-        *,
-        assessment: Any,
-        error_context: Dict[str, Any],
-        current_insights: List[Dict[str, Any]],
-    ) -> List[str]:
-        """Return exact final-insight identities implicated by a semantic gap."""
-
-        current_ids = {
-            _s(insight.get("id")).strip()
-            for insight in current_insights
-            if isinstance(insight, dict) and _s(insight.get("id")).strip()
-        }
-        candidate_ids: set[str] = set()
-        raw_gaps = error_context.get("material_gaps")
-        if isinstance(raw_gaps, list):
-            for gap in raw_gaps:
-                if not isinstance(gap, dict):
-                    continue
-                candidate_ids.update(
-                    _s(value).strip()
-                    for value in gap.get("final_insight_ids", [])
-                    if _s(value).strip()
-                )
-        for key in (
-            "affected_insight_ids",
-            "supporting_insight_ids",
-            "invalid_insight_ids",
-        ):
-            values = error_context.get(key)
-            if isinstance(values, list):
-                candidate_ids.update(
-                    _s(value).strip() for value in values if _s(value).strip()
-                )
-        raw_assessments = (
-            assessment.get("theme_coverage")
-            if isinstance(assessment, dict)
-            else None
-        )
-        if isinstance(raw_assessments, list):
-            for item in raw_assessments:
-                if not isinstance(item, dict):
-                    continue
-                status = _s(item.get("status")).strip().casefold()
-                if status not in {"partial", "uncovered"}:
-                    continue
-                candidate_ids.update(
-                    _s(value).strip()
-                    for value in item.get("supporting_insight_ids", [])
-                    if _s(value).strip()
-                )
-        return sorted(candidate_ids.intersection(current_ids))
-
-    def merge_targeted_insight_repair(
-        *,
-        current_insights: List[Dict[str, Any]],
-        repaired_insights: List[Dict[str, Any]],
-        targeted_ids: Sequence[str],
-        allowed_candidate_ids: set[str],
-    ) -> List[Dict[str, Any]]:
-        """Keep unaffected accepted prose fixed during a localized repair."""
-
-        target_ids = set(targeted_ids)
-        if not target_ids:
-            return repaired_insights
-        current_ids = {
-            _s(insight.get("id")).strip()
-            for insight in current_insights
-            if isinstance(insight, dict) and _s(insight.get("id")).strip()
-        }
-        repaired_by_id = {
-            _s(insight.get("id")).strip(): insight
-            for insight in repaired_insights
-            if isinstance(insight, dict) and _s(insight.get("id")).strip()
-        }
-        substitutions = [
-            insight
-            for insight in repaired_insights
-            if isinstance(insight, dict)
-            and _s(insight.get("id")).strip() not in current_ids
-            and _s(insight.get("id")).strip() in allowed_candidate_ids
-        ]
-        substitution_index = 0
-        used_ids: set[str] = set()
-        merged: List[Dict[str, Any]] = []
-        for current in current_insights:
-            insight_id = _s(current.get("id")).strip()
-            if insight_id not in target_ids:
-                merged.append(current)
-                continue
-            replacement = repaired_by_id.get(insight_id)
-            if replacement is None and substitution_index < len(substitutions):
-                replacement = substitutions[substitution_index]
-                substitution_index += 1
-            if replacement is None:
-                merged.append(current)
-                continue
-            merged.append(replacement)
-            used_ids.add(_s(replacement.get("id")).strip())
-        for replacement in substitutions[substitution_index:]:
-            replacement_id = _s(replacement.get("id")).strip()
-            if replacement_id and replacement_id not in used_ids:
-                merged.append(replacement)
-                used_ids.add(replacement_id)
-        return merged
 
     def semantic_coverage_diagnostics(
         final_insights: List[Dict[str, Any]],
@@ -2937,6 +3401,13 @@ def generate_artifacts(
             editorial_plan_dependency_vars,
             editorial_plan_json=editorial_plan_json,
             final_insight_target_count=final_insight_target_count,
+            verified_editorial_obligations_json=_dump_json(
+                _verified_editorial_obligation_context(
+                    editorial_plan,
+                    insights_candidates,
+                    visual_authority_verified_facts,
+                )
+            ),
         )
         summary_evidence_json = _summary_prioritized_evidence_json(
             active_evidence, editorial_plan
@@ -3135,12 +3606,31 @@ def generate_artifacts(
                 ],
                 **material_gap_identity_lists(error.context.get("material_gaps", [])),
             }
-            targeted_insight_ids = semantic_targeted_insight_ids(
+            repair_scope = _build_semantic_repair_scope(
+                editorial_plan=editorial_plan,
                 assessment=semantic_theme_coverage_result,
                 error_context=error.context,
                 current_insights=insights_final,
+                candidate_insights=insights_candidates,
             )
+            targeted_insight_ids = list(repair_scope.get("targeted_insight_ids", []))
+            if recovery_kind == "targeted_rewrite" and repair_scope.get("mode") != (
+                "targeted_rewrite"
+            ):
+                semantic_theme_repair.update(
+                    {
+                        "status": "blocked_incomplete_roster",
+                        "terminal_classification": (
+                            "semantic_theme_repair_scope_invalid"
+                        ),
+                        "repair_scope": deepcopy(repair_scope),
+                    }
+                )
+                error.context["semantic_theme_repair"] = deepcopy(semantic_theme_repair)
+                raise error
             semantic_theme_repair["targeted_insight_ids"] = targeted_insight_ids
+            semantic_theme_repair["repair_scope"] = deepcopy(repair_scope)
+            scoped_candidate_ids = set(repair_scope.get("authorized_candidate_ids", []))
             repair_feedback = {
                 "failure": {
                     "code": error.code,
@@ -3153,6 +3643,7 @@ def generate_artifacts(
                 "assessment": semantic_theme_coverage_result,
                 "material_gaps": deepcopy(error.context.get("material_gaps", [])),
                 "targeted_insight_ids": targeted_insight_ids,
+                "repair_scope": repair_scope,
                 "targeted_final_insights": [
                     deepcopy(insight)
                     for insight in insights_final
@@ -3177,8 +3668,21 @@ def generate_artifacts(
                     for candidate in eligible_final_insight_candidates(
                         insights_candidates
                     )
+                    if _s(candidate.get("id")).strip() in scoped_candidate_ids
                 ],
             }
+
+            def validate_scoped_final_insight_patch(
+                payload: Dict[str, Any],
+            ) -> None:
+                normalize_required_evidence_references(payload)
+                validate_required_evidence_references(payload, insights_final_ctx)
+                _validate_scoped_insight_patch(
+                    payload,
+                    repair_scope=repair_scope,
+                    candidate_insights=insights_candidates,
+                )
+
             repaired_result = (
                 run_verified_replan_insights(
                     error,
@@ -3196,6 +3700,10 @@ def generate_artifacts(
                         "semantic_theme_targeted_insights_json": _dump_json(
                             repair_feedback["targeted_final_insights"]
                         ),
+                        "semantic_theme_repair_scope_json": _dump_json(repair_scope),
+                        "semantic_theme_allowed_patch_ids_json": _dump_json(
+                            repair_scope.get("authorized_candidate_ids", [])
+                        ),
                         "semantic_theme_coverage_feedback_json": _dump_json(
                             repair_feedback
                         ),
@@ -3204,7 +3712,9 @@ def generate_artifacts(
                         ctx,
                         task_id=f"{ctx.task_id}:semantic_repair:insights_final",
                     ),
-                    payload_validator=validate_final_insight_references,
+                    payload_validator=validate_scoped_final_insight_patch,
+                    allow_reuse=False,
+                    persist_family_output=False,
                 )
             )
             semantic_theme_repair["attempts"]["targeted_rewrite"] = (
@@ -3215,18 +3725,24 @@ def generate_artifacts(
                 prefix="insight",
                 verified_mode=True,
             )
-            if recovery_kind == "targeted_rewrite" and targeted_insight_ids:
-                repaired_insights = merge_targeted_insight_repair(
+            if recovery_kind == "targeted_rewrite":
+                _validate_scoped_insight_patch(
+                    {"insights_final": repaired_insights},
+                    repair_scope=repair_scope,
+                    candidate_insights=insights_candidates,
+                )
+                repaired_insights = _merge_scoped_insight_repair(
                     current_insights=insights_final,
                     repaired_insights=repaired_insights,
-                    targeted_ids=targeted_insight_ids,
-                    allowed_candidate_ids={
-                        _s(candidate.get("id")).strip()
-                        for candidate in eligible_final_insight_candidates(
-                            insights_candidates
-                        )
-                        if _s(candidate.get("id")).strip()
-                    },
+                    repair_scope=repair_scope,
+                )
+                semantic_theme_repair["transient_prompt_identity"] = deepcopy(
+                    transient_prompt_identities.get(
+                        "report_vs/artifacts/insights_final", {}
+                    )
+                )
+                semantic_theme_repair["transient_family_reuse"] = deepcopy(
+                    transient_family_reuse.get("report_vs/artifacts/insights_final", {})
                 )
             before_ids = {
                 _s(insight.get("id")).strip()
@@ -3244,7 +3760,18 @@ def generate_artifacts(
                 "added_ids": sorted(after_ids - before_ids),
                 "displaced_ids": sorted(before_ids - after_ids),
             }
-            insights_final = final_insights_for_coverage(repaired_insights)
+            if recovery_kind == "targeted_rewrite":
+                insights_final = [
+                    restore_artifact_insight_factual_fields(
+                        insight,
+                        insights_candidates,
+                        preserve_unknown_metric_fields=True,
+                    )
+                    for insight in repaired_insights
+                ]
+                validate_final_insight_references({"insights_final": insights_final})
+            else:
+                insights_final = final_insights_for_coverage(repaired_insights)
             validate_verified_final_insight_count(
                 insights_final, stage="semantic_repair"
             )
@@ -3419,6 +3946,13 @@ def generate_artifacts(
                         editorial_plan_dependency_vars,
                         editorial_plan_json=editorial_plan_json,
                         final_insight_target_count=final_insight_target_count,
+                        verified_editorial_obligations_json=_dump_json(
+                            _verified_editorial_obligation_context(
+                                editorial_plan,
+                                insights_candidates,
+                                visual_authority_verified_facts,
+                            )
+                        ),
                     )
                     summary_evidence_json = _summary_prioritized_evidence_json(
                         active_evidence, editorial_plan
