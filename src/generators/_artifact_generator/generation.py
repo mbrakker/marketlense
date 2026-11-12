@@ -244,6 +244,72 @@ def _verified_editorial_obligation_context(
     }
 
 
+def _repair_evidence_identity(value: Any) -> str:
+    """Normalize a repair binding with the same finding-ID prefix rules as plans."""
+
+    return normalize_text(value).removeprefix("evidence:findings:")
+
+
+def _repair_verified_fact_identity(value: Any) -> str:
+    identity = _repair_evidence_identity(value)
+    if not identity:
+        return ""
+    return (
+        identity
+        if identity.startswith("verified-fact:")
+        else f"verified-fact:{identity}"
+    )
+
+
+def _scoped_candidate_binding_ids(candidate: Dict[str, Any]) -> set[str]:
+    identities = {
+        _repair_evidence_identity(candidate.get("evidence_id")),
+        *(
+            _repair_evidence_identity(value)
+            for value in candidate.get("evidence_ids") or []
+        ),
+        _repair_verified_fact_identity(candidate.get("verified_fact_id")),
+    }
+    verified_fact = candidate.get("verified_fact")
+    if isinstance(verified_fact, dict):
+        identities.add(_repair_verified_fact_identity(verified_fact.get("fact_id")))
+    return {identity for identity in identities if identity}
+
+
+def _scoped_material_gap_bindings(error_context: Dict[str, Any]) -> list[set[str]]:
+    """Return only validated, source-bound material gap identities."""
+
+    raw_gaps = error_context.get("material_gaps")
+    if not isinstance(raw_gaps, list):
+        return []
+    bindings: list[set[str]] = []
+    for gap in raw_gaps:
+        if not isinstance(gap, dict) or not _s(gap.get("explanation")).strip():
+            continue
+        fact_ids = gap.get("verified_fact_ids")
+        evidence_ids = gap.get("evidence_ids")
+        if (
+            not isinstance(fact_ids, list)
+            or not isinstance(evidence_ids, list)
+            or not fact_ids
+            or not evidence_ids
+        ):
+            continue
+        identities = {
+            _repair_verified_fact_identity(value)
+            for value in fact_ids
+            if _repair_verified_fact_identity(value)
+        }
+        identities.update(
+            _repair_evidence_identity(value)
+            for value in evidence_ids
+            if _repair_evidence_identity(value)
+        )
+        if identities:
+            bindings.append(identities)
+    return bindings
+
+
 def _build_semantic_repair_scope(
     *,
     editorial_plan: Dict[str, Any],
@@ -318,6 +384,7 @@ def _build_semantic_repair_scope(
         for value in error_context.get("omitted_essential_themes", [])
         if _s(value).strip()
     )
+    material_gap_bindings = _scoped_material_gap_bindings(error_context)
 
     targeted_ids: list[str] = []
     additions: list[str] = []
@@ -397,6 +464,31 @@ def _build_semantic_repair_scope(
             if status == "uncovered" and not supporting_ids
             else []
         )
+        if status == "partial" and material_gap_bindings:
+            theme_evidence_ids = {
+                _repair_evidence_identity(value)
+                for value in binding.get("reference_keys", set())
+                if _repair_evidence_identity(value)
+            }
+            theme_evidence_ids.update(
+                _repair_evidence_identity(value)
+                for value in binding.get("coverage_keys", set())
+                if _repair_evidence_identity(value)
+            )
+            for gap_ids in material_gap_bindings:
+                if not gap_ids.intersection(theme_evidence_ids):
+                    continue
+                for candidate_id in binding_candidate_ids:
+                    if candidate_id in current_id_set:
+                        continue
+                    candidate_ids = _scoped_candidate_binding_ids(
+                        eligible_by_id[candidate_id]
+                    )
+                    if candidate_ids.intersection(
+                        gap_ids
+                    ) and candidate_ids.intersection(theme_evidence_ids):
+                        binding_additions.append(candidate_id)
+        binding_additions = list(dict.fromkeys(binding_additions))
         additions.extend(binding_additions)
         theme_scopes.append(
             {
@@ -462,7 +554,11 @@ def _validate_scoped_insight_patch(
             code="artifact_final_insight_repair_invalid",
             message="Localized final-insight repair must return a non-empty patch",
             retryable=False,
-            context={"repair_scope": repair_scope},
+            context={
+                "rule_id": "verified_insight_repair.nonempty_patch",
+                "field": "insights_final",
+                "status": "empty",
+            },
         )
     for item in patch:
         if (
@@ -476,12 +572,14 @@ def _validate_scoped_insight_patch(
                     "Localized final-insight repair entries require stable IDs and text"
                 ),
                 retryable=False,
-                context={"repair_scope": repair_scope},
+                context={
+                    "rule_id": "verified_insight_repair.entry_shape",
+                    "field": "insights_final.entry",
+                    "invalid_insight_ids": [_s(item.get("id")).strip()]
+                    if isinstance(item, dict) and _s(item.get("id")).strip()
+                    else [],
+                },
             )
-    validate_final_insight_candidate_lineage(
-        final_insights=patch,
-        candidate_insights=list(candidate_insights),
-    )
     ids = [_s(item.get("id")).strip() for item in patch]
     if len(ids) != len(set(ids)):
         raise AppError(
@@ -489,7 +587,11 @@ def _validate_scoped_insight_patch(
             message="Localized final-insight repair contains duplicate IDs",
             retryable=False,
             context={
-                "duplicate_ids": sorted({item for item in ids if ids.count(item) > 1})
+                "rule_id": "verified_insight_repair.duplicate_ids",
+                "field": "insights_final.id",
+                "duplicate_insight_ids": sorted(
+                    {item for item in ids if ids.count(item) > 1}
+                ),
             },
         )
     targeted_ids = {
@@ -520,8 +622,9 @@ def _validate_scoped_insight_patch(
                 message="Localized final-insight repair changed an unauthorized ID",
                 retryable=False,
                 context={
-                    "insight_id": item_id,
-                    "authorized_ids": sorted(authorized_ids),
+                    "rule_id": "verified_insight_repair.authorized_id",
+                    "field": "insights_final.id",
+                    "invalid_insight_ids": [item_id],
                 },
             )
         candidate = candidate_by_id.get(item_id)
@@ -532,7 +635,11 @@ def _validate_scoped_insight_patch(
                     "Localized final-insight repair selected an ineligible candidate"
                 ),
                 retryable=False,
-                context={"insight_id": item_id},
+                context={
+                    "rule_id": "verified_insight_repair.eligible_candidate",
+                    "field": "insights_final.id",
+                    "invalid_insight_ids": [item_id],
+                },
             )
         primary = _s(item.get("evidence_id")).strip()
         candidate_primary = _s(candidate.get("evidence_id")).strip()
@@ -544,7 +651,11 @@ def _validate_scoped_insight_patch(
                     "binding"
                 ),
                 retryable=False,
-                context={"insight_id": item_id},
+                context={
+                    "rule_id": "verified_insight_repair.primary_evidence",
+                    "field": "insights_final.evidence_id",
+                    "mismatched_primary_evidence_ids": [item_id],
+                },
             )
         evidence_ids = [primary, *(item.get("evidence_ids") or [])]
         if any(
@@ -556,7 +667,16 @@ def _validate_scoped_insight_patch(
                     "Localized final-insight repair used evidence outside its scope"
                 ),
                 retryable=False,
-                context={"insight_id": item_id},
+                context={
+                    "rule_id": "verified_insight_repair.supporting_evidence",
+                    "field": "insights_final.evidence_ids",
+                    "invalid_insight_ids": [item_id],
+                    "unauthorized_evidence_ids": [
+                        value
+                        for value in evidence_ids
+                        if normalize_text(value) not in allowed_evidence_ids
+                    ],
+                },
             )
         raw_metric = item.get("metric")
         if isinstance(raw_metric, dict):
@@ -583,10 +703,43 @@ def _validate_scoped_insight_patch(
                         ),
                         retryable=False,
                         context={
-                            "insight_id": item_id,
-                            "conflicting_fields": sorted(conflicts),
+                            "rule_id": "verified_insight_repair.protected_metric",
+                            "field": "insights_final.metric",
+                            "invalid_insight_ids": [item_id],
+                            "protected_dimensions": sorted(conflicts),
                         },
                     )
+
+    try:
+        validate_final_insight_candidate_lineage(
+            final_insights=patch,
+            candidate_insights=list(candidate_insights),
+        )
+    except AppError as exc:
+        source_context = exc.context if isinstance(exc.context, dict) else {}
+        context: dict[str, Any] = {
+            "rule_id": "verified_insight_repair.lineage",
+            "field": "insights_final",
+        }
+        for key in (
+            "invalid_insight_ids",
+            "duplicate_insight_ids",
+            "mismatched_primary_evidence_ids",
+            "unauthorized_evidence_ids",
+        ):
+            value = source_context.get(key)
+            if isinstance(value, list) and value:
+                context[key] = [
+                    str(item).strip() for item in value if str(item).strip()
+                ]
+        raise AppError(
+            code="artifact_final_insight_repair_invalid",
+            message=(
+                "Localized final-insight repair failed candidate lineage validation"
+            ),
+            retryable=False,
+            context=context,
+        ) from exc
 
 
 def _merge_scoped_insight_repair(
@@ -603,6 +756,7 @@ def _merge_scoped_insight_repair(
         _s(item.get("id")).strip() for item in current if isinstance(item, dict)
     ]
     patch_ids = [_s(item.get("id")).strip() for item in patch if isinstance(item, dict)]
+    all_ids = current_ids + patch_ids
     if len(current_ids) != len(set(current_ids)) or len(patch_ids) != len(
         set(patch_ids)
     ):
@@ -610,6 +764,17 @@ def _merge_scoped_insight_repair(
             code="artifact_final_insight_repair_invalid",
             message="Localized final-insight repair cannot merge duplicate IDs",
             retryable=False,
+            context={
+                "rule_id": "verified_insight_repair.merge_duplicates",
+                "field": "insights_final.id",
+                "duplicate_insight_ids": sorted(
+                    {
+                        item_id
+                        for item_id in all_ids
+                        if item_id and all_ids.count(item_id) > 1
+                    }
+                ),
+            },
         )
     targeted_ids = {
         _s(value).strip()
@@ -628,14 +793,24 @@ def _merge_scoped_insight_repair(
                 code="artifact_final_insight_repair_invalid",
                 message="Localized final-insight repair mutated an unaffected entry",
                 retryable=False,
-                context={"insight_id": item_id},
+                context={
+                    "rule_id": "verified_insight_repair.unaffected_entry",
+                    "field": "insights_final.id",
+                    "invalid_insight_ids": [item_id],
+                    "status": "unaffected_mutation",
+                },
             )
         if item_id not in current_id_set and item_id not in additions:
             raise AppError(
                 code="artifact_final_insight_repair_invalid",
                 message="Localized final-insight repair added an unauthorized entry",
                 retryable=False,
-                context={"insight_id": item_id},
+                context={
+                    "rule_id": "verified_insight_repair.unauthorized_addition",
+                    "field": "insights_final.id",
+                    "invalid_insight_ids": [item_id],
+                    "status": "unauthorized_addition",
+                },
             )
     patch_by_id = dict(zip(patch_ids, patch, strict=True))
     merged = [
@@ -652,6 +827,11 @@ def _merge_scoped_insight_repair(
             code="artifact_final_insight_repair_invalid",
             message="Localized final-insight repair did not change the roster",
             retryable=False,
+            context={
+                "rule_id": "verified_insight_repair.merge",
+                "field": "insights_final",
+                "status": "unchanged",
+            },
         )
     return merged
 
@@ -3695,6 +3875,13 @@ def generate_artifacts(
                     namespace="report_vs/artifacts/insights_final",
                     variables={
                         **insights_final_vars,
+                        "insights_candidates_json": _dump_json(
+                            repair_feedback["eligible_admitted_candidate_alternatives"]
+                        ),
+                        "final_insight_allowed_candidate_ids_json": _dump_json(
+                            repair_scope.get("authorized_candidate_ids", [])
+                        ),
+                        "verified_editorial_obligations_json": "",
                         "current_insights_final_json": _dump_json(insights_final),
                         "semantic_theme_targeted_insight_ids_json": _dump_json(
                             targeted_insight_ids

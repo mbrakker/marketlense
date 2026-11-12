@@ -5,6 +5,9 @@ from copy import deepcopy
 
 import pytest
 
+from src.contracts.openai import OpenAIResponseResult
+from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
+from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.generators._artifact_generator.generation import (
     _build_semantic_repair_scope,
     _merge_scoped_insight_repair,
@@ -15,7 +18,10 @@ from src.generators._artifact_generator.generation import (
 from src.generators.artifact_normalization import (
     validate_substantive_editorial_theme_coverage,
 )
+from src.services.prompt_service import load_prompt_set, render_prompt
+from src.services.structured_output_service import execute_structured_output
 from src.utils.errors import AppError
+from src.utils.structured_output import StructuredOutputFailure
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
     FakeAnalysisStore,
@@ -303,6 +309,7 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
             covered_evidence_ids={"f1", "f2"},
         ),
     ]
+    prompt_client = CapturingPromptClient()
     payload = generate_artifacts(
         report_id="verified-transient-editorial-repair",
         report_name="Verified transient editorial repair",
@@ -311,7 +318,7 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=FakeOpenAI(responses),
-        prompt_client=CapturingPromptClient(),
+        prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
         visual_authority_admitter=lambda shortlisted: _verified_admission(
             shortlisted, digest="t" * 64
@@ -329,6 +336,22 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
     assert repair["transient_family_reuse"]["regeneration_reason"] == (
         "transient_repair_no_reuse"
     )
+    final_calls = [
+        call
+        for call in prompt_client.render_calls
+        if call["path"] == "report_vs/artifacts/insights_final/user"
+    ]
+    assert len(final_calls) == 2
+    repair_variables = final_calls[-1]["variables"]
+    authorized_ids = json.loads(
+        repair_variables["final_insight_allowed_candidate_ids_json"]
+    )
+    repair_candidates = json.loads(repair_variables["insights_candidates_json"])
+    assert authorized_ids == json.loads(
+        repair_variables["semantic_theme_allowed_patch_ids_json"]
+    )
+    assert {item["id"] for item in repair_candidates} <= set(authorized_ids)
+    assert repair_variables["verified_editorial_obligations_json"] == ""
 
 
 def test_uncovered_theme_empty_supporting_ids_authorizes_feasible_addition() -> None:
@@ -544,3 +567,390 @@ def test_report_wide_failure_is_not_localized() -> None:
         candidate_insights=candidates,
     )
     assert scope["mode"] == "replan"
+
+
+def _render_final_insight_user_prompt(**overrides: object) -> str:
+    variables: dict[str, object] = {
+        "insights_candidates_json": json.dumps(
+            [
+                {
+                    "id": "candidate-1",
+                    "text": "A source-backed qualified signal.",
+                    "evidence_id": "verified-fact:f1",
+                    "qualifiers": ["Survey excludes non-respondents."],
+                }
+            ]
+        ),
+        "current_insights_final_json": "[]",
+        "semantic_theme_targeted_insight_ids_json": "[]",
+        "semantic_theme_targeted_insights_json": "[]",
+        "semantic_theme_repair_scope_json": "",
+        "semantic_theme_allowed_patch_ids_json": "[]",
+        "doc_map_json": "{}",
+        "evidence_json": "{}",
+        "editorial_plan_json": "{}",
+        "verified_editorial_obligations_json": "",
+        "semantic_theme_coverage_feedback_json": "",
+        "final_insight_target_count": 3,
+        "verified_mode": True,
+        "final_insight_allowed_candidate_ids_json": '["candidate-1"]',
+    }
+    variables.update(overrides)
+    ctx = _ctx()
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_final",
+            force_reload=True,
+        ),
+        ctx,
+    )
+    return render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.user,
+            variables=variables,
+        ),
+        ctx,
+    ).text
+
+
+def test_scoped_final_prompt_omits_full_roster_requirements() -> None:
+    full_prompt = _render_final_insight_user_prompt(
+        verified_editorial_obligations_json='{"marker":"FULL_OBLIGATION_ONLY"}'
+    )
+    scoped_prompt = _render_final_insight_user_prompt(
+        semantic_theme_repair_scope_json=json.dumps(
+            {
+                "theme_scopes": [
+                    {
+                        "theme": "Demand comparison",
+                        "allowed_addition_candidate_ids": ["candidate-2"],
+                    }
+                ],
+                "authorized_candidate_ids": ["candidate-1", "candidate-2"],
+            }
+        ),
+        semantic_theme_allowed_patch_ids_json='["candidate-1", "candidate-2"]',
+        semantic_theme_coverage_feedback_json='{"diagnosis":"planned_theme_execution"}',
+        verified_editorial_obligations_json='{"marker":"FULL_OBLIGATION_ONLY"}',
+    )
+
+    assert "Minimum final insight target:" in full_prompt
+    assert "Select at least" in full_prompt
+    assert "every essential theme" in full_prompt
+    assert "FULL_OBLIGATION_ONLY" in full_prompt
+    assert "Survey excludes non-respondents." in full_prompt
+    assert "candidate-1" in scoped_prompt
+    assert "candidate-2" in scoped_prompt
+    assert "This is a scoped patch" in scoped_prompt
+    assert "FULL_OBLIGATION_ONLY" not in scoped_prompt
+    assert "Minimum final insight target:" not in scoped_prompt
+    assert "Select at least" not in scoped_prompt
+    assert "every essential theme" not in scoped_prompt
+
+
+def _partial_scope(
+    *,
+    material_gaps: list[dict] | None,
+    candidate_insights: list[dict] | None = None,
+) -> dict:
+    candidates = candidate_insights or [
+        _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
+    ]
+    return _build_semantic_repair_scope(
+        editorial_plan=_plan(),
+        assessment={
+            "theme_coverage": [
+                {
+                    "theme": "Demand comparison",
+                    "status": "partial",
+                    "supporting_insight_ids": ["candidate-1"],
+                    "explanation": "The second population is not developed.",
+                }
+            ],
+            "diagnosis": "planned_theme_execution",
+            "recovery_action": "targeted_rewrite",
+        },
+        error_context={"material_gaps": material_gaps or []},
+        current_insights=[
+            {
+                "id": "candidate-1",
+                "text": "Existing first population insight.",
+                "evidence_id": "verified-fact:f1",
+            }
+        ],
+        candidate_insights=candidates,
+    )
+
+
+def test_partial_theme_gap_authorizes_exactly_matching_feasible_addition() -> None:
+    scope = _partial_scope(
+        material_gaps=[
+            {
+                "verified_fact_ids": ["f2"],
+                "evidence_ids": ["verified-fact:f2"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The second population is missing.",
+            }
+        ]
+    )
+
+    assert scope["allowed_addition_candidate_ids"] == ["candidate-2"]
+    assert scope["authorized_candidate_ids"] == ["candidate-1", "candidate-2"]
+
+
+@pytest.mark.parametrize(
+    "material_gaps",
+    [
+        [
+            {
+                "verified_fact_ids": ["f9"],
+                "evidence_ids": ["verified-fact:f9"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "No matching candidate exists.",
+            }
+        ],
+        [
+            {
+                "verified_fact_ids": ["f1"],
+                "evidence_ids": ["verified-fact:f1"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The existing fact is incomplete.",
+            }
+        ],
+        [],
+    ],
+)
+def test_partial_theme_does_not_authorize_unbound_or_redundant_additions(
+    material_gaps: list[dict],
+) -> None:
+    scope = _partial_scope(material_gaps=material_gaps)
+
+    assert scope["allowed_addition_candidate_ids"] == []
+    assert scope["authorized_candidate_ids"] == ["candidate-1"]
+
+
+def test_partial_theme_rejects_candidate_with_unrelated_exact_binding() -> None:
+    candidates = [
+        _candidate("candidate-1", "f1"),
+        _candidate("candidate-2", "f3"),
+    ]
+    scope = _partial_scope(
+        material_gaps=[
+            {
+                "verified_fact_ids": ["f2"],
+                "evidence_ids": ["verified-fact:f2"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The second population is missing.",
+            }
+        ],
+        candidate_insights=candidates,
+    )
+
+    assert scope["allowed_addition_candidate_ids"] == []
+
+
+def test_partial_theme_authorized_addition_merges_without_mutating_current_roster() -> (
+    None
+):
+    candidates = [_candidate("candidate-1", "f1"), _candidate("candidate-2", "f2")]
+    scope = _partial_scope(
+        material_gaps=[
+            {
+                "verified_fact_ids": ["f2"],
+                "evidence_ids": ["verified-fact:f2"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The second population is missing.",
+            }
+        ],
+        candidate_insights=candidates,
+    )
+    patch = [
+        {
+            "id": "candidate-2",
+            "text": "The second population moves in the opposite direction.",
+            "evidence_id": "verified-fact:f2",
+        }
+    ]
+
+    _validate_scoped_insight_patch(
+        {"insights_final": patch},
+        repair_scope=scope,
+        candidate_insights=candidates,
+    )
+    merged = _merge_scoped_insight_repair(
+        current_insights=[
+            {
+                "id": "candidate-1",
+                "text": "Existing first population insight.",
+                "evidence_id": "verified-fact:f1",
+            }
+        ],
+        repaired_insights=patch,
+        repair_scope=scope,
+    )
+
+    assert [item["id"] for item in merged] == ["candidate-1", "candidate-2"]
+
+
+def test_scoped_repair_rejections_have_bounded_actionable_context() -> None:
+    candidates = [
+        _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
+    ]
+    scope = _partial_scope(
+        material_gaps=[
+            {
+                "verified_fact_ids": ["f2"],
+                "evidence_ids": ["verified-fact:f2"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The second population is missing.",
+            }
+        ],
+        candidate_insights=candidates,
+    )
+    cases = [
+        ({"insights_final": []}, "field", "insights_final"),
+        (
+            {
+                "insights_final": [
+                    {
+                        "id": "candidate-4",
+                        "text": "Wrong.",
+                        "evidence_id": "verified-fact:f4",
+                    }
+                ]
+            },
+            "invalid_insight_ids",
+            "candidate-4",
+        ),
+        (
+            {
+                "insights_final": [
+                    {
+                        "id": "candidate-1",
+                        "text": "A.",
+                        "evidence_id": "verified-fact:f1",
+                    },
+                    {
+                        "id": "candidate-1",
+                        "text": "B.",
+                        "evidence_id": "verified-fact:f1",
+                    },
+                ]
+            },
+            "duplicate_insight_ids",
+            "candidate-1",
+        ),
+        (
+            {
+                "insights_final": [
+                    {
+                        "id": "candidate-1",
+                        "text": "Wrong binding.",
+                        "evidence_id": "verified-fact:f2",
+                    }
+                ]
+            },
+            "mismatched_primary_evidence_ids",
+            "candidate-1",
+        ),
+    ]
+    for payload, expected_key, expected_value in cases:
+        with pytest.raises(AppError) as exc_info:
+            _validate_scoped_insight_patch(
+                payload,
+                repair_scope=scope,
+                candidate_insights=candidates,
+            )
+        context = exc_info.value.context
+        assert context["rule_id"].startswith("verified_insight_repair.")
+        assert context["field"]
+        assert expected_value in context.get(expected_key, [context.get(expected_key)])
+        assert "repair_scope" not in context
+        assert "authorized_ids" not in context
+
+
+def test_scoped_metric_conflict_and_unchanged_merge_are_diagnosable() -> None:
+    candidates = [_candidate("candidate-1", "f1")]
+    scope = _partial_scope(
+        material_gaps=[
+            {
+                "verified_fact_ids": ["f1"],
+                "evidence_ids": ["verified-fact:f1"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The comparison wording is incomplete.",
+            }
+        ],
+        candidate_insights=candidates,
+    )
+    conflicting = deepcopy(candidates[0])
+    conflicting["metric"] = {**conflicting["metric"], "value": "99%"}
+    with pytest.raises(AppError) as exc_info:
+        _validate_scoped_insight_patch(
+            {"insights_final": [conflicting]},
+            repair_scope=scope,
+            candidate_insights=candidates,
+        )
+    assert exc_info.value.context["rule_id"] == (
+        "verified_insight_repair.protected_metric"
+    )
+    assert exc_info.value.context["field"] == "insights_final.metric"
+    assert "value" in exc_info.value.context["protected_dimensions"]
+
+    with pytest.raises(AppError) as unchanged:
+        _merge_scoped_insight_repair(
+            current_insights=[deepcopy(candidates[0])],
+            repaired_insights=[deepcopy(candidates[0])],
+            repair_scope=scope,
+        )
+    assert unchanged.value.context["rule_id"] == "verified_insight_repair.merge"
+    assert unchanged.value.context["status"] == "unchanged"
+
+
+def test_scoped_repair_diagnostic_survives_structured_output_failure_path() -> None:
+    def validate_payload(payload: dict) -> None:
+        del payload
+        raise AppError(
+            code="artifact_final_insight_repair_invalid",
+            message="Localized patch used an unauthorized candidate",
+            context={
+                "rule_id": "verified_insight_repair.authorized_id",
+                "field": "insights_final.id",
+                "invalid_insight_ids": ["candidate-4"],
+            },
+        )
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del mode, original_response, schema_errors
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps({"insights_final": [{"id": "candidate-4"}]}),
+            model="gpt-5-mini",
+        )
+
+    request = StructuredOutputExecutionRequest(
+        schema_version="1.0",
+        report_id="scoped-repair-diagnostic",
+        artifact_family="insights_final",
+        schema_name="artifacts",
+        model="gpt-5-mini",
+        terminal_failure_code="artifact_final_insight_repair_invalid",
+    )
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            request,
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=validate_payload,
+            is_substantive=lambda payload: bool(payload),
+            model_pricing={},
+        )
+
+    context = exc_info.value.context
+    assert context["rule_id"] == "verified_insight_repair.authorized_id"
+    assert context["field"] == "insights_final.id"
+    assert context["invalid_insight_ids"] == ["candidate-4"]
+    assert context["repair_attempt"] == 2
+    assert len(context["attempt_diagnostics"]) == 3
