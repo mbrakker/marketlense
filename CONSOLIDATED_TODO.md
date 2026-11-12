@@ -2501,3 +2501,21 @@ roster, so it is not evidence of improved live editorial quality and the other
 four frozen members were not started. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full
 details and the retained artifact path are in the [Step 2 evidence report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
+
+**Evidence update — 2026-11-12 (scoped-repair authorization correction):**
+Commit `9ea73416c7d83184f541d17b3cdf6e3119e9af72` corrected the localized
+repair scope so an uncovered essential obligation with no semantic supporting
+IDs can authorize revision of a feasible selected entry or addition of a
+feasible admitted candidate. The existing patch validator, exact evidence
+bindings, protected-fact checks, merge preservation rules, and post-merge
+full validation remain authoritative. Focused checks passed 15 direct
+regressions, 192 combined editorial/prompt tests, 309 affected
+artifact/evidence/regeneration tests, and 2 ownership tests. Hosted CI
+[43192923454](https://github.com/mbrakker/marketlense/actions/runs/43192923454)
+passed tests/coverage, both mutation partitions, release evidence, prompt
+fixtures, and downstream quality gates. The prompt baseline and thresholds
+were unchanged. The only full-local failure was the existing Python 3.14
+wheelhouse test requiring CPython 3.12. The provider-backed Capgemini run in
+the evidence report predates this small follow-up correction and failed before
+an accepted roster; therefore the live editorial verdict remains
+**PARTIAL/NO-GO**, E18 **Active/PARTIAL**, and Step 3 **unstarted/not ready**.

@@ -12581,3 +12581,47 @@ editorial acceptance for this correction is **PARTIAL / NO-GO**. E18 remains
 **unstarted/not ready**. The retained run artifacts and `cohort_result.json`
 are the evidence for this bounded result; no fabricated or cached final report
 was substituted.
+
+### Follow-up scoped-repair correction and hosted CI — 2026-11-12 (`9ea73416`)
+
+Commit `9ea73416c7d83184f541d17b3cdf6e3119e9af72` closes the remaining
+localized-repair authorization gap. An essential theme with
+`supporting_insight_ids=[]` now authorizes both revision of a feasible existing
+entry and addition of feasible admitted candidates; previously, the presence
+of any current roster entry could suppress those additions even when the
+semantic assessment supplied no supporting ID. The existing scope validator
+and merge rules still decide which returned patch entries are accepted, so
+this change does not select a candidate deterministically, broaden evidence
+authority, or alter full-roster validation. Regression doubles were also
+changed to the required patch-only response shape, and the long snapshot test
+was split without changing production behavior.
+
+The final focused checks passed: **15** directly affected regressions,
+**192** combined prompt/obligation/editorial semantic tests, **309** affected
+artifact/evidence/regeneration tests, and **2** test-file ownership checks.
+Ruff, formatting, diff-check, and the repository type gate passed (786 source
+files, zero tracked errors). The full local Python 3.14 run recorded **8,715
+passed, 2 skipped, 88 warnings and 24 subtests**, with one pre-existing
+`test_build_hash_locked_wheelhouse` failure because the active wheelhouse gate
+requires CPython 3.12. The supported-runtime hosted run is authoritative.
+
+Hosted CI [43192923454](https://github.com/mbrakker/marketlense/actions/runs/43192923454)
+passed: tests/coverage, both mutation partitions, release-evidence gates,
+prompt-fixture regression, PDF benchmarks, public-render and routing/accounting
+gates. The WordPress staging REST gate was skipped by its existing prerequisite;
+no publication was attempted. The prompt fixture remained unchanged and green
+at **118,497 tokens / `$0.025505`** total and **12,810 / `$0.002194`** for
+validation against **118,469 / `$0.025502`** and **12,864 / `$0.002199`**
+baselines. No new prompt family, LLM call, schema, service, retry count, or
+release threshold was introduced.
+
+The provider-backed Capgemini attempt retained above ran at `b91b9c1b`, before
+this follow-up authorization correction. It failed closed at final-insight
+structured repair and produced no accepted final roster, HTML, readiness pass,
+or canonical/publication write. Consequently, the follow-up edge case is
+demonstrated by focused regressions only; no live quality improvement is
+claimed for `9ea73416`, and Activate, KPMG, Reuters Institute, and Adjust were
+not rerun at this SHA. The implementation verdict is **PASS**; live editorial
+acceptance remains **PARTIAL / NO-GO**, E18 remains **Active/PARTIAL**, Step 2
+remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready** pending
+an accepted provider-backed cohort.
