@@ -2468,3 +2468,15 @@ coverage, grounding, or structured-contract validation. No unsupported factual
 claim was promoted and no publication write occurred. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready** pending an accepted fresh cohort.
+
+**Evidence update — 2026-11-12 (hosted contract-regression confirmation):**
+Regression commit `c8189f10` adds focused raw-provider-contract and
+grounding-batch-scope tests; the affected slice passed 160 tests. Hosted CI
+run [43156874113](https://github.com/mbrakker/marketlense/actions/runs/43156874113)
+passed on CPython 3.12.16, including full tests/coverage, both mutation
+partitions, quality non-regression, prompt fixtures, and all release-evidence
+gates. No threshold or baseline was changed. This closes the deterministic
+implementation/CI acceptance for this slice, but does not change the
+provider-backed live verdict: the current-SHA attempts remain
+**PARTIAL/NO-GO**, E18 remains **Active/PARTIAL**, and Step 3 remains
+**unstarted/not ready** because no accepted fresh five-report cohort exists.

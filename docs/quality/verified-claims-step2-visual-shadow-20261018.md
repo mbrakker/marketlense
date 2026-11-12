@@ -12473,3 +12473,30 @@ current-SHA frozen-five acceptance verdict is therefore **PARTIAL / NO-GO**;
 Step 3 remains unstarted/not ready. Remaining limitations are provider
 variability in semantic theme coverage, the KPMG protected-fact conflict, and
 the absence of a terminal accepted current-SHA five-report HTML cohort.
+
+### Hosted CI confirmation for the semantic-contract slice — 2026-11-12
+
+The final regression-test commit is `c8189f10` on
+`codex/fix-retained-insight-evidence-validation`. It adds only focused
+provider-boundary and batch-scope regressions; production code, prompt text,
+schemas, thresholds, caches, and release gates were unchanged after the
+implementation commits. The focused affected slice passed **160 tests**.
+
+Hosted CI run [43156874113](https://github.com/mbrakker/marketlense/actions/runs/43156874113)
+passed on CPython 3.12.16: the full tests/coverage job, both mutation
+partitions, quality non-regression, PDF benchmark, public-render, routing,
+workflow-queue, accounting, prompt-fixture, manifest, and release-evidence
+gates all passed. The generator coverage gate passed without changing the
+baseline or threshold. The prompt-fixture gate remained **118,375 total
+tokens / `$0.025493`** and **12,810 validation tokens / `$0.002194`**, versus
+baselines of **118,469 / `$0.025502`** and **12,864 / `$0.002199`**.
+
+The local Python 3.14 full run is not treated as the authoritative result: it
+recorded 8,702 passed and 2 skipped, with one pre-existing wheelhouse test
+failure because that test requires CPython 3.12. The hosted supported-runtime
+run is green. No provider-backed report run, canonical promotion, or
+WordPress write was performed for this test-only correction. The deterministic
+implementation verdict remains **PASS**; current-SHA live editorial
+acceptance remains **PARTIAL / NO-GO**, and Step 3 remains unstarted/not ready
+because the retained five-report attempts documented above did not form an
+accepted cohort.
