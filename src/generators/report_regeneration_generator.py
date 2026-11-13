@@ -82,6 +82,9 @@ from src.generators.public_editorial_quality_generator import (
 )
 from src.generators.report_generation_shared import resolve_doc_map_metadata
 from src.generators.report_title_resolution_generator import source_backed_title
+from src.generators.soft_copy_claim_provenance import (
+    retained_soft_copy_claims_cover_text,
+)
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.generators.validation.regeneration_candidate import (
@@ -648,6 +651,7 @@ def regenerate_artifacts(
         if isinstance(final_family_status, dict):
             for family, status in assembled_abstained_family_status.items():
                 final_family_status[family] = status
+    _assert_summary_family_consistency(updated_artifacts)
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.
         updated_artifacts["_repair_evidence_selection"] = {
@@ -829,6 +833,67 @@ def _regeneration_report_stub(artifacts: Dict[str, Any]):
             quotes[0].get("speaker") or quotes[0].get("author") or "Unknown"
         )
     return payload
+
+
+def _assert_summary_family_consistency(artifacts: Dict[str, Any]) -> None:
+    """Keep summary content, status, and sentence provenance in one state."""
+
+    family_status = artifacts.get("family_status")
+    summary_status = (
+        family_status.get("summary") if isinstance(family_status, dict) else None
+    )
+    if not isinstance(summary_status, dict):
+        return
+    status = _s(summary_status.get("status")).strip().casefold()
+    summary = artifacts.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    raw_provenance = artifacts.get("soft_copy_claim_provenance")
+    claims = soft_copy_claim_provenance_from_payload(raw_provenance)
+    summary_claims = [claim for claim in claims if claim.artifact_family == "summary"]
+    public_content_present = bool(
+        any(
+            _s(summary.get(field_name)).strip()
+            for field_name in (
+                "tldr",
+                "card_tldr_compact",
+                "executive_summary",
+            )
+        )
+        or summary.get("claim_evidence_map")
+    )
+    if status == "abstained":
+        if public_content_present or summary_claims:
+            raise AppError(
+                code="regeneration_deterministic_projection_failed",
+                message=(
+                    "An abstained summary cannot retain public copy or summary "
+                    "claim provenance after atomic regeneration."
+                ),
+                retryable=False,
+                context={
+                    "projection": "summary_status_content",
+                    "status": "abstained",
+                    "public_content_present": public_content_present,
+                    "summary_provenance_claim_count": len(summary_claims),
+                },
+            )
+        return
+    if status == "generated" and not retained_soft_copy_claims_cover_text(
+        text=soft_copy_public_text("summary", summary),
+        claims=summary_claims,
+    ):
+        raise AppError(
+            code="soft_copy_claim_provenance_coverage_invalid",
+            message=(
+                "A generated summary must retain exact provenance for every "
+                "material public sentence."
+            ),
+            retryable=False,
+            context={
+                "artifact_family": "summary",
+                "status": "generated",
+            },
+        )
 
 
 def _build_grounding_package(

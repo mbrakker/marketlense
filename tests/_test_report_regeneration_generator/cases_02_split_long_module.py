@@ -142,9 +142,7 @@ def test_visual_authority_pool_does_not_restore_a_removed_insight() -> None:
 
     _apply_visual_authority_pool(state)
 
-    assert [item["id"] for item in state.insights_candidates] == [
-        "replacement-insight"
-    ]
+    assert [item["id"] for item in state.insights_candidates] == ["replacement-insight"]
     assert [item["id"] for item in state.insights_final] == ["replacement-insight"]
 
 
@@ -297,9 +295,7 @@ def test_summary_safe_removal_clears_same_claim_from_sibling_fields(tmp_path) ->
         {
             "tldr": supported_tldr,
             "card_tldr_compact": failed,
-            "executive_summary": (
-                f"{failed} {supported_sibling} {supported_compact}"
-            ),
+            "executive_summary": (f"{failed} {supported_sibling} {supported_compact}"),
             "claim_evidence_map": [
                 {
                     "claim": failed,
@@ -375,8 +371,16 @@ def test_summary_safe_removal_clears_same_claim_from_sibling_fields(tmp_path) ->
                 "classification": "factual",
                 "evidence_ids": ["f4"],
             },
-            {"claim": supported_tldr, "classification": "factual", "evidence_ids": ["f1"]},
-            {"claim": supported_sibling, "classification": "factual", "evidence_ids": ["f2"]},
+            {
+                "claim": supported_tldr,
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            },
+            {
+                "claim": supported_sibling,
+                "classification": "factual",
+                "evidence_ids": ["f2"],
+            },
         ],
         evidence_span_index=artifact_evidence_span_index(
             doc_map=evidence_packs["doc_map"], evidence_packs=evidence_packs
@@ -450,9 +454,7 @@ def test_summary_safe_removal_clears_same_claim_from_sibling_fields(tmp_path) ->
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
     assert f"soft_copy:summary:{failed_hash[:16]}" not in {
         claim["claim_id"]
-        for claim in response.updated_artifacts["soft_copy_claim_provenance"][
-            "claims"
-        ]
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     }
 
 
@@ -593,6 +595,17 @@ def test_summary_safe_removal_combines_map_and_copy_issues_with_stale_provenance
         assert error.value.code == "summary_safe_removal_target_unresolved"
         assert openai_client.calls == []
         return
+    if not copy_has_sibling:
+        with pytest.raises(AppError) as error:
+            _regenerate_artifacts(
+                request,
+                openai_client=openai_client,
+                prompt_client=_FakePromptClient(),
+            )
+        assert error.value.code == "regeneration_deterministic_projection_failed"
+        assert error.value.context["projection"] == "summary_status_content"
+        assert openai_client.calls == []
+        return
 
     response = _regenerate_artifacts(
         request,
@@ -689,25 +702,16 @@ def test_summary_safe_removal_requires_claim_identity_for_family_quality_issue(
         assert error.value.code == "summary_safe_removal_target_unresolved"
         assert openai_client.calls == []
         return
-
-    response = _regenerate_artifacts(
-        request,
-        openai_client=openai_client,
-        prompt_client=_FakePromptClient(),
-    )
-
-    assert response.updated_artifacts["summary"]["executive_summary"] == ""
-    assert response.updated_artifacts["summary"]["tldr"] == current["summary"]["tldr"]
-    assert (
-        response.updated_artifacts["summary"]["claim_evidence_map"]
-        == current["summary"]["claim_evidence_map"]
-    )
-    assert not any(
-        claim["claim_id"] == failed_claim.claim_id
-        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
-    )
+    with pytest.raises(AppError) as error:
+        _regenerate_artifacts(
+            request,
+            openai_client=openai_client,
+            prompt_client=_FakePromptClient(),
+        )
+    assert error.value.code == "regeneration_deterministic_projection_failed"
+    assert error.value.context["projection"] == "summary_status_content"
     assert openai_client.calls == []
-    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
+    return
 
 
 def test_summary_safe_removal_without_retained_replacement_fails_typed(tmp_path):
@@ -911,9 +915,7 @@ def test_summary_safe_removal_reuses_other_retained_supported_sentences(tmp_path
     assert failed_compact not in summary["card_tldr_compact"]
     retained_ids = {
         claim["claim_id"]
-        for claim in response.updated_artifacts["soft_copy_claim_provenance"][
-            "claims"
-        ]
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     }
     assert provenance(failed_tldr, "f1").claim_id not in retained_ids
     assert provenance(failed_compact, "f2").claim_id not in retained_ids

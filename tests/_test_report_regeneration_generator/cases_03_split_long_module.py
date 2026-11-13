@@ -143,6 +143,51 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
     openai_client = _FakeOpenAIClient()
     prompt_client = _FakePromptClient()
 
+    if artifact_family == "summary":
+        with pytest.raises(AppError) as error:
+            regenerate_artifacts(
+                ArtifactRegenerationRequest(
+                    report_id="report-1",
+                    report_name="report-1",
+                    attempt_index=3,
+                    plan=RegenerationPlan(
+                        mode="targeted",
+                        targets=[
+                            RegenerationTarget(
+                                target_section=artifact_family,
+                                repair_action=repair_action,
+                                repair_strategy=repair_strategy,
+                                allowed_paths=[
+                                    "summary.executive_summary[claim_index=0]"
+                                ],
+                                issues=[
+                                    RegenerationIssue(
+                                        rule_id=issue_rule_id,
+                                        affected_section="summary.executive_summary",
+                                        message="Remove the failed soft-copy family.",
+                                        severity="error",
+                                        entity_id=repaired_claim["claim_id"],
+                                    )
+                                ],
+                            )
+                        ],
+                    ),
+                    current_artifacts=current,
+                    doc_map=evidence_packs["doc_map"],
+                    evidence_packs=evidence_packs,
+                    settings=_settings(tmp_path),
+                    ctx=_ctx(),
+                    source_status=current["source_status"],
+                    categories=["Category"],
+                ),
+                openai_client=openai_client,
+                prompt_client=prompt_client,
+            )
+        assert error.value.code == "regeneration_deterministic_projection_failed"
+        assert error.value.context["projection"] == "summary_status_content"
+        assert openai_client.calls == []
+        return
+
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
             report_id="report-1",
@@ -400,6 +445,13 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
         key: value for key, value in original.items() if key != "so_what"
     }
     assert len(openai_client.calls) == 1
+    localized_prompt = openai_client.calls[0].user_prompt
+    assert "insights_final[item=insight-1].so_what" in localized_prompt
+    assert "Unsupported number in the implication." in localized_prompt
+    assert "Evidence text" in localized_prompt
+    assert "every editorial theme" not in localized_prompt
+    assert "fill the final roster" not in localized_prompt
+    assert "compact card" not in localized_prompt
 
 
 @pytest.mark.parametrize(

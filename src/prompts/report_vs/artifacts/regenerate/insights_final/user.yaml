@@ -20,6 +20,7 @@ text: |
   private `repair_decision` envelope defined in the included contract.
 
   Requirements:
+  {% if final_insight_target_count|default(2) > 1 %}
   - Prefer repaired candidates that directly resolve the listed failures.
   - Treat the prior final insights as failed copy, not source evidence. Use only
     `grounding_package.relevant_evidence`; do not use any ID listed in
@@ -35,6 +36,31 @@ text: |
   - Use each stable `id` at most once. Do not let a duplicate ID displace another retained insight; retain that insight's original stable ID and its evidence binding.
   - If the summary abstains, keep one complete, source-backed insight at 18
     words or fewer for the compact card; preserve scope and never clip it.
+  {% else %}
+  - Correct only the exact authorized failing field of the one target insight,
+    using its canonical source candidate and the supplied grounding feedback.
+  - Preserve the target's existing stable `id` and all unlisted fields. Change
+    only fields in `repair_context_json.allowed_paths`; do not change or remove
+    sibling insight IDs or array members.
+  - Treat the prior target wording as failed copy, not source evidence. Use only
+    `grounding_package.relevant_evidence`; do not use any ID listed in
+    `grounding_package.quarantined_evidence_ids`.
+  - For a scope-only failure, preserve the linked value and subject and use the
+    exact scope in its evidence; never substitute a neighboring value.
+  - Keep the authoritative candidate's protected metric and factual evidence
+    bindings unchanged. For a factual wording repair, preserve the canonical
+    proposition, including its comparison, denominator, population, timeframe,
+    forecast status, and qualifiers.
+  - For an interpretive-field repair, remove unsupported empirical premises
+    without removing defensible commercial analysis. Do not import figures from
+    another insight or a neighboring source fact.
+  - If an exact protected metric leaf is explicitly authorized, retain the
+    existing `CORRECT_PROTECTED_FACT` handling and source-authoritative
+    restoration; do not rewrite other metric leaves.
+  - Return only the existing private `repair_decision` envelope and the minimum
+    authorized patch. If no source-supported repair exists, return the existing
+    non-success decision rather than inventing a replacement.
+  {% endif %}
   - `so_what` must state a report-specific business implication; `now_what` must
     state a concrete, report-specific decision or action. Neither field may be
     empty, generic, or a citation label.

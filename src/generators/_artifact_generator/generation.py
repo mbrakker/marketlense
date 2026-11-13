@@ -1031,11 +1031,17 @@ def _merge_scoped_insight_repair(
     current_insights: Sequence[Dict[str, Any]],
     repaired_insights: Sequence[Dict[str, Any]],
     repair_scope: Dict[str, Any],
+    raw_repaired_insights: Optional[Sequence[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """Apply a validated patch without changing unrelated roster entries."""
 
     current = [deepcopy(item) for item in current_insights]
     patch = [deepcopy(item) for item in repaired_insights]
+    raw_patch = (
+        [deepcopy(item) for item in raw_repaired_insights]
+        if raw_repaired_insights is not None
+        else patch
+    )
     current_ids = [
         _s(item.get("id")).strip() for item in current if isinstance(item, dict)
     ]
@@ -1097,8 +1103,35 @@ def _merge_scoped_insight_repair(
                 },
             )
     patch_by_id = dict(zip(patch_ids, patch, strict=True))
+    raw_patch_by_id = {
+        _s(item.get("id")).strip(): item
+        for item in raw_patch
+        if isinstance(item, dict) and _s(item.get("id")).strip()
+    }
+
+    def merge_existing_item(
+        item_id: str, current_item: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        normalized_item = patch_by_id.get(item_id)
+        if normalized_item is None:
+            return current_item
+        raw_item = raw_patch_by_id.get(item_id, normalized_item)
+        merged_item = deepcopy(current_item)
+        for field_name in raw_item:
+            if field_name in {"id"}:
+                value = normalized_item.get(field_name, raw_item[field_name])
+            elif raw_item[field_name] in (None, "", [], {}):
+                # Explicit empty values are intentional patch operations.  Do
+                # not let normalization-generated defaults turn them into a
+                # request to preserve the prior editorial field.
+                value = deepcopy(raw_item[field_name])
+            else:
+                value = deepcopy(normalized_item.get(field_name, raw_item[field_name]))
+            merged_item[field_name] = value
+        return merged_item
+
     merged = [
-        patch_by_id.get(item_id, item)
+        merge_existing_item(item_id, item)
         for item_id, item in zip(current_ids, current, strict=True)
     ]
     merged.extend(
@@ -4251,8 +4284,9 @@ def generate_artifacts(
             semantic_theme_repair["attempts"]["targeted_rewrite"] = (
                 0 if recovery_kind == "replan" else 1
             )
+            raw_repaired_insights = repaired_result.get("insights_final")
             repaired_insights = normalize_artifact_insights(
-                repaired_result.get("insights_final"),
+                raw_repaired_insights,
                 prefix="insight",
                 verified_mode=True,
             )
@@ -4265,6 +4299,11 @@ def generate_artifacts(
                 repaired_insights = _merge_scoped_insight_repair(
                     current_insights=insights_final,
                     repaired_insights=repaired_insights,
+                    raw_repaired_insights=(
+                        raw_repaired_insights
+                        if isinstance(raw_repaired_insights, list)
+                        else []
+                    ),
                     repair_scope=repair_scope,
                 )
                 semantic_theme_repair["transient_prompt_identity"] = deepcopy(
