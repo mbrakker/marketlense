@@ -32,7 +32,11 @@
             "type": "string",
             "enum": ["entailed", "contradicted", "not_established"]
           },
-          "violation_type": {"type": "string", "minLength": 1},
+          "violation_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "For an entailed verdict use none. For contradicted or not_established, select the most appropriate type: hallucinated_entity_or_event, unsupported_number, misattributed_quote, report_directive_misattribution, unsupported_factual_claim, unsupported_causal_outcome, unsupported_certainty, unsupported_operational_or_financial_benefit, numerically_inconsistent, contradicted, not_established, invalid_comparison, missing_material_evidence, hallucinated_evidence_id, evidence_retrieval_failure, or non_fatal_interpretation. Do not use none for a non-entailed verdict."
+          },
           "proposition_status": {
             "type": "string",
             "enum": ["compatible", "incompatible", "unknown"]

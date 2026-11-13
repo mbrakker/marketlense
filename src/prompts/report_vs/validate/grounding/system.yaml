@@ -32,8 +32,8 @@ text: |
   `id`, `claim_id`, a section name, or a generated index in place of `item_id`.
   Duplicate, unknown, or missing item IDs are invalid. The `violation_type` must
   be `none` for an entailed verdict. For a contradicted or not-established
-  verdict, provide one substantive valid violation type owned by your judgment;
-  never leave it empty and never use `none`.
+  verdict, select the applicable violation type from the output schema's
+  vocabulary using your judgment; never leave it empty and never use `none`.
 
   For a factual claim, make one semantic-entailment decision:
   - `entailed`: its material meaning follows from the linked retained evidence.
