@@ -237,10 +237,56 @@ def _verified_editorial_obligation_context(
                 "qualifiers": deepcopy(fact.get("qualifiers") or []),
             }
         )
+    theme_fact_id_set = set(fact_ids_in_order)
+    additional_admitted_facts: list[Dict[str, Any]] = []
+    additional_fact_ids: set[str] = set()
+    for candidate in candidate_insights:
+        if not isinstance(candidate, dict):
+            continue
+        candidate_id = _s(candidate.get("id")).strip()
+        primary_evidence_id = _s(candidate.get("evidence_id")).strip()
+        fact_id = _s(candidate.get("verified_fact_id")).strip()
+        verified_fact = candidate.get("verified_fact")
+        if not fact_id and isinstance(verified_fact, dict):
+            fact_id = _s(verified_fact.get("fact_id")).strip()
+        if not fact_id:
+            for evidence_id in [
+                primary_evidence_id,
+                *(
+                    _s(value).strip()
+                    for value in candidate.get("evidence_ids", [])
+                    if _s(value).strip()
+                ),
+            ]:
+                if evidence_id.startswith("verified-fact:"):
+                    fact_id = evidence_id.removeprefix("verified-fact:")
+                    break
+        if (
+            not candidate_id
+            or not primary_evidence_id
+            or not fact_id
+            or fact_id in theme_fact_id_set
+            or fact_id in additional_fact_ids
+            or fact_id not in fact_by_id
+        ):
+            continue
+        fact = fact_by_id[fact_id]
+        additional_admitted_facts.append(
+            {
+                "fact_id": fact_id,
+                "candidate_id": candidate_id,
+                "evidence_id": primary_evidence_id,
+                "statement": _s(fact.get("statement")).strip(),
+                "metric": deepcopy(fact.get("metric") or {}),
+                "qualifiers": deepcopy(fact.get("qualifiers") or []),
+            }
+        )
+        additional_fact_ids.add(fact_id)
     return {
         "themes": themes,
         "candidate_bindings": list(candidate_bindings.values()),
         "authoritative_facts": authoritative_facts,
+        "additional_admitted_facts": additional_admitted_facts,
     }
 
 
@@ -280,8 +326,7 @@ def _scoped_material_gap_bindings(error_context: Dict[str, Any]) -> list[set[str
     """Return only validated, source-bound material gap identities."""
 
     return [
-        record["identities"]
-        for record in _scoped_material_gap_records(error_context)
+        record["identities"] for record in _scoped_material_gap_records(error_context)
     ]
 
 
@@ -322,9 +367,7 @@ def _scoped_material_gap_records(error_context: Dict[str, Any]) -> list[Dict[str
                         _s(value).strip() for value in fact_ids if _s(value).strip()
                     ],
                     "evidence_ids": [
-                        _s(value).strip()
-                        for value in evidence_ids
-                        if _s(value).strip()
+                        _s(value).strip() for value in evidence_ids if _s(value).strip()
                     ],
                     "final_insight_ids": [
                         _s(value).strip()
@@ -559,10 +602,7 @@ def _build_semantic_repair_scope(
             if insight_id in binding_candidate_ids
             and (
                 insight_id in context_target_ids
-                or (
-                    status in {"partial", "uncovered"}
-                    and insight_id in supporting_ids
-                )
+                or (status in {"partial", "uncovered"} and insight_id in supporting_ids)
             )
         ]
         if status in {"partial", "uncovered"} and not binding_target_ids:
@@ -670,11 +710,6 @@ def _build_semantic_repair_scope(
     material_gap_scopes: list[Dict[str, Any]] = []
     for gap_record in material_gap_records:
         gap_ids = gap_record["identities"]
-        if any(
-            gap_ids.intersection(theme_ids)
-            for theme_ids in planned_theme_identity_sets
-        ):
-            continue
         gap_evidence_ids = {
             _repair_evidence_identity(value)
             for value in gap_record["evidence_ids"]
@@ -720,7 +755,14 @@ def _build_semantic_repair_scope(
             {
                 "theme": "",
                 "scope_type": "material_report_completeness",
-                "status": "unmapped",
+                "status": (
+                    "partially_mapped"
+                    if any(
+                        gap_ids.intersection(theme_ids)
+                        for theme_ids in planned_theme_identity_sets
+                    )
+                    else "unmapped"
+                ),
                 "importance": "report",
                 "coverage_obligation": gap_record["explanation"],
                 "evidence_ids": list(gap_record["evidence_ids"]),
@@ -4580,6 +4622,22 @@ def generate_artifacts(
             if key in selected_lead_insight
         }
     )
+    selected_final_insights_json = _dump_json(
+        [
+            {
+                key: insight[key]
+                for key in (
+                    "id",
+                    "text",
+                    "evidence_id",
+                    "evidence_ids",
+                    "metric",
+                )
+                if key in insight
+            }
+            for insight in insights_final
+        ]
+    )
     summary_task = ArtifactRenderTask(
         schema_version="1.0",
         step_name="summary",
@@ -4590,6 +4648,12 @@ def generate_artifacts(
             "evidence_json": summary_evidence_json,
             "editorial_plan_json": editorial_plan_json,
             "selected_lead_insight_json": selected_lead_insight_json,
+            "selected_final_insights_json": (
+                selected_final_insights_json
+                if visual_authority_admitter is not None
+                else "[]"
+            ),
+            "verified_mode": visual_authority_admitter is not None,
         },
         ctx=child_context(ctx, task_id=f"{ctx.task_id}:summary"),
     )

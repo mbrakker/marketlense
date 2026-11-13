@@ -100,6 +100,8 @@ GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v6"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 GROUNDING_MAX_CLAIMS_PER_CALL = 4
 GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 8
+VERIFIED_GROUNDING_MAX_CLAIMS_PER_CALL = 2
+VERIFIED_GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 4
 _NON_SUBSTANTIVE_GROUNDING_REASONS = frozenset(
     {
         "ok",
@@ -170,19 +172,30 @@ def _grounding_text_matches(expected: str, actual: str) -> bool:
 def _grounding_batches(
     audit_payload: dict,
     semantic_inputs: Sequence[ClaimSemanticInput],
+    verified_mode: bool = False,
 ) -> list[tuple[dict, list[ClaimSemanticInput]]]:
     """Split the canonical public inventories under the provider output ceiling."""
 
+    max_claims_per_call = (
+        VERIFIED_GROUNDING_MAX_CLAIMS_PER_CALL
+        if verified_mode
+        else GROUNDING_MAX_CLAIMS_PER_CALL
+    )
+    max_public_items_per_call = (
+        VERIFIED_GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL
+        if verified_mode
+        else GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL
+    )
     claim_entries = list(audit_payload.get("retained_claims_to_ground") or [])
     public_items = list(audit_payload.get("public_factual_items") or [])
     claim_pairs = list(zip(semantic_inputs, claim_entries, strict=True))
     claim_groups = [
-        claim_pairs[index : index + GROUNDING_MAX_CLAIMS_PER_CALL]
-        for index in range(0, len(claim_pairs), GROUNDING_MAX_CLAIMS_PER_CALL)
+        claim_pairs[index : index + max_claims_per_call]
+        for index in range(0, len(claim_pairs), max_claims_per_call)
     ] or [[]]
     public_groups = [
-        public_items[index : index + GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL]
-        for index in range(0, len(public_items), GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL)
+        public_items[index : index + max_public_items_per_call]
+        for index in range(0, len(public_items), max_public_items_per_call)
     ] or [[]]
     batch_count = max(len(claim_groups), len(public_groups))
     batches: list[tuple[dict, list[ClaimSemanticInput]]] = []
@@ -379,9 +392,7 @@ def _adapt_grounding_model_payload(
     ]
     returned_id_set = {item_id for item_id in returned_ids if item_id}
     duplicate_ids = sorted(
-        item_id
-        for item_id in returned_id_set
-        if returned_ids.count(item_id) > 1
+        item_id for item_id in returned_id_set if returned_ids.count(item_id) > 1
     )
     unknown_ids = sorted(returned_id_set - expected_ids)
     missing_ids = sorted(expected_ids - returned_id_set)
@@ -429,9 +440,7 @@ def _adapt_grounding_model_payload(
                     "unknown_item_ids": [item_id],
                 },
             )
-        outcome = normalize_entailment_outcome(
-            s(raw_check.get("entailment_outcome"))
-        )
+        outcome = normalize_entailment_outcome(s(raw_check.get("entailment_outcome")))
         raw_violation_type = s(raw_check.get("violation_type")).strip().casefold()
         if outcome == "entailed":
             if raw_violation_type not in _GROUNDING_NO_VIOLATION_VALUES:
@@ -697,6 +706,16 @@ def run_grounding_check(
     prompt_namespace = "report_vs/validate/grounding"
     artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
     verified_mode = verified_facts_mode(artifacts, request.validation_mode)
+    max_claims_per_call = (
+        VERIFIED_GROUNDING_MAX_CLAIMS_PER_CALL
+        if verified_mode
+        else GROUNDING_MAX_CLAIMS_PER_CALL
+    )
+    max_public_items_per_call = (
+        VERIFIED_GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL
+        if verified_mode
+        else GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL
+    )
     evidence_packs = request.evidence_packs
     verified_facts: dict[str, dict[str, Any]] = {}
     if verified_mode:
@@ -775,7 +794,9 @@ def run_grounding_check(
         item_id: list(item.get("evidence_ids") or [])
         for item_id, item in grounding_items_by_id.items()
     }
-    grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
+    grounding_batches = _grounding_batches(
+        audit_payload, retained_claim_inputs, verified_mode=verified_mode
+    )
     authority_policy = grounding_authority_policy(verified_mode)
     batch_prompt_vars = _grounding_batch_prompt_variables(
         grounding_batches,
@@ -874,7 +895,9 @@ def run_grounding_check(
         retained_entity_ids = {
             item_id: claim_id for claim_id, item_id in retained_item_ids.items()
         }
-        grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
+        grounding_batches = _grounding_batches(
+            audit_payload, retained_claim_inputs, verified_mode=verified_mode
+        )
         batch_prompt_vars = _grounding_batch_prompt_variables(
             grounding_batches,
             evidence_texts=evidence_texts,
@@ -966,8 +989,8 @@ def run_grounding_check(
                 "batch_count": len(grounding_batches),
                 "retained_claim_count": len(retained_claim_inputs),
                 "public_item_count": len(public_item_ids),
-                "max_claims_per_batch": GROUNDING_MAX_CLAIMS_PER_CALL,
-                "max_public_items_per_batch": GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL,
+                "max_claims_per_batch": max_claims_per_call,
+                "max_public_items_per_batch": max_public_items_per_call,
                 "configured_global_max_in_flight": int(
                     getattr(settings, "validation_grounding_global_max_in_flight", 1)
                 ),
@@ -1010,8 +1033,8 @@ def run_grounding_check(
         "authority_policy": authority_policy,
         "batch_policy": {
             "schema_version": "1.0",
-            "max_claims_per_call": GROUNDING_MAX_CLAIMS_PER_CALL,
-            "max_public_items_per_call": GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL,
+            "max_claims_per_call": max_claims_per_call,
+            "max_public_items_per_call": max_public_items_per_call,
         },
     }
     if verified_mode:

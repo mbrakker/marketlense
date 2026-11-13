@@ -8,11 +8,18 @@ text: |
   Context:
   - Editorial plan JSON: {{ editorial_plan_json }}
   - Selected lead insight JSON: {{ selected_lead_insight_json }}
+  {% if verified_mode|default(false) %}
+  - Accepted final insights JSON: {{ selected_final_insights_json }}
+  {% endif %}
   - Evidence packs JSON: {{ evidence_json }}
   - DocMap JSON: {{ doc_map_json }}
 
   Source-of-truth summary schema:
   {{ summary_schema }}
+
+  {% if verified_mode|default(false) %}
+  Verified summary factual boundary: use `selected_final_insights_json` as the factual selection boundary. Use the canonical verified evidence packs only to substantiate those accepted findings; do not introduce an unselected factual finding merely because it appears elsewhere in the evidence packs. Each quantitative or empirical summary sentence must develop one clearly source-bound proposition. Do not combine distinct findings into an apparent causal, comparative, or numerical relationship unless that relationship is explicitly supported by its authoritative evidence. Preserve source scope, population, timeframe, denominator, and forecast/observation status. If two findings cannot be expressed as one supported relationship, put them in separate sentences. Do not invent a connecting statistic or implied comparison to improve narrative flow.
+  {% endif %}
 
   Task: Return a JSON object with the `summary` and private `claim_provenance` fields:
   {
@@ -55,4 +62,8 @@ text: |
   - A claim containing a number, magnitude, superlative, requirement, or forecast must cite a direct `findings` or `quote_candidates` ID. Use a DocMap section ID only for descriptive, non-quantitative context; otherwise omit or soften the claim.
   - Keep each executive-summary sentence and each `claim_evidence_map` item to one proposition supported by its linked evidence ID. Do not combine unrelated sections or topics in one sentence or map item. Use a section summary only for a descriptive statement about that section, not to assert what is central to the full report.
   - Preserve per-group versus across-group scope exactly as stated in linked evidence.
+  {% if verified_mode|default(false) %}
+  - Include enough `claim_evidence_map` entries to cover the distinct factual propositions in the summary; do not add unnecessary entries for purely interpretive statements.
+  {% else %}
   - Keep 3-5 claim-map items.
+  {% endif %}

@@ -6,8 +6,13 @@ text: |
   Legacy source context for corroborating those listed items (JSON):
   {{ evidence_json }}
 
-  Return one schema-valid `checks` verdict for every listed public item and
-  retained claim. Include `item_id`, `classification`, `entailment_outcome`,
-  `violation_type`, `proposition_status`, the complete `protected_facts` object,
-  and a substantive `reason`. Use `violation_type` `none` only for entailed
-  verdicts. Do not return `unsupported`, `section`, or `text` fields.
+  Iterate over every exact `item_id` supplied in this batch and return exactly
+  one complete schema-valid `checks` entry for each public item and retained
+  claim. Never skip `now_what`, summary, or interpretive statements, and do not
+  return only failed items. Include `item_id`, `classification`,
+  `entailment_outcome`, `violation_type`, `proposition_status`, every required
+  protected-facts dimension, and a substantive `reason` for every verdict.
+  Report an unsupported or uncertain proposition through the existing semantic
+  verdict rather than omitting its entry. Use `violation_type` `none` only for
+  entailed verdicts. Do not return deprecated `unsupported`, `section`, or
+  `text` fields.

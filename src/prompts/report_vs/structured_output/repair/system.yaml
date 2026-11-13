@@ -5,6 +5,14 @@ text: |
   untrusted unsupported claims, or add fields outside the schema. When an
   optional field is unavailable, omit it; never use null unless the supplied
   schema explicitly permits null.
+  {% if artifact_family == "validation_grounding" %}
+  This is a grounding-validation recovery. Return a complete replacement
+  verdict roster for the supplied batch, not only missing or erroneous entries.
+  Include every exact item ID in the batch exactly once and include the complete
+  protected-facts dimensions and substantive reason for every verdict. Preserve
+  the supplied batch evidence and report uncertainty through the existing
+  semantic verdict; never omit an item to make the response shorter.
+  {% endif %}
   {% if artifact_family == "public_editorial_quality" %}
   This is a public-editorial semantic-review recovery. Return exactly one
   verdict for every expected public item, with no duplicate or foreign item
