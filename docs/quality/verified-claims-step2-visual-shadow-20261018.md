@@ -11113,6 +11113,66 @@ and regression-covered. Current live selection/editorial effectiveness and
 fresh source-PDF acceptance remain unverified; E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
 
+### Evidence update — 2026-11-13 (first-pass editorial completeness and scoped repair replay)
+
+Commit `80ae8aef176e113cc887ba3cb074850e5bc22310` adds the verified
+`insights_final` completeness instructions and deterministic focal-fact context
+for the existing bounded semantic repair. The full verified writer now receives
+the executable editorial obligations (including complete metric objects and
+qualifiers); a scoped repair receives only exact material-gap facts, evidence
+IDs, authorized candidate IDs, affected final IDs, and the gap explanation.
+Normal-mode prompting and the existing validators, schemas, retry limits,
+publication gates, and cache contracts are unchanged. The focused module passed
+32 tests; the affected integration slice passed 273 tests; the adjacent
+editorial/semantic slice passed 127 tests. Ruff, targeted mypy, diff-check, and
+the prompt-fixture gate passed. The current fixture totals are 118,635 tokens /
+`$0.025519` versus 118,469 / `$0.025502` (an intentional +166-token /
+`$0.000017` change); publishing is +162 tokens and report is +58, while
+validation is -54. No baseline or threshold was changed.
+
+The mandatory fresh Capgemini run used the exact frozen PDF SHA-256
+`612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e` in
+`C:\ml-editorial-first-pass-20261112-capgemini-live\frozen-reliability-k1tkev27`.
+Ten verified facts were admitted and ten candidates were retained: the model
+returned 15 candidates and deterministic evidence-backed supplementation added
+one candidate opportunity. The first final writer returned nine insights; the
+price- and brand-priority facts were intentionally represented by one final
+stable ID with both authoritative evidence IDs. No semantic repair was needed.
+The final HTML, validation, grounding, evidence-fidelity, and publication
+readiness all passed with zero unsupported and zero unresolved retained factual
+claims. Measured usage was 120 provider calls, 1,123,270 input / 204,165
+output tokens, six file-search calls, seven structured-output recovery calls,
+`$0.227799`, and 1,370.745 seconds. Direct inspection of source pages 9, 12,
+13, 24, 26, 33, 42, and 45 confirmed the final numerical relationships,
+populations, periods, qualifiers, and non-causal wording. No WordPress or
+canonical publication write occurred.
+
+The subsequent isolated Activate, Reuters Institute, and Adjust replay was run
+from the same implementation SHA in
+`C:\ml-editorial-first-pass-20261112-editorial-cases\frozen-reliability-pmjt61ja`.
+The terminal outcomes are mutually exclusive:
+
+| Report | Terminal result | Facts / final insights | Calls | Input / output tokens | Cost | Repairs | Readiness |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Activate | awaiting review / pass | 10 / 10 | 503 | 2,418,136 / 422,799 | `$0.467561` | 3 targeted | pass |
+| Reuters Institute | validation failed at `summary` family confidence | 10 / 9 before terminal repair | 116 | 1,481,884 / 194,012 | `$0.253942` | 3 targeted | fail |
+| Adjust | validation failed closed at grounding completeness | 10 / 7 after final safe-removal candidate | 342 | 3,869,207 / 715,401 | `$0.724003` | 3 targeted | fail |
+
+Activate's initial model candidate pool was eight and evidence-backed
+supplementation retained ten; its final HTML/readiness passed with zero
+unsupported and zero unresolved retained factual claims. Reuters admitted all
+ten verified facts but failed the existing `summary` family-confidence gate;
+no unsupported fact was promoted. Adjust admitted all ten verified facts and no
+unsupported fact was promoted, but every bounded grounding recovery reproduced
+an invalid JSON/coverage response: the expected single `now_what` verdict was
+not returned as a complete verdict, and the validator failed closed. The
+failure moved across source-bound claims during safe removal, so it is not
+evidence that the model correction was factually accepted. No publication write
+occurred in either failed run. The live replay therefore demonstrates improved
+candidate explanation and successful Capgemini/Activate completion, but not a
+general live quality improvement across all three reports; the verdict remains
+**PARTIAL / NO-GO** pending the frozen-five result.
+
 ### Hosted CI verification for the final correction — 2026-11-07
 
 Commit `58ba253ef17394748f23820cecd89d8d52f8f9f5` was verified by hosted run
@@ -12690,3 +12750,53 @@ focused deterministic regressions. Live editorial acceptance is **PARTIAL /
 NO-GO**: the fresh Capgemini report still lacks an accepted final roster and
 HTML, and no five-report cohort was completed. E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+### Exact frozen-five replay — 2026-11-13 (`80ae8aef`)
+
+The required provider-backed replay was completed from an isolated fresh state
+at `C:\ml-editorial-first-pass-20261113-frozen-five\frozen-reliability-tufi12k9`
+using commit `80ae8aef176e113cc887ba3cb074850e5bc22310`. All five reports were
+admitted to verified-facts processing, and each admitted all 10 evaluated facts
+(50/50 facts; 0 quarantined). No WordPress authentication/readback, publication
+write, operator intervention, or canonical promotion occurred. The cohort was
+not publication-ready: **0/5** reports passed final validation/readiness.
+
+| Report | Terminal result | Final roster / candidates | Calls | Input / output tokens | Cost | Duration | Structured repair / material result |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Capgemini | `validation_failed` (grounding) | 5 / 10 | 117 | 1,150,451 / 178,168 | `$0.219837` | 1,370.272 s | 3; summary combined the supported private-label shift with unsupported Gen-AI figures; 1 unsupported retained claim |
+| Activate | `artifact_final_insight_coverage_invalid` | 6 / 10 | 460 | 1,176,854 / 273,491 | `$0.279309` | 3,280.936 s | 3; three exact material gaps remained after bounded semantic repair |
+| KPMG | `artifact_final_insight_coverage_invalid` | 8 / 10 | 108 | 820,191 / 99,552 | `$0.161551` | 1,004.876 s | 5; `verified-fact:insight-ai-diligence` remained an uncovered material gap |
+| Reuters Institute | `validation_failed` (grounding) | 7 / 10 | 132 | 1,523,677 / 224,260 | `$0.282147` | 1,524.196 s | 9; 40 unresolved retained factual claims; grounding response completeness failed |
+| Adjust | `validation_failed` (grounding) | 10 / 10 | 173 | 1,801,698 / 253,940 | `$0.317403` | 1,958.371 s | 10; 47 unresolved retained factual claims; grounding response completeness failed |
+| **Total** | **0/5 readiness** | — | **990** | **6,472,871 / 1,029,411** | **`$1.260247`** | **9,138.651 s** | failure Pareto: 2 completeness, 3 validation |
+
+The frozen-five terminal JSON is the source for the counts above. The three
+reports that emitted `artifacts.json` retained 5 Capgemini, 7 Reuters, and 10
+Adjust final insights; Activate and KPMG stopped at the existing material
+coverage gate. The corresponding retained artifact paths are:
+
+- `C:\ml-editorial-first-pass-20261113-frozen-five\frozen-reliability-tufi12k9\members\cohort-81af3890cd84ece81ef1\ias-first-attempt-tsseiyn0\output\final-web-version-report-consu-1d9e64dd7425\report_analysis\artifacts.json`
+- `C:\ml-editorial-first-pass-20261113-frozen-five\frozen-reliability-tufi12k9\members\cohort-4b763ae2286ca69fe8ac\ias-first-attempt-7grdodni\output\trends-and-predictions-2026-pdf\report_analysis\artifacts.json`
+- `C:\ml-editorial-first-pass-20261113-frozen-five\frozen-reliability-tufi12k9\members\cohort-b638414df0b1fccea1cd\ias-first-attempt-8hhl75oz\output\mobile-app-trends-2026-pdf\report_analysis\artifacts.json`
+
+The mandatory Capgemini source SHA was verified as
+`612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e`. A
+separate fresh Capgemini run of the same implementation (outside the exact
+five-member replay) passed readiness with 9 final insights, 120 calls,
+1,123,270 / 204,165 tokens, `$0.227799`, 1,370.745 seconds, 0 unsupported
+claims, 0 unresolved claims, and no automatic repair. The exact frozen-five
+Capgemini member instead failed on a mixed unsupported executive-summary
+proposition. This is direct evidence of provider-run variability and of the
+grounding gate rejecting an unsupported rewrite; it is not evidence that the
+implementation improved live selection quality. The earlier isolated
+Activate/Reuters/Adjust run likewise had Activate pass and Reuters/Adjust fail,
+so the differing terminal outcomes are recorded rather than averaged away.
+
+The exact replay therefore leaves the implementation regressions **PASS** but
+live editorial acceptance **PARTIAL / NO-GO**. The remaining blockers are
+observed failures, not hypothetical edge cases: first-pass material coverage
+can still remain incomplete after the bounded repair; grounding responses can
+be malformed/incomplete or reject mixed evidence; and provider variability can
+change which report-level gap is exposed. No validator, retry limit, evidence
+binding, or publication gate was weakened. E18 remains **Active/PARTIAL**, Step
+2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.

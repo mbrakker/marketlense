@@ -2504,6 +2504,20 @@ four frozen members were not started. E18 remains **Active/PARTIAL**, Step 2
 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full
 details and the retained artifact path are in the [Step 2 evidence report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
 
+**Evidence update — 2026-11-13 (exact frozen-five replay):** The required
+provider-backed replay at `80ae8aef` completed all five reports from isolated
+fresh state: 990 calls, 6,472,871 input / 1,029,411 output tokens,
+`$1.260247`, and 9,138.651 seconds. Verified-fact admission was 50/50 with
+0 quarantined, but final readiness was 0/5. Capgemini failed grounding on a
+mixed supported/unsupported executive-summary proposition; Activate and KPMG
+failed the existing material-report completeness gate after bounded repair;
+Reuters and Adjust failed grounding response validation. No WordPress or
+canonical publication writes occurred. A separate Capgemini replay passed,
+but the exact cohort did not, so no live editorial improvement is claimed.
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready**. See the Step 2 evidence report for terminal
+paths, per-report counts, and the retained final artifacts.
+
 **Evidence update — 2026-11-12 (scoped-repair authorization correction):**
 Commit `9ea73416c7d83184f541d17b3cdf6e3119e9af72` corrected the localized
 repair scope so an uncovered essential obligation with no semantic supporting
@@ -2521,3 +2535,22 @@ wheelhouse test requiring CPython 3.12. The provider-backed Capgemini run in
 the evidence report predates this small follow-up correction and failed before
 an accepted roster; therefore the live editorial verdict remains
 **PARTIAL/NO-GO**, E18 **Active/PARTIAL**, and Step 3 **unstarted/not ready**.
+
+**Evidence update — 2026-11-13 (first-pass editorial completeness and scoped
+repair):** Commit `80ae8aef` adds authoritative verified editorial obligations
+to the full `insights_final` prompt and compact source-bound focal facts to the
+existing bounded semantic repair. Focused and affected regression suites passed;
+the prompt fixture gate remained green at 118,635 tokens / `$0.025519` versus
+118,469 / `$0.025502` without threshold or baseline changes. A fresh Capgemini
+run admitted 10/10 facts, produced 10 candidates and a 9-insight final roster
+with the two category-classification facts represented together; validation,
+readiness, HTML, and source-page inspection passed with 0 unsupported and 0
+unresolved retained factual claims. The subsequent isolated Activate, Reuters,
+and Adjust replay completed with typed terminal outcomes: Activate passed
+readiness after three targeted repairs; Reuters failed the existing summary
+family-confidence gate; Adjust failed closed after three grounding repairs
+because the model repeatedly returned incomplete `now_what` verdict coverage.
+No publication writes occurred. The authoritative detail is in the [Step 2
+evidence report](docs/quality/verified-claims-step2-visual-shadow-20261018.md);
+E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
+remains **unstarted/not ready** pending the exact frozen-five result.
