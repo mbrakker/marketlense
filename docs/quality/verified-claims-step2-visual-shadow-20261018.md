@@ -12828,3 +12828,107 @@ be malformed/incomplete or reject mixed evidence; and provider variability can
 change which report-level gap is exposed. No validator, retry limit, evidence
 binding, or publication gate was weakened. E18 remains **Active/PARTIAL**, Step
 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
+### Fresh exact frozen-five replay for first-pass recovery — 2026-11-13 (`f848dba9`)
+
+The requested fresh provider-backed replay ran from isolated state with the
+canonical runner and the frozen manifest:
+
+```text
+python scripts/quality/run_frozen_reliability_cohort.py \
+  --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json \
+  --sources-root "C:\\Programing\\Market lense" \
+  --runs-root "C:\\ml-first-pass-next-live-runs" \
+  --max-duration 7200 --verified-facts-architecture
+```
+
+Run directory: `C:\ml-first-pass-next-live-runs\frozen-reliability-iwdh_qgp`.
+The terminal result is [cohort_result.json](C:/ml-first-pass-next-live-runs/frozen-reliability-iwdh_qgp/cohort_result.json).
+The run used commit `f848dba9aac149902585dea67b477aab0c7276d7`, no operator
+intervention, and no WordPress or other publication writes.
+
+#### Terminal ledger
+
+Counts below are mutually exclusive terminal outcomes. “Grounding batches”
+counts root initial batches; split counts are recursive subdivisions recorded in
+the usage ledger. A report that stopped before validation is shown as N/A; it
+is not counted as a grounding pass.
+
+| Report | Editorial / repair outcome | Grounding outcome | Final artifact / readiness | Calls | Input / output tokens | Cost | Wall-clock |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: |
+| Capgemini | Final roster retained after 3 targeted repairs; validation passed; downstream `card_tldr_compact_invalid` because the report-card manifest was missing | Pass; 16 root batches, 8 subdivisions, 8 structured-output repairs | `artifacts.json` and HTML retained; readiness **FAIL** | 156 | 1,569,905 / 259,756 | $0.301967 | 1,763.261 s |
+| Activate | `insights_final` protected-metric contract remained invalid at repair attempt 2 | N/A; stopped before an accepted final artifact | No final artifact; readiness **FAIL** | 467 | 1,516,537 / 278,248 | $0.310660 | 3,420.540 s |
+| KPMG | 7-insight artifact retained; public-editorial semantic review remained unresolved after primary, model repair, and regeneration paths | Pass; 20 root batches, no subdivisions | `artifacts.json` retained; readiness **FAIL** | 124 | 1,091,348 / 170,888 | $0.216975 | 1,340.385 s |
+| Reuters Institute | Semantic theme repair exhausted for `ai-response-video-audio-priorities`; final roster remained incomplete | N/A; stopped before an accepted final artifact | No final artifact; readiness **FAIL** | 98 | 916,800 / 135,384 | $0.179129 | 1,338.404 s |
+| Adjust | Final artifact reached validation, but safe removal found no replacement; 47 retained claims unresolved | Fail; 23 root batches, 5 subdivisions, 16 structured-output repairs | `artifacts.json` retained; no HTML/readiness | 246 | 2,708,723 / 365,998 | $0.446571 | 2,478.170 s |
+| **Total** | **0/5 accepted for publication** | — | **0/5 readiness** | **1,091** | **7,803,313 / 1,210,274** | **$1.455302** | **10,340.760 s** |
+
+The cohort-level report records report admission 5/5, typed terminal outcomes
+5/5, bounded automatic-repair rate 0.4, and publication readiness 0/5. The
+per-report `automatic_repair_count` is 3 for Capgemini and 0 for the other
+four; Adjust is marked as having entered the bounded-repair path even though
+its counter is zero. This is why the aggregate rate is not the same as the
+sum of the per-report counter. The exact structured-output recovery counts are
+8, 4, 3, 4, and 16 respectively.
+
+The grounding-batch policy change is observable in the usage ledger: verified
+validation used the smaller batch policy and preserved recursive subdivision;
+legacy tests retained the 4-claim/8-public-item policy. Activate and Reuters
+have no grounding result because they terminated earlier. No new retry stage or
+repair attempt was introduced.
+
+#### Source and editorial inspection
+
+- Capgemini used the required PDF SHA
+  `612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e`.
+  Its 10 final insight IDs all matched their `verified-fact:<id>` primary
+  evidence IDs and canonical physical pages; the numeric terms in all 10
+  final texts were present on the cited PDF pages. The retained HTML is
+  [final-web-version-report-consumer-trends-2026-pdf.html](C:/ml-first-pass-next-live-runs/frozen-reliability-iwdh_qgp/members/cohort-81af3890cd84ece81ef1/ias-first-attempt-b1vdz_q7/output/final-web-version-report-consumer-trends-2026-pdf.html).
+  It is 62,180 bytes and contains no `verified-fact:`, `candidate_id`,
+  `evidence_id`, `primary_evidence_id`, or `fact_id` tokens. The independent
+  public-quality review passed and retained factual validation reported zero
+  unsupported and zero unresolved claims. This is a useful artifact-level
+  result, but it is not a publication pass because the report-card manifest
+  gate failed.
+- Adjust used the required PDF SHA
+  `ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3`.
+  The 10 retained final IDs and primary evidence IDs were source-authoritative
+  and all 10 had numeric terms on their cited PDF pages. Independent review of
+  the actual PDF pages found a rejected failure in the retained, non-published
+  artifact: `gaming-partners-per-app` included the complete page-19
+  subvertical-growth series even though its authoritative fact is the page-23
+  partners-per-app observation. The validator reported this as semantic
+  distinctness/analytical-depth failure and the pipeline stopped with 47
+  unresolved claims; no HTML or public output was produced. This demonstrates
+  why the final artifact cannot be treated as an accepted report merely because
+  its numeric tokens are source-present.
+- KPMG’s retained facts also passed the source-authoritative validation path
+  (10/10 admitted, zero quarantined), but its public-editorial semantic review
+  failed closed. Activate and Reuters were admitted to the workflow but
+  stopped before their architecture evidence artifact was written, so their
+  missing evidence files are recorded as unavailable rather than inferred as
+  passes.
+
+#### Comparison with the retained exact-five baseline
+
+The previous exact-five baseline at `80ae8ef` recorded 990 calls,
+6,472,871 input / 1,029,411 output tokens, `$1.260247`, and 9,138.651 seconds,
+with readiness 0/5. The fresh run recorded 1,091 calls (+10.20%),
+7,803,313 input (+20.55%), 1,210,274 output (+17.57%), `$1.455302`
+(+$0.195055, +15.48%), and 10,340.760 seconds (+13.15%); readiness remained
+0/5. Failure modes changed rather than improving: the current run exposed
+downstream card-manifest, protected-metric, semantic-review, theme-repair, and
+safe-removal failures. The difference cannot be attributed solely to the
+implementation because both runs use provider-backed generation and the
+retained evidence shows model/provider variability. The deterministic tests
+below demonstrate the intended behavior; this replay does not demonstrate
+improved live selection or first-pass acceptance.
+
+The implementation slice is therefore **PASS** for the specified local
+contracts and regression coverage, while the provider-backed acceptance is
+**PARTIAL / NO-GO**. The remaining observed blockers are incomplete first-pass
+material coverage, protected-metric recovery failure, public semantic-review
+failure, and rejected cross-insight content before publication. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

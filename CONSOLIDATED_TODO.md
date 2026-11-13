@@ -2571,3 +2571,23 @@ No publication writes occurred. The authoritative detail is in the [Step 2
 evidence report](docs/quality/verified-claims-step2-visual-shadow-20261018.md);
 E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready** pending the exact frozen-five result.
+
+**Evidence update — 2026-11-13 (current-SHA first-pass recovery replay):**
+Commit `f848dba9` implements the specified verified-mode first-pass obligation
+context, selected-final-insight summary boundary, smaller verified grounding
+batches, complete grounding recovery rosters, and mixed planned/unplanned
+material-gap authorization. Focused affected tests (354), Ruff, mypy,
+formatting, diff-check, and the prompt-fixture gate passed; the fixture gate
+remained within its existing thresholds at 118,715 tokens / `$0.025527` versus
+118,469 / `$0.025502`. The fresh exact frozen-five replay
+(`frozen-reliability-iwdh_qgp`) completed 1,091 provider calls,
+7,803,313 / 1,210,274 tokens, `$1.455302`, and 10,340.760 seconds, but
+readiness remained 0/5. Capgemini retained a source-checked HTML artifact but
+failed the report-card-manifest gate; Activate stopped on protected-metric
+repair; KPMG stopped on public semantic review; Reuters exhausted semantic
+theme repair; Adjust stopped safely with 47 unresolved claims, including a
+rejected cross-insight contamination. No publication writes occurred. This is
+implementation **PASS**, live acceptance **PARTIAL/NO-GO**; E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**. Full per-report evidence and artifact paths are in
+the [Step 2 quality report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
