@@ -650,7 +650,11 @@ def regenerate_artifacts(
         final_family_status = updated_artifacts.setdefault("family_status", {})
         if isinstance(final_family_status, dict):
             for family, status in assembled_abstained_family_status.items():
-                final_family_status[family] = status
+                family_roots = legacy_target_roots.get(family, {family})
+                if family_roots.intersection(authorized_source_roots) or any(
+                    target.target_section == family for target in request.plan.targets
+                ):
+                    final_family_status[family] = status
     _assert_summary_family_consistency(updated_artifacts)
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.

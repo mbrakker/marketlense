@@ -39,6 +39,7 @@ def test_summary_claim_map_repair_rejects_abstained_status_with_restored_copy(
     # summary field is incomplete. Atomic claim-map reconciliation must not
     # restore the promoted copy while retaining that abstained status.
     artifacts["summary"]["card_tldr_compact"] = ""
+    artifacts["summary"]["claim_evidence_map"][0]["id"] = "claim-one"
     plan = _build_regeneration_plan(
         issues=[
             ValidationIssue(

@@ -293,7 +293,7 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
         assert prompt_client.render_calls == []
 
 
-def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_untouched_sections(
+def test_insights_bundle_targeted_repair_preserves_untouched_sections(
     tmp_path,
 ):
     prompt_client = _FakePromptClient()
@@ -387,6 +387,26 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
 
 def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
     current = _current_artifacts()
+    current["summary"] = {
+        "tldr": "",
+        "card_tldr_compact": "",
+        "executive_summary": "",
+        "claim_evidence_map": [],
+    }
+    current["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "summary"
+    ]
+    current.setdefault("family_status", {})["summary"] = {
+        "schema_version": "1.0",
+        "family": "summary",
+        "source": "artifact",
+        "status": "abstained",
+        "confidence_score": 1.0,
+        "policy_action": "abstain",
+        "reason": "summary_no_short_direct_claim",
+    }
     current["insights_final"][0]["so_what"] = "The original implication is unsupported."
     current["insights_candidates"].append(
         {
@@ -444,6 +464,31 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
     assert {key: value for key, value in repaired.items() if key != "so_what"} == {
         key: value for key, value in original.items() if key != "so_what"
     }
+    integrity = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=response.updated_artifacts,
+        evidence_packs=_evidence_packs(),
+        ctx=_ctx(),
+    )
+    assert not any(
+        issue.rule_id == "regeneration_derived_projection" for issue in integrity.issues
+    )
+    assert (
+        response.updated_artifacts["family_status"]["summary"]
+        == (current["family_status"]["summary"])
+    )
+    tampered = deepcopy(response.updated_artifacts)
+    tampered["family_status"]["summary"]["confidence_score"] = 0.0
+    tampered_integrity = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=tampered,
+        evidence_packs=_evidence_packs(),
+        ctx=_ctx(),
+    )
+    assert any(
+        issue.rule_id == "regeneration_derived_projection"
+        for issue in tampered_integrity.issues
+    )
     assert len(openai_client.calls) == 1
     localized_prompt = openai_client.calls[0].user_prompt
     assert "insights_final[item=insight-1].so_what" in localized_prompt
@@ -706,7 +751,10 @@ def test_page_bound_rebind_keeps_authoritative_verified_fact_pages() -> None:
 
 def test_canonical_metric_copy_changes_only_declared_metric_leaf(tmp_path):
     current = _current_artifacts()
-    evidence_text = "Regional Attention index was 99-110 across APAC, EMEA, LATAM and North America."
+    evidence_text = (
+        "Regional Attention index was 99-110 across APAC, EMEA, LATAM "
+        "and North America."
+    )
     current["insights_final"][0]["evidence"] = evidence_text
     current["insights_final"][0]["metric"].update(
         {
