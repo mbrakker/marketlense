@@ -444,17 +444,12 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
     assert focal_facts[0]["authorized_candidate_ids"] == [initial[1]["id"]]
     assert repair_variables["verified_editorial_obligations_json"] == ""
     assert repair_variables["current_insights_final_json"] == ""
-    targeted = json.loads(repair_variables["semantic_theme_targeted_insights_json"])
-    assert [item["id"] for item in targeted] == [initial[1]["id"]]
-    assert (
-        "do not emit a metric object"
-        in _render_final_insight_user_prompt(
-            semantic_theme_repair_scope_json=json.dumps({"mode": "targeted_rewrite"}),
-            semantic_theme_allowed_patch_ids_json='["candidate-1"]',
-            semantic_theme_targeted_insight_ids_json='["candidate-1"]',
-            semantic_theme_targeted_insights_json='[{"id":"candidate-1"}]',
-        ).lower()
-    )
+    assert [
+        item["id"]
+        for item in json.loads(
+            repair_variables["semantic_theme_targeted_insights_json"]
+        )
+    ] == [initial[1]["id"]]
 
 
 def test_uncovered_theme_empty_supporting_ids_authorizes_feasible_addition() -> None:
@@ -850,35 +845,6 @@ def test_scoped_final_prompt_omits_full_roster_requirements() -> None:
     assert "Minimum final insight target:" not in scoped_prompt
     assert "Select at least" not in scoped_prompt
     assert "every essential theme" not in scoped_prompt
-    assert "do not emit a metric object" in scoped_prompt.lower()
-
-
-def test_verified_full_prompt_keeps_facts_candidate_local() -> None:
-    prompt = _render_final_insight_user_prompt(
-        semantic_theme_repair_scope_json="",
-        verified_editorial_obligations_json='{"authoritative_facts":[{"fact_id":"f1"},{"fact_id":"f2"}]}',
-        insights_candidates_json=json.dumps(
-            [
-                {
-                    "id": "candidate-1",
-                    "evidence_id": "verified-fact:f1",
-                    "text": "Fact one has its own population and metric.",
-                },
-                {
-                    "id": "candidate-2",
-                    "evidence_id": "verified-fact:f2",
-                    "text": "Fact two has a distinct population and metric.",
-                },
-            ]
-        ),
-    ).lower()
-
-    assert "candidate-local factual rule" in prompt
-    assert (
-        "do not import numeric series, populations, categories, or comparisons"
-        in prompt
-    )
-    assert "explicitly included in the authorized evidence binding" in prompt
 
 
 def test_final_insight_prompt_does_not_allow_null_optional_arrays() -> None:

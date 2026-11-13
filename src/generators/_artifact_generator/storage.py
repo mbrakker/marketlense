@@ -450,12 +450,20 @@ def assemble_artifacts_payload(
                 fields={"binding_count": recovered_summary_binding_count},
             )
         )
-    if repaired_compact_tldr_invalid or (
-        not summary_repair_in_progress
-        and not summary_already_bound
-        and summary_has_unbound_material_sentences(
-            summary=summary,
-            claim_bindings=soft_copy_claim_bindings.get("summary"),
+    summary_has_complete_public_fields = all(
+        _s(summary.get(field)).strip()
+        for field in ("tldr", "card_tldr_compact", "executive_summary")
+    )
+    if (
+        repaired_compact_tldr_invalid
+        or (regeneration_attempt > 0 and not summary_has_complete_public_fields)
+        or (
+            not summary_repair_in_progress
+            and not summary_already_bound
+            and summary_has_unbound_material_sentences(
+                summary=summary,
+                claim_bindings=soft_copy_claim_bindings.get("summary"),
+            )
         )
     ):
         _abstain_summary_without_short_direct_claim(

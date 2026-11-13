@@ -512,6 +512,16 @@ def regenerate_artifacts(
         validate_references=False,
         visual_authority_canary=bool(state.visual_authority_facts),
     )
+    assembled_abstained_family_status = {
+        family: deepcopy(status)
+        for family, status in (
+            updated_artifacts.get("family_status", {})
+            if isinstance(updated_artifacts.get("family_status"), dict)
+            else {}
+        ).items()
+        if isinstance(status, dict)
+        and _s(status.get("status")).strip().casefold() == "abstained"
+    }
     _preserve_atomic_target_families(
         updated_artifacts=updated_artifacts,
         state=state,
@@ -633,6 +643,11 @@ def regenerate_artifacts(
         summary_claim_map_is_patched=summary_claim_map_is_patched,
         summary_claim_map_item_indices=summary_claim_map_item_indices,
     )
+    if assembled_abstained_family_status:
+        final_family_status = updated_artifacts.setdefault("family_status", {})
+        if isinstance(final_family_status, dict):
+            for family, status in assembled_abstained_family_status.items():
+                final_family_status[family] = status
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.
         updated_artifacts["_repair_evidence_selection"] = {

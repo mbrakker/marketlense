@@ -2591,3 +2591,19 @@ implementation **PASS**, live acceptance **PARTIAL/NO-GO**; E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**. Full per-report evidence and artifact paths are in
 the [Step 2 quality report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
+
+**Evidence update — 2026-11-13 (first-pass handover correction):** The
+first-pass follow-up at `44acf2d3` preserves exact direct summary bindings,
+fails closed when a regeneration leaves required summary fields incomplete,
+keeps scoped repairs candidate-local, and preserves abstention through the
+atomic regeneration merge. The affected local suites passed 318 broader
+artifact/regeneration tests and 107 focused/ownership tests; Ruff, mypy,
+formatting, and the unchanged prompt-fixture gate passed. A fresh isolated
+two-report provider replay admitted 10/10 Capgemini and 10/10 Activate facts:
+Capgemini passed validation/readiness with 0 unsupported and 0 unresolved
+claims; Activate failed closed in grounding after bounded repair with 48
+unresolved claims and 0 unsupported claims. The replay stopped before
+Reuters, KPMG, and Adjust, so no current-SHA frozen-five improvement is
+claimed. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
+Step 3 remains **unstarted/not ready**. Full metrics and artifact paths are in
+the [Step 2 quality report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).

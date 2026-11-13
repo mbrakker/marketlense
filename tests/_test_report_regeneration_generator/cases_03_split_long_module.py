@@ -204,6 +204,7 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
         assert updated["summary"]["executive_summary"] == ""
         assert updated["summary"]["tldr"] == "Old TLDR."
         assert updated["summary"]["card_tldr_compact"] == "Old TLDR."
+        assert updated["family_status"]["summary"]["status"] == "abstained"
     else:
         assert updated[artifact_family] == ""
     if not attempt_number_does_not_select_safe_removal and artifact_family != "summary":

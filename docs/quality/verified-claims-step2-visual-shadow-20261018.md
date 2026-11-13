@@ -12932,3 +12932,95 @@ material coverage, protected-metric recovery failure, public semantic-review
 failure, and rejected cross-insight content before publication. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+### First-pass editorial handover correction and bounded two-report replay — 2026-11-13 (`44acf2d3`)
+
+This follow-up closes the remaining deterministic handover defects found by
+the first-pass editorial work. The summary path now recovers an exact direct
+binding before abstention, but a regeneration that leaves a required summary
+field incomplete fails closed. The post-assembly atomic merge preserves that
+abstained family status instead of restoring `generated` from the promoted
+baseline. Verified summary prompts receive only canonical evidence packs for
+accepted final-insight fact IDs; scoped semantic repairs receive only affected
+entries and authorized admitted alternatives, while omitting metric objects so
+the authoritative candidate restores protected facts. Normal-mode summary
+policy and existing public-quality gates remain unchanged. No new LLM call,
+validator, retry, schema, publication, or cache policy was introduced.
+
+The deterministic verification after the correction passed:
+
+- 318 affected artifact/render/regeneration/verified-authority tests;
+- 107 focused first-pass, summary, prompt, source-fidelity, and ownership tests;
+- 2 long-test-file ownership checks;
+- Ruff on changed production/tests, formatting, `git diff --check`, and mypy
+  on the four affected generator modules;
+- the unchanged prompt-fixture gate: 118,841 tokens versus 118,469 baseline
+  (+372, +0.31%), estimated `$0.025539` versus `$0.025502` (+`$0.000037`).
+
+The fresh provider-backed replay was intentionally stopped after the first
+blocker report, as required by the acceptance procedure. It used the exact
+frozen Capgemini and Activate source inputs, no WordPress or publication
+writes, and no operator intervention:
+
+```text
+python scripts/quality/run_frozen_reliability_cohort.py \
+  --sources-manifest C:\ml-first-pass-next-live-runs\frozen-reliability-iwdh_qgp\frozen_cohort.json \
+  --sources-root "C:\Programing\Market lense" \
+  --runs-root C:\\ml-first-pass-editorial-live-44acf2d3-r1 \
+  --report-ids cohort-81af3890cd84ece81ef1 cohort-cbb6e7df67412186b8bc \
+  --verified-facts-architecture
+```
+
+Run root: `C:\ml-first-pass-editorial-live-44acf2d3-r1\frozen-reliability-1jniefox`.
+The cohort terminal record is at
+`C:\ml-first-pass-editorial-live-44acf2d3-r1\frozen-reliability-1jniefox\cohort_result.json`.
+The run made 756 provider calls, used 4,958,786 input and 899,352 output
+tokens, cost `$0.954202`, and took 6,777.652 seconds. These measurements are
+reported as observed; they are not attributed to a cost or quality
+improvement because the prior retained baseline used different provider
+paths.
+
+| Report | Candidate/admission | Final editorial and validation | Readiness | Calls | Input / output tokens | Cost | Duration |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: |
+| Capgemini | 10 evaluated, 10 admitted, 0 quarantined; final 10 | 10 verified; unsupported 0, unresolved 0; validation pass | **PASS** | 136 | 1,305,511 / 212,413 | `$0.258157` | 1,484.984 s |
+| Activate | 10 evaluated, 10 admitted, 0 quarantined; final 10 | grounding failed closed after bounded repairs: 48 unresolved retained claims, 0 unsupported | **FAIL** | 620 | 3,653,275 / 686,939 | `$0.696045` | 5,292.668 s |
+
+Capgemini’s retained artifacts are:
+
+- HTML: `C:\ml-first-pass-editorial-live-44acf2d3-r1\frozen-reliability-1jniefox\members\cohort-81af3890cd84ece81ef1\ias-first-attempt-9r50mzpg\output\final-web-version-report-consumer-trends-2026-pdf.html`;
+- artifacts: `C:\ml-first-pass-editorial-live-44acf2d3-r1\frozen-reliability-1jniefox\members\cohort-81af3890cd84ece81ef1\ias-first-attempt-9r50mzpg\output\final-web-version-report-consumer-1d9e64dd7425\report_analysis\artifacts.json`;
+- validation/readiness: the corresponding `validation.json` and
+  `publish_readiness.json` both report pass; the report-card manifest is
+  retained in the `final-web-version-report-consumer-trends-2026-pdf` output
+  directory.
+
+The HTML is 62,110 bytes and contains zero `verified-fact:`, `candidate_id`,
+`evidence_id`, `primary_evidence_id`, or `fact_id` strings. Its ten final
+insights retain source-backed wording and the accepted secondary-fact compact
+TLDR. Independent inspection found no unsupported material factual assertion
+in the retained public output. Compared with the prior retained Capgemini
+`f848dba9` run, this replay used 20 fewer calls (-12.82%), 16.84% fewer input
+tokens, 18.23% fewer output tokens, `$0.043810` lower cost (-14.51%), and
+278.277 seconds less wall time (-15.79%), while moving from missing-card/readiness
+failure to validation/readiness pass. This is a useful report-level observed
+difference, but not a cohort-wide attribution.
+
+Activate’s final artifact retained ten source-bound insights and the compact
+TLDR used an accepted secondary fact. The source-cached correction for
+`insight-02` preserves the page-6 `$128B/5.7%`, `$108B/4.7%`, and `$66B/2.3%`
+forecast relationship with its global 2017E–2021E scope and footnote. The
+run nevertheless failed closed in grounding after three bounded repair paths:
+malformed/incomplete semantic fields and a protected-fact conflict remained,
+and the later public review also identified redundancy/material-coverage gaps.
+No HTML, report-card manifest, readiness pass, or public artifact was
+accepted. This is a corrected terminal location, not a successful acceptance.
+
+The requested exact five-report extension was not run: Activate failed the
+first two-report blocker gate, so Reuters Institute, KPMG, and Adjust were not
+reprocessed at this SHA. The live run therefore does not establish 29-insight
+or frozen-five readiness improvement, and no live selection-effectiveness
+claim is made. The final two-report result is **implementation PASS / live
+editorial acceptance PARTIAL / Step 2 PARTIAL-NO-GO / Step 3 unstarted-not
+ready**. Remaining material blockers are provider-dependent first-pass
+semantic completeness, bounded repair stability, and the absence of a fresh
+accepted five-report cohort.

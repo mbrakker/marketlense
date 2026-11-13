@@ -225,8 +225,7 @@ def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> N
 
     assert (
         "use numbers only when its excerpt states the full value-subject-period "
-        "relationship"
-        in candidates_text.lower()
+        "relationship" in candidates_text.lower()
     )
     assert "A quote ID is allowed only when its text states the exact value" in (
         candidates_text
@@ -246,7 +245,7 @@ def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> N
     assert "paraphrase or a nearby unrelated value is insufficient" in findings_text
 
 
-def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> None:
+def test_summary_prompt_preserves_lead_and_allows_verified_compact_fallback() -> None:
     prompt_set = prompt_service.load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",
@@ -258,8 +257,13 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert "selected lead insight json" in prompt_text
-    assert "lead both tldrs and the opening executive_summary sentence with it" in (
-        prompt_text
+    assert (
+        "lead the standard `tldr` and the opening `executive_summary` sentence with it"
+        in (prompt_text)
+    )
+    assert (
+        "the verified-mode compact tldr may instead use another accepted final insight"
+        in prompt_text
     )
     assert "do not substitute an introductory statistic or recommendation" in (
         prompt_text
@@ -271,7 +275,7 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     assert "use the plan only for coherence" in prompt_text
     assert "docmap summary supports its section only" in prompt_text
     assert "abstain when none is supportable" in prompt_text
-    assert "if absent, use the strongest direct finding" in prompt_text
+    assert "if the lead is absent, use the strongest direct finding" in prompt_text
     assert "priority order or section summaries do not prove cross-section links" in (
         prompt_text
     )
@@ -403,8 +407,7 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     assert "preserve paired measures, causes, mechanisms, and periods" in doc_map_text
     assert (
         "primary pass: search file_search by section/title/page and each key-point "
-        "metric"
-        in findings_text
+        "metric" in findings_text
     )
     assert "seek directional body outcomes" in findings_text
     assert (
@@ -434,7 +437,9 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     )
     assert "use the plan only for coherence" in summary_text
     assert "docmap summary supports its section only" in summary_text
-    assert "if absent, use the strongest direct finding or abstain" in summary_text
+    assert "if the lead is absent, use the strongest direct finding or abstain" in (
+        summary_text
+    )
     assert "both sides of each comparison" in final_text
     assert "direct evidence strength, source specificity" in final_text
     assert "scores break close choices" in final_text
