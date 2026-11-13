@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -954,7 +955,9 @@ def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path
                             RegenerationIssue(
                                 rule_id="public_editorial_quality.temporal_integrity",
                                 affected_section="summary.tldr",
-                                message="lost distinct source-proven comparative temporal qualifiers",
+                                message=(
+                                    "lost distinct source-proven comparative temporal qualifiers"
+                                ),
                                 severity="error",
                                 evidence_ids=["f1"],
                                 pages=[1],
