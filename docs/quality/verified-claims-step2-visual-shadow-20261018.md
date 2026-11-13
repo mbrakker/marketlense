@@ -12843,7 +12843,7 @@ python scripts/quality/run_frozen_reliability_cohort.py \
 ```
 
 Run directory: `C:\ml-first-pass-next-live-runs\frozen-reliability-iwdh_qgp`.
-The terminal result is [cohort_result.json](C:/ml-first-pass-next-live-runs/frozen-reliability-iwdh_qgp/cohort_result.json).
+The terminal result is `C:\ml-first-pass-next-live-runs\frozen-reliability-iwdh_qgp\cohort_result.json`.
 The run used commit `f848dba9aac149902585dea67b477aab0c7276d7`, no operator
 intervention, and no WordPress or other publication writes.
 
@@ -12884,7 +12884,7 @@ repair attempt was introduced.
   Its 10 final insight IDs all matched their `verified-fact:<id>` primary
   evidence IDs and canonical physical pages; the numeric terms in all 10
   final texts were present on the cited PDF pages. The retained HTML is
-  [final-web-version-report-consumer-trends-2026-pdf.html](C:/ml-first-pass-next-live-runs/frozen-reliability-iwdh_qgp/members/cohort-81af3890cd84ece81ef1/ias-first-attempt-b1vdz_q7/output/final-web-version-report-consumer-trends-2026-pdf.html).
+  `C:\ml-first-pass-next-live-runs\frozen-reliability-iwdh_qgp\members\cohort-81af3890cd84ece81ef1\ias-first-attempt-b1vdz_q7\output\final-web-version-report-consumer-trends-2026-pdf.html`.
   It is 62,180 bytes and contains no `verified-fact:`, `candidate_id`,
   `evidence_id`, `primary_evidence_id`, or `fact_id` tokens. The independent
   public-quality review passed and retained factual validation reported zero
