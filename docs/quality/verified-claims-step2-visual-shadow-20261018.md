@@ -13024,3 +13024,109 @@ editorial acceptance PARTIAL / Step 2 PARTIAL-NO-GO / Step 3 unstarted-not
 ready**. Remaining material blockers are provider-dependent first-pass
 semantic completeness, bounded repair stability, and the absence of a fresh
 accepted five-report cohort.
+
+### Non-destructive repair correction and isolated Activate replay — 2026-11-13 (`bff8b75a`)
+
+Commit `bff8b75ae7c5b1d98db17611ac0c7d8063906947` implements the three
+requested root-cause corrections on top of `a6dd15c6`:
+
+- scoped insight repairs retain the raw patch and overlay only explicitly
+  supplied fields on the existing insight, so omitted `so_what`, `now_what`,
+  metric copy, coverage metadata, report lens, and scores survive; explicit
+  empty values remain explicit patch operations;
+- the localized one-insight regeneration prompt no longer contains
+  full-roster, theme-fill, or compact-card instructions, while the existing
+  multi-insight prompt branch retains those requirements; and
+- atomic summary reconciliation now fails closed with existing typed contract
+  errors when an abstained summary has public copy/provenance or a generated
+  summary lacks exact public-copy provenance.
+
+Focused regressions cover raw text-only and explicit-field patches, localized
+versus full-roster prompt rendering, protected-field restoration, valid and
+conflicting summary claim-map repair, and summary abstention consistency. The
+affected suites passed **182 tests**, the larger artifact/regeneration suite
+passed **357 tests**, and the prompt/grounding fixture subset passed **80
+tests**. The unchanged fixture gate passed at **118,841 tokens / `$0.025539`**
+versus **118,469 / `$0.025502`** (`+372`, `+$0.000037`); formatting, Ruff,
+targeted mypy, and diff checks passed. No schema, retry, publication, or
+WordPress gate was weakened.
+
+#### Fresh Activate replay
+
+The required fresh isolated run used the exact Activate PDF and source hash
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`, from
+clean commit `bff8b75a`, with no publication writes:
+
+```text
+python scripts/quality/run_frozen_reliability_cohort.py \
+  --sources-manifest scripts/quality/frozen_reliability_cohort_20.json \
+  --sources-root "C:\\Programing\\Market lense" \
+  --runs-root "C:\\ml-non-destructive-repair-live-20261113\\activate-clean" \
+  --max-duration 7200 --report-ids cohort-cbb6e7df67412186b8bc \
+  --verified-facts-architecture
+```
+
+Run root: `C:\ml-non-destructive-repair-live-20261113\activate-clean\frozen-reliability-ffcfnv9u`.
+The terminal record is in `cohort_result.json`; the member report-analysis
+artifacts are under
+`members\cohort-cbb6e7df67412186b8bc\ias-first-attempt-4qhmeqnr\output\d8ca0bf6efb9c7033438-d460f8aa84f6\report_analysis`.
+
+| Measure | Fresh Activate | Prior retained Activate (`44acf2d3`) | Difference |
+| --- | ---: | ---: | ---: |
+| Provider calls | 488 | 620 | -132 (-21.29%) |
+| Input tokens | 1,954,249 | 3,653,275 | -1,699,026 (-46.51%) |
+| Output tokens | 353,689 | 686,939 | -333,250 (-48.51%) |
+| Cached input tokens | 22,036 | not retained in the prior summary | not comparable |
+| Estimated cost | `$0.382780` | `$0.696045` | -`$0.313265` (-45.01%) |
+| Wall-clock | 3,582.970 s | 5,292.668 s | -1,709.698 s (-32.30%) |
+| Structured-output repair calls | 7 | not retained in the prior summary | not comparable |
+| Automatic repairs | 0 | 3 targeted repairs | not a quality comparison |
+
+Verified-fact admission passed **10/10 evaluated, 10/10 admitted, 0
+quarantined**, with complete coverage and the required PDF/source identity.
+The candidate checkpoint was not empty: `artifacts.json` retained **10
+candidate IDs** and **6 final IDs**. The `insights_candidates` provider event
+was a valid completed call, so this run demonstrates provider-supplied
+candidate output rather than a source-order empty-list fallback. The retained
+artifacts do not expose a separate fallback-origin audit, so no stronger claim
+about fallback invocation is made.
+
+The first editorial pass produced a six-insight draft. Public semantic review
+failed closed on `s03-video-spend-top-users` because it stated the 61% time,
+34% spend, and 25% user shares without the required comparison that both
+measured shares exceeded the cohort's user share. This is a first-pass FAIL,
+not a verified-output success. The exact localized repair targeted only
+`insights_final[item=s03-video-spend-top-users].text`. The retained repair
+candidate added the missing comparison, preserved the two authoritative fact
+IDs and physical page 15, and did not change the protected metric binding or
+unlisted fields. Its audit records the authorized text-only path.
+
+That repaired candidate was not promoted: candidate validation still reported
+the existing derived-projection and family-status scope violations, after
+which the workflow terminated with the typed `schema_type_mismatch` error
+`root.insights_final[1].evidence_ids None is not of type 'array'`. The terminal
+record reports one workflow attempt, zero automatic repairs, seven structured
+output recovery calls, and no accepted HTML/readiness artifact. The persisted
+draft's zero unsupported/unresolved counters are therefore not a readiness
+result. The existing prompts already require omission rather than `null` for
+unavailable optional arrays; this live provider-contract failure is recorded
+fail-closed and was not “fixed” by weakening the schema.
+
+The retained evidence is sufficient to classify the observed categories for
+this run as: nonempty provider candidate generation; first-pass material
+coverage failure; semantically correct but unpromoted localized text repair;
+derived/scope validation failure; and terminal malformed optional-array
+schema output. The previous replay's aggregate **48 unresolved Activate
+claims** cannot be broken down into missing IDs, incomplete fields, protected
+dimensions, `not_established`, and other categories from the retained
+artifacts because raw provider responses were not retained. No breakdown is
+inferred. Capgemini was not rerun: the acceptance procedure stops the wider
+replay after the first failing report, so its earlier accepted run remains the
+only non-regression evidence.
+
+The implementation/regression verdict is **PASS**. The provider-backed
+first-pass/repair acceptance verdict is **PARTIAL / NO-GO**: the intended
+repair behavior is demonstrated in retained artifacts and local regressions,
+but the fresh report did not reach final readiness. E18 remains
+**Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
+**unstarted/not ready**.

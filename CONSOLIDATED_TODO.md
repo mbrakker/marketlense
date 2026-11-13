@@ -2607,3 +2607,24 @@ Reuters, KPMG, and Adjust, so no current-SHA frozen-five improvement is
 claimed. E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and
 Step 3 remains **unstarted/not ready**. Full metrics and artifact paths are in
 the [Step 2 quality report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
+
+**Evidence update — 2026-11-13 (non-destructive repair correction):** Commit
+`bff8b75a` preserves omitted editorial fields during scoped insight repair,
+removes full-roster instructions from localized regeneration, and fails closed
+on inconsistent atomic summary status/content/provenance. Focused affected
+tests (182), the larger artifact/regeneration suite (357), prompt tests (80),
+formatting, Ruff, targeted mypy, and the unchanged prompt-fixture gate passed;
+the fixture result was 118,841 tokens / `$0.025539` versus 118,469 /
+`$0.025502`. A fresh isolated Activate run at this SHA admitted 10/10 facts
+and retained 10 provider-generated candidates, but its first-pass semantic
+coverage failed on `s03`; the localized text repair produced the correct
+source-bound comparison and was then rejected by existing derived/scope
+validation. The report subsequently dead-lettered on a provider-returned
+`evidence_ids: null` schema mismatch after seven structured-output recovery
+calls, so no final readiness or HTML pass is claimed. The prior 48-claim
+diagnostic breakdown is unavailable because raw provider responses were not
+retained; no categories are inferred. The wider replay stopped as required,
+so Capgemini was not rerun. Implementation is **PASS**, live acceptance is
+**PARTIAL/NO-GO**, E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full metrics and
+artifact paths are in the [Step 2 quality report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
