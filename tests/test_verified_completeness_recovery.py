@@ -62,6 +62,14 @@ def test_verified_generation_repairs_completeness_only_failure_without_omitted_t
             "recovery_action": "targeted_rewrite",
         }
     )
+    incomplete["material_gaps"] = [
+        {
+            "verified_fact_ids": [candidates[0]["id"]],
+            "evidence_ids": [f"verified-fact:{candidates[0]['id']}"],
+            "final_insight_ids": [candidates[0]["id"]],
+            "explanation": "The first proposition needs a bounded rewrite.",
+        }
+    ]
     responses["editorial_theme_coverage"] = [
         incomplete,
         _theme_coverage_response(

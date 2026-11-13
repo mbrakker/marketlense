@@ -11113,6 +11113,27 @@ and regression-covered. Current live selection/editorial effectiveness and
 fresh source-PDF acceptance remain unverified; E18 remains **Active/PARTIAL**,
 Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
 
+### Hosted CI correction — 2026-11-13
+
+Hosted run [43361052716](https://github.com/mbrakker/marketlense/actions/runs/43361052716)
+passed the repository setup, policy, formatting, Ruff, type, architecture,
+hygiene, documentation, contract, and both mutation-partition gates. Its
+default pytest job reported 8,735 passed and one skipped, with two failures:
+the pre-existing completeness-recovery regression did not provide the now
+required source-bound `material_gaps` binding, and the newly added regression
+module was 1,423 lines. The release-evidence job correctly stopped because the
+tests prerequisite failed.
+
+The test-only correction adds the explicit source-bound gap to the affected
+fixture and splits the new regressions into
+`test_verified_editorial_first_pass_and_scoped_repair.py` (999 lines) and
+`test_verified_editorial_repair_diagnostics.py` (548 lines). Production
+selection, prompt, repair, validation, retry, and publication code is
+unchanged after `80ae8aef`. The corrected local checks passed 33 focused tests,
+the long-file ownership gate (2 tests), Ruff, targeted mypy, and diff-check.
+The hosted rerun is required before CI can be called green; no threshold,
+allowlist, or quality gate was weakened.
+
 ### Evidence update — 2026-11-13 (first-pass editorial completeness and scoped repair replay)
 
 Commit `80ae8aef176e113cc887ba3cb074850e5bc22310` adds the verified

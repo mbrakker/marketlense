@@ -2518,6 +2518,18 @@ E18 remains **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3
 remains **unstarted/not ready**. See the Step 2 evidence report for terminal
 paths, per-report counts, and the retained final artifacts.
 
+**Evidence update — 2026-11-13 (hosted CI correction):** Hosted run
+[43361052716](https://github.com/mbrakker/marketlense/actions/runs/43361052716)
+passed its non-test policy and both mutation gates but the default pytest job
+reported two failures: an existing recovery fixture lacked the explicit
+source-bound material-gap binding now required for fail-closed verified repair,
+and the new regression file exceeded the unchanged 1,000-line limit. The
+test-only correction supplies that binding and splits the tests into 999- and
+548-line modules. Local focused tests (33), long-file ownership (2), Ruff,
+mypy, and diff-check pass. The hosted rerun is pending; no production quality
+gate or threshold was relaxed. E18 remains **Active/PARTIAL**, Step 2 remains
+**PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
+
 **Evidence update — 2026-11-12 (scoped-repair authorization correction):**
 Commit `9ea73416c7d83184f541d17b3cdf6e3119e9af72` corrected the localized
 repair scope so an uncovered essential obligation with no semantic supporting
