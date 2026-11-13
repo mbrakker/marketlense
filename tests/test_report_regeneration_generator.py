@@ -11,3 +11,4 @@ from ._test_report_regeneration_generator.cases_06_split_long_module import *  #
 from ._test_report_regeneration_generator.cases_07_split_long_module import *  # noqa: F401,F403
 from ._test_report_regeneration_generator.cases_08_split_long_module import *  # noqa: F401,F403
 from ._test_report_regeneration_generator.cases_09_grounding_handover import *  # noqa: F401,F403
+from ._test_report_regeneration_generator.cases_10_summary_consistency import *  # noqa: F401,F403
