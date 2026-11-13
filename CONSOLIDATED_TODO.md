@@ -2619,12 +2619,52 @@ the fixture result was 118,841 tokens / `$0.025539` versus 118,469 /
 and retained 10 provider-generated candidates, but its first-pass semantic
 coverage failed on `s03`; the localized text repair produced the correct
 source-bound comparison and was then rejected by existing derived/scope
-validation. The report subsequently dead-lettered on a provider-returned
-`evidence_ids: null` schema mismatch after seven structured-output recovery
-calls, so no final readiness or HTML pass is claimed. The prior 48-claim
+validation. The report subsequently dead-lettered on an assembled-artifact
+`evidence_ids: null` schema mismatch; the retained records do not establish
+whether the provider or a later transformation introduced the null. Seven
+structured-output recovery calls were recorded overall, without an established
+attribution to this mismatch. No final readiness or HTML pass is claimed. The prior 48-claim
 diagnostic breakdown is unavailable because raw provider responses were not
 retained; no categories are inferred. The wider replay stopped as required,
 so Capgemini was not rerun. Implementation is **PASS**, live acceptance is
 **PARTIAL/NO-GO**, E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**. Full metrics and
 artifact paths are in the [Step 2 quality report](docs/quality/verified-claims-step2-visual-shadow-20261018.md).
+
+**Evidence update — 2026-11-13 (scoped projection correction):** Commit
+`f66e68ad` prevents unrelated transient abstention statuses from overwriting
+the canonical atomic repair projection. Focused regressions and 291 affected
+tests passed; hosted CI, coverage, mutation partitions and release evidence
+passed. A fresh isolated Activate run admitted 10/10 verified facts. Its
+first-pass review failed on an omitted population distinction; a source-checked
+text-only repair passed projection, scope and grounding but was rolled back
+after independent review found weak analysis in other unchanged insights.
+Two further candidates were rolled back for an incomplete grounding verdict
+and an essential-coverage violation. The run ended `validation_failed` after
+568 calls, `$0.546875`, and 4,292.331 seconds, with no readiness or publication.
+Commit `90410c20` exposes the existing grounding violation vocabulary to the
+primary and recovery calls; whether it improves live recovery remains to be
+measured. E18 remains **Active/PARTIAL**, Step 2 **PARTIAL/NO-GO**.
+
+The isolated Capgemini non-regression replay at `f66e68ad` admitted all 10
+facts but failed after two rolled-back candidates and a safe-removal attempt
+without an eligible replacement. The first candidate had grounding and
+editorial-response contract failures; the second still had an unresolved
+editorial obligation-support response. It used 248 calls, `$0.576648`, and
+2,837.701 seconds versus the earlier accepted run's 136 calls, `$0.258157`,
+and 1,484.984 seconds. This is an observed regression, not an attribution to a
+specific code change. The run records 49 unresolved retained factual claims;
+it also exposes an obligation requiring a verified-fact ID absent from the
+reviewable insight. Similar text alone does not justify rebinding it. Hosted CI
+at `2401088f` passed; the subsequent grounding
+schema/prompt clarification needs fresh live evidence. The five-report gate
+remains blocked by the failed targeted cases.
+
+The fresh Activate replay at `90410c20` admitted 8/10 evaluated facts and
+quarantined two as unresolved. It produced five draft insights but failed
+independent editorial review on an unbound `verified-fact:01c` required by an
+essential obligation; no repair or readiness pass followed. It used 503 calls,
+`$0.369917`, and 3,583.882 seconds. The five draft insight texts were checked
+against their cited PDF pages, but no accepted HTML was available for a full
+public-output review. This run does not prove the grounding clarification
+improves live recovery. Details and limitations are in the Step 2 report.

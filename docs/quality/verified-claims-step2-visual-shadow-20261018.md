@@ -13130,3 +13130,134 @@ repair behavior is demonstrated in retained artifacts and local regressions,
 but the fresh report did not reach final readiness. E18 remains
 **Active/PARTIAL**, Step 2 remains **PARTIAL/NO-GO**, and Step 3 remains
 **unstarted/not ready**.
+
+### Scoped projection correction and fresh Activate replay — 2026-11-13 (`f66e68ad`)
+
+The prior `bff8b75a` repair failure was reproduced: assembly reapplied
+transient abstained family statuses after atomic finalization, changing an
+unrelated accepted summary status and causing the canonical derived-projection
+and scope checks to reject a text-only insight repair. Commit `f66e68ad`
+limits that reapplication to an authorized family; the existing consistency,
+projection and scope guards remain in force. A regression reproduces the
+unchanged abstained summary, verifies the corrected projection, and confirms
+that an altered summary status is still rejected. A prior summary consistency
+test was corrected to identify a real repair target. The affected suite passed
+291 tests, targeted mypy and Ruff passed, and hosted CI run
+[43497007454](https://github.com/mbrakker/marketlense/actions/runs/43497007454)
+passed tests, coverage, both mutation partitions and release evidence.
+
+The fresh isolated Activate run at `f66e68ad` is retained at
+`C:\ml-repair-acceptance-live-20261113\activate\frozen-reliability-df6pu1kw`.
+The source PDF SHA-256 was
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`.
+Ten facts were evaluated and admitted, none quarantined. First-pass review
+failed because primary insight `i19` omitted the distinction between U.S.
+adult news discovery and the separate active-news-reader search population.
+The first targeted candidate added that distinction, retained its fact ID and
+physical page 98, passed grounding and scope/projection validation, and reached
+independent editorial review. Visual inspection of page 98 confirms the 40%
+and 38% adult-discovery values and the separately labeled right-hand panel
+and sample. Candidate 1 was rolled back: the review found weak, repetitive
+primary analysis in unchanged `i06` and `i12` and a report-level distinctness
+failure. Those weaknesses are visible in the retained text; they were not
+treated as mere validator noise. Candidate 2 was rolled back after grounding
+returned an incomplete `violation_type` verdict for `i23`; candidate 3 was
+rolled back because removing `i19` violated an essential editorial obligation.
+No candidate was promoted, readiness failed, and no report was published.
+
+The run used 568 provider calls, 2,695,383 input and 535,565 output tokens,
+15 structured-output recovery calls, 11 file-search calls, three targeted
+repairs, `$0.546875`, and 4,292.331 seconds. Its zero retained unsupported and
+unresolved factual counters are not an independently reviewed readiness pass.
+The previous null-array failure was an assembled-artifact schema error; the
+retained audit cannot establish whether the provider or a transformation
+introduced the null. The newly discovered editorial findings cannot safely be
+reused as baseline verdicts: the review sees the complete report and does not
+record every dependency, while the existing review identity binds its whole
+input. E18 remains **Active/PARTIAL** and Step 2 **PARTIAL/NO-GO**.
+
+#### Capgemini non-regression replay at `f66e68ad`
+
+The isolated run at
+`C:\ml-repair-acceptance-live-20261113\capgemini\frozen-reliability-n6p1lrdg`
+used source SHA-256
+`612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e`.
+It admitted 10/10 verified facts without quarantine, but first-pass grounding
+failed closed on an inconsistent `now_what` verdict. Candidate 1 was rolled
+back after another inconsistent grounding verdict and an incomplete independent
+editorial review. Candidate 2 was rolled back because the editorial review
+still failed its obligation-support contract. A subsequent safe-removal path
+terminated with `insight_safe_removal_no_replacement`: no distinct supported
+retained insight could fill the slot. No candidate was promoted and readiness
+was not achieved. The cohort reports 49 unresolved retained factual claims;
+these are unresolved validations, not independently confirmed false claims.
+The editorial plan required both `verified-fact:ai-assistant-user-satisfaction`
+and `verified-fact:weekly-shopping-assistant-use-and-satisfaction`, while the
+retained reviewable insight carried only the latter. The similar candidate
+texts do not by themselves justify merging identities or adding a binding.
+Visual inspection of physical page 33 confirms 52% weekly use, 46%
+satisfaction among those weekly users, and the report's separate qualitative
+expectation that satisfaction will rise; it does not settle the identity or
+editorial-plan binding contract.
+The cohort summary reports zero automatic repairs; the two
+persisted, rolled-back candidate audits are reported separately here.
+
+The run used 248 provider calls, 3,423,913 input and 503,053 output tokens,
+25 structured-output recovery calls, six file-search calls, `$0.576648`, and
+2,837.701 seconds. The earlier accepted Capgemini run at `44acf2d3` used 136
+calls, `$0.258157`, and 1,484.984 seconds. This is an observed regression, not
+proof that the projection change caused it: provider outputs and run inputs can
+vary. No accepted HTML was available for independent final-output review.
+
+Commit `90410c20` subsequently made the existing accepted grounding violation
+vocabulary visible in the provider output schema and recovery context while
+retaining the validator and its aliases. A focused recovery regression and the
+unchanged fixture gate passed (118,847 tokens and `$0.025540` against the
+118,469-token, `$0.025502` baseline); hosted CI at `2401088f` passed tests,
+coverage, both mutation partitions and release evidence. This schema/prompt
+clarification addresses a proven contract gap, but the retained failed
+response does not show whether that gap caused the specific `i23` failure.
+Live effectiveness requires a fresh run at the revised producer version.
+
+#### Activate replay at `90410c20`
+
+The fresh isolated run is retained at
+`C:\ml-repair-acceptance-live-20261113\activate-90410c20\frozen-reliability-l7w5sz09`.
+It evaluated ten visual candidates, admitted eight, and quarantined
+`insight_07` and `insight_08` with `outcome_unresolved`; the retained admission
+audit does not establish whether those were factual rejections or response
+failures. It produced eight candidate insights and five final draft insights.
+Grounding retained an informational warning on a LinkedIn recommendation,
+but independent editorial review failed closed after three response attempts
+with `public_editorial_quality_obligation_review_support_mismatch`: the
+essential revenue obligation required `verified-fact:01c`, which was not bound
+to its supporting reviewable insight. No automatic repair was attempted and
+the terminal outcome was `validation_failed`, with one unresolved retained
+claim and zero recorded unsupported claims. These counters do not establish a
+publication-ready report.
+
+The run used 503 provider calls, 1,735,925 input and 349,782 output tokens,
+nine structured-output recovery calls, ten file-search calls, `$0.369917`,
+and 3,583.882 seconds. The fixed grounding vocabulary was present in this
+producer version, but this failure occurred at editorial obligation binding;
+the run does not establish improved grounding-recovery reliability. Visual
+inspection of the five draft insight texts against physical PDF pages 5, 6,
+11, 15, 38, and 52 found the reported figures and their stated populations,
+forecast labels, and exclusions on those pages. The video insight reports
+61%, 34%, and a 25% cohort but leaves the comparison to the cohort's share
+implicit, the same kind of omission the earlier public review rejected.
+No final HTML was accepted, and this targeted page check is not a full
+independent review of every public assertion. The five-report cohort was not
+started because the targeted acceptance cases did not pass. E18 remains
+**Active/PARTIAL** and Step 2 remains **PARTIAL/NO-GO**.
+
+The repeated mismatch exposes an unresolved contract conflict: generation's
+theme-coverage check accepts any selected planned evidence ID, while the
+public-review validator requires every original obligation ID to be bound to
+supporting final insights. The published editorial contract and final-writing
+prompt do not clearly establish whether redundant plan IDs are mandatory
+lineage or alternative support. In this run `01c` covers an advertising
+forecast already represented by `insight_02`; this overlap does not establish
+a general equivalence rule. No evidence ID was automatically added, no
+review gate was relaxed, and no selection contract was changed without a
+resolved interpretation.
