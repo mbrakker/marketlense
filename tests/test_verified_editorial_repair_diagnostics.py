@@ -123,8 +123,9 @@ def _partial_scope(
     )
 
 
-def test_material_gap_can_repair_exact_unselected_fact_when_themes_are_covered(
-) -> None:
+def test_material_gap_can_repair_exact_unselected_fact_when_themes_are_covered() -> (
+    None
+):
     candidates = [
         _candidate(f"candidate-{index}", f"f{index}") for index in range(1, 5)
     ]
@@ -368,9 +369,7 @@ def test_focal_context_preserves_complete_fact_and_exact_bindings() -> None:
         repair_scope=scope,
         verified_facts=facts,
         candidate_insights=[candidate],
-        current_insights=[
-            {"id": "candidate-1", "evidence_id": "verified-fact:f2"}
-        ],
+        current_insights=[{"id": "candidate-1", "evidence_id": "verified-fact:f2"}],
     )
 
     assert focal == [
@@ -547,4 +546,3 @@ def test_scoped_repair_diagnostic_survives_structured_output_failure_path() -> N
     assert context["invalid_insight_ids"] == ["candidate-4"]
     assert context["repair_attempt"] == 2
     assert len(context["attempt_diagnostics"]) == 3
-

@@ -11134,6 +11134,13 @@ the long-file ownership gate (2 tests), Ruff, targeted mypy, and diff-check.
 The hosted rerun is required before CI can be called green; no threshold,
 allowlist, or quality gate was weakened.
 
+The first test-only follow-up push then stopped at the unchanged format gate
+because the new diagnostics module needed the repository formatter. Running
+the formatter produced no semantic changes; corrected local verification now
+passes 35 tests (including the two long-file ownership checks), Ruff, targeted
+mypy, the format gate, and diff-check. A second hosted rerun is required for
+the final CI result.
+
 ### Evidence update — 2026-11-13 (first-pass editorial completeness and scoped repair replay)
 
 Commit `80ae8aef176e113cc887ba3cb074850e5bc22310` adds the verified

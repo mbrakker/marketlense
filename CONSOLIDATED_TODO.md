@@ -2530,6 +2530,11 @@ mypy, and diff-check pass. The hosted rerun is pending; no production quality
 gate or threshold was relaxed. E18 remains **Active/PARTIAL**, Step 2 remains
 **PARTIAL/NO-GO**, and Step 3 remains **unstarted/not ready**.
 
+The first test-only follow-up then stopped at the unchanged formatter gate for
+the new diagnostics module. Applying the repository formatter produced no
+semantic change; local verification now passes 35 tests, format, Ruff, mypy,
+and diff-check. A final hosted rerun is required before CI is green.
+
 **Evidence update — 2026-11-12 (scoped-repair authorization correction):**
 Commit `9ea73416c7d83184f541d17b3cdf6e3119e9af72` corrected the localized
 repair scope so an uncovered essential obligation with no semantic supporting
