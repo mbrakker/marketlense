@@ -1577,76 +1577,6 @@ def _clear_unproven_metric_metadata(metric: Dict[str, Any]) -> None:
             metric[field_name] = ""
 
 
-def constrain_summary_to_source_backed_claims(
-    summary: Dict[str, Any],
-    *,
-    require_direct_fallback: bool = False,
-) -> bool:
-    """Fail closed to direct claim copy when a strong claim has weak evidence."""
-
-    # A deterministic text-strength/evidence heuristic cannot replace or
-    # suppress model-authored prose.  The existing grounding and independent
-    # public-editorial review own this decision and fail closed when needed.
-    return False
-
-    claims = summary.get("claim_evidence_map") if isinstance(summary, dict) else None
-    if not isinstance(claims, list):
-        return False
-    valid_claims = [claim for claim in claims if isinstance(claim, dict)]
-    weak_strong_claims = [
-        claim for claim in valid_claims if _claim_is_strong_and_weakly_bound(claim)
-    ]
-    if not weak_strong_claims and not require_direct_fallback:
-        return False
-    direct_claims = [
-        claim
-        for claim in valid_claims
-        if _claim_has_direct_evidence(claim) and _s(claim.get("claim")).strip()
-    ]
-    if not direct_claims:
-        return False
-    descriptive_claims = [
-        claim
-        for claim in valid_claims
-        if not _claim_has_direct_evidence(claim)
-        and _claim_has_descriptive_doc_map_evidence(claim)
-    ]
-    fallback_claims = [*direct_claims, *descriptive_claims]
-    fallback_claims = [
-        claim for claim in fallback_claims if _s(claim.get("claim")).strip()
-    ]
-    direct_public_claims = [_s(claim.get("claim")).strip() for claim in direct_claims]
-    public_claims = [_s(claim.get("claim")).strip() for claim in fallback_claims]
-    public_claims = [claim for claim in public_claims if claim]
-    if not public_claims:
-        return False
-    compact_claim = next(
-        (
-            claim
-            for claim in direct_public_claims
-            if _is_complete_short_sentence(claim, limit=18)
-        ),
-        None,
-    )
-    if compact_claim is None:
-        raise AppError(
-            code="card_tldr_compact_invalid",
-            message=(
-                "summary.card_tldr_compact must be a complete sentence of 1 to 18 words"
-            ),
-            retryable=False,
-            context={
-                "field": "summary.card_tldr_compact",
-                "word_count": len(" ".join(direct_public_claims[0].split()).split()),
-            },
-        )
-    summary["claim_evidence_map"] = fallback_claims
-    summary["tldr"] = public_claims[0]
-    summary["card_tldr_compact"] = compact_claim
-    summary["executive_summary"] = " ".join(public_claims[:3])
-    return True
-
-
 def summary_has_unbound_material_sentences(
     *, summary: Dict[str, Any], claim_bindings: object
 ) -> bool:
@@ -1668,16 +1598,6 @@ def summary_has_unbound_material_sentences(
     return any(
         sentence not in covered for sentence in soft_copy_material_sentences(text)
     )
-
-
-def _claim_is_strong_and_weakly_bound(claim: Dict[str, Any]) -> bool:
-    claim_text = _s(claim.get("claim")).strip()
-    if not claim_text or not _strong_claim_text(claim_text):
-        return False
-    spans = [
-        span for span in claim.get("evidence_spans") or [] if isinstance(span, dict)
-    ]
-    return bool(spans) and not any(_span_is_direct(span) for span in spans)
 
 
 def _claim_has_direct_evidence(claim: Dict[str, Any]) -> bool:
@@ -2558,8 +2478,7 @@ def validate_substantive_editorial_theme_coverage(
     )
     if verified_adaptive:
         if not isinstance(payload, dict) or any(
-            field not in payload
-            for field in ("report_completeness", "diagnosis")
+            field not in payload for field in ("report_completeness", "diagnosis")
         ):
             raise AppError(
                 code="artifact_final_insight_coverage_invalid",
@@ -2830,10 +2749,10 @@ def validate_substantive_editorial_theme_coverage(
                         ),
                     },
                 )
-            if (
-                status in {"partial", "uncovered"}
-                and not supporting_evidence_keys.issubset(obligation_evidence_keys)
-            ):
+            if status in {
+                "partial",
+                "uncovered",
+            } and not supporting_evidence_keys.issubset(obligation_evidence_keys):
                 raise AppError(
                     code="artifact_final_insight_coverage_invalid",
                     message=(

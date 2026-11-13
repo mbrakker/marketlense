@@ -59,7 +59,6 @@ from src.generators.artifact_normalization import (
     artifact_evidence_span_index,
     bind_artifact_evidence_spans,
     carry_soft_copy_binding_semantics_to_final_sentences,
-    constrain_summary_to_source_backed_claims,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
@@ -385,30 +384,6 @@ def assemble_artifacts_payload(
             if exc.code != "card_tldr_compact_invalid":
                 raise
             repaired_compact_tldr_invalid = True
-    try:
-        summary_fallback_applied = (
-            constrain_summary_to_source_backed_claims(
-                summary,
-                require_direct_fallback=repaired_compact_tldr_invalid,
-            )
-            if not summary_repair_in_progress or repaired_compact_tldr_invalid
-            else False
-        )
-    except AppError as exc:
-        if exc.code != "card_tldr_compact_invalid":
-            raise
-        _abstain_summary_without_short_direct_claim(
-            summary=summary,
-            family_status=family_status,
-        )
-        soft_copy_claim_bindings["summary"] = []
-        summary_fallback_applied = False
-    if repaired_compact_tldr_invalid and not summary_fallback_applied:
-        _abstain_summary_without_short_direct_claim(
-            summary=summary,
-            family_status=family_status,
-        )
-        soft_copy_claim_bindings["summary"] = []
     _repair_incomplete_executive_summary(summary)
     pre_correction_soft_copy: Dict[str, Any] = {
         "summary": deepcopy(summary),
@@ -442,10 +417,6 @@ def assemble_artifacts_payload(
             expert_comment=expert_comment,
             linkedin_post=linkedin_post,
         )
-    if summary_fallback_applied:
-        soft_copy_claim_bindings["summary"] = source_backed_summary_claim_bindings(
-            summary
-        )
     if not visual_authority_canary:
         preserve_soft_copy_binding_source_displays(
             summary=summary,
@@ -460,50 +431,38 @@ def assemble_artifacts_payload(
             claims=retained_summary_after_replacements,
         )
     )
-    if (
-        not summary_fallback_applied
-        and not summary_repair_in_progress
+    completed_summary_bindings, recovered_summary_binding_count = (
+        _complete_summary_bindings_from_exact_direct_claims(
+            summary=summary,
+            bindings=soft_copy_claim_bindings.get("summary"),
+        )
+        if not summary_already_bound
+        else (soft_copy_claim_bindings.get("summary") or [], 0)
+    )
+    if recovered_summary_binding_count:
+        soft_copy_claim_bindings["summary"] = completed_summary_bindings
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_summary_provenance_completed_from_direct_claim_map",
+                module=logger.name,
+                fields={"binding_count": recovered_summary_binding_count},
+            )
+        )
+    if repaired_compact_tldr_invalid or (
+        not summary_repair_in_progress
         and not summary_already_bound
         and summary_has_unbound_material_sentences(
             summary=summary,
             claim_bindings=soft_copy_claim_bindings.get("summary"),
         )
     ):
-        try:
-            summary_fallback_applied = constrain_summary_to_source_backed_claims(
-                summary,
-                require_direct_fallback=True,
-            )
-        except AppError as exc:
-            if exc.code != "card_tldr_compact_invalid":
-                raise
-            _abstain_summary_without_short_direct_claim(
-                summary=summary,
-                family_status=family_status,
-            )
-            soft_copy_claim_bindings["summary"] = []
-            summary_fallback_applied = False
-        if summary_fallback_applied and not visual_authority_canary:
-            preserve_public_source_displays(
-                summary=summary,
-                insights_final=insights_final,
-                expert_comment="",
-                linkedin_post="",
-            )
-            soft_copy_claim_bindings["summary"] = source_backed_summary_claim_bindings(
-                summary
-            )
-            preserve_soft_copy_binding_source_displays(
-                summary=summary,
-                insights_final=insights_final,
-                soft_copy_claim_bindings=soft_copy_claim_bindings,
-            )
-        else:
-            _abstain_summary_without_short_direct_claim(
-                summary=summary,
-                family_status=family_status,
-            )
-            soft_copy_claim_bindings["summary"] = []
+        _abstain_summary_without_short_direct_claim(
+            summary=summary,
+            family_status=family_status,
+        )
+        soft_copy_claim_bindings["summary"] = []
     if "expert_comment" not in (soft_copy_repair_texts or {}):
         expert_comment = retain_bound_optional_soft_copy_sentences(
             artifact_family="expert_comment",
@@ -521,8 +480,6 @@ def assemble_artifacts_payload(
         "expert_comment": expert_comment,
         "linkedin_post": linkedin_post,
     }.items():
-        if family == "summary" and summary_fallback_applied:
-            continue
         carried = carry_soft_copy_binding_semantics_to_final_sentences(
             artifact_family=family,
             original_public_text=pre_correction_soft_copy[family],
@@ -587,25 +544,6 @@ def assemble_artifacts_payload(
     if visual_authority_canary:
         artifacts_payload["verified_facts"] = deepcopy(
             [fact for fact in (verified_facts or []) if isinstance(fact, dict)]
-        )
-    completed_summary_bindings, recovered_summary_binding_count = (
-        _complete_summary_bindings_from_exact_direct_claims(
-            summary=summary,
-            bindings=soft_copy_claim_bindings.get("summary"),
-        )
-        if not summary_already_bound
-        else (soft_copy_claim_bindings.get("summary") or [], 0)
-    )
-    if recovered_summary_binding_count:
-        soft_copy_claim_bindings["summary"] = completed_summary_bindings
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="artifact_summary_provenance_completed_from_direct_claim_map",
-                module=logger.name,
-                fields={"binding_count": recovered_summary_binding_count},
-            )
         )
     artifacts_payload["soft_copy_claim_provenance"] = (
         _soft_copy_claim_provenance_payload(

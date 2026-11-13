@@ -178,7 +178,7 @@ def test_verified_full_prompt_explains_report_wide_fact_selection() -> None:
 
 def test_verified_summary_receives_only_the_accepted_final_roster(tmp_path) -> None:
     candidates = [
-        _insight(f"f{index}", score=1.0 - index / 100) for index in range(1, 6)
+        _insight(f"f{index}", score=1.0 - index / 100) for index in range(1, 7)
     ]
     responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
     responses["insights_final"] = {
@@ -187,9 +187,13 @@ def test_verified_summary_receives_only_the_accepted_final_roster(tmp_path) -> N
                 **candidate,
                 "evidence_id": f"verified-fact:{candidate['id']}",
             }
-            for candidate in candidates
+            for candidate in candidates[:5]
         ]
     }
+    responses["insights_final"]["insights_final"][0]["evidence_ids"] = [
+        f"verified-fact:{candidates[0]['id']}",
+        f"verified-fact:{candidates[1]['id']}",
+    ]
     responses["summary"]["summary"]["claim_evidence_map"][0]["evidence_id"] = (
         "verified-fact:insight-f1-0.99"
     )
@@ -203,8 +207,8 @@ def test_verified_summary_receives_only_the_accepted_final_roster(tmp_path) -> N
     generate_artifacts(
         report_id="verified-summary-roster",
         report_name="Verified summary roster",
-        doc_map=_doc_map(5),
-        evidence_packs=_generation_evidence(5),
+        doc_map=_doc_map(6),
+        evidence_packs=_generation_evidence(6),
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=FakeOpenAI(responses),
@@ -223,12 +227,20 @@ def test_verified_summary_receives_only_the_accepted_final_roster(tmp_path) -> N
     selected = json.loads(summary_variables["selected_final_insights_json"])
     assert summary_variables["verified_mode"] is True
     assert [item["id"] for item in selected] == [
-        candidate["id"] for candidate in candidates
+        candidate["id"] for candidate in candidates[:5]
     ]
     assert all(
         set(item) <= {"id", "text", "evidence_id", "evidence_ids", "metric"}
         for item in selected
     )
+    evidence = json.loads(summary_variables["evidence_json"])
+    assert {
+        fact["fact_id"] for fact in evidence["verified_facts"]["verified_facts"]
+    } == {candidate["id"] for candidate in candidates[:5]}
+    assert {
+        finding["verified_fact_id"] for finding in evidence["findings"]["findings"]
+    } == {candidate["id"] for candidate in candidates[:5]}
+    assert evidence["findings"]["findings"][0]["source_identity"]
 
 
 def test_verified_summary_prompt_uses_selected_final_roster_as_fact_boundary() -> None:
@@ -262,6 +274,43 @@ def test_verified_summary_prompt_uses_selected_final_roster_as_fact_boundary() -
     assert "do not combine distinct findings" in prompt
     assert "enough `claim_evidence_map` entries" in prompt
     assert "keep 3-5 claim-map items" not in prompt
+
+
+def test_verified_summary_compact_tldr_may_use_another_accepted_fact() -> None:
+    prompt = _render(
+        "report_vs/artifacts/summary",
+        {
+            "editorial_plan_json": "{}",
+            "selected_lead_insight_json": json.dumps(
+                {
+                    "id": "lead",
+                    "text": "The lead comparison requires a lengthy qualification.",
+                    "evidence_id": "verified-fact:lead",
+                }
+            ),
+            "selected_final_insights_json": json.dumps(
+                [
+                    {
+                        "id": "lead",
+                        "text": "The lead comparison requires a lengthy qualification.",
+                        "evidence_id": "verified-fact:lead",
+                    },
+                    {
+                        "id": "short",
+                        "text": "Repeat buyers reached 42% adoption.",
+                        "evidence_id": "verified-fact:short",
+                    },
+                ]
+            ),
+            "evidence_json": "{}",
+            "doc_map_json": "{}",
+            "verified_mode": True,
+        },
+    )
+
+    assert "standard `tldr`" in prompt
+    assert "another accepted final insight" in prompt
+    assert "do not clip" in prompt.lower()
 
 
 def test_verified_grounding_uses_smaller_batches_without_changing_legacy_limits() -> (

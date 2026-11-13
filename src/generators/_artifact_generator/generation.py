@@ -98,7 +98,12 @@ from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
 from src.utils.structured_output import StructuredOutputFailure
 from src.utils.text_normalization import normalize_text
-from src.utils.verified_facts import PROTECTED_METRIC_FIELDS, validated_verified_facts
+from src.utils.verified_facts import (
+    PROTECTED_METRIC_FIELDS,
+    VERIFIED_FACT_EVIDENCE_PREFIX,
+    canonical_verified_evidence_packs,
+    validated_verified_facts,
+)
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
@@ -1484,6 +1489,63 @@ def _summary_prioritized_evidence_json(
             },
         }
     )
+
+
+def _selected_verified_summary_evidence_json(
+    *,
+    final_insights: Sequence[Dict[str, Any]],
+    verified_facts: Sequence[Dict[str, Any]],
+) -> str:
+    """Build the verified summary context from exact selected fact bindings."""
+
+    facts_by_id = {
+        _s(fact.get("fact_id")).strip(): fact
+        for fact in verified_facts
+        if isinstance(fact, dict) and _s(fact.get("fact_id")).strip()
+    }
+    selected_facts: dict[str, Dict[str, Any]] = {}
+    unresolved_evidence_ids: list[str] = []
+    for insight in final_insights:
+        if not isinstance(insight, dict):
+            continue
+        supporting_evidence_ids = insight.get("evidence_ids")
+        evidence_ids = [
+            _s(insight.get("evidence_id")).strip(),
+            *[
+                _s(value).strip()
+                for value in (
+                    supporting_evidence_ids
+                    if isinstance(supporting_evidence_ids, list)
+                    else []
+                )
+                if _s(value).strip()
+            ],
+        ]
+        for evidence_id in dict.fromkeys(evidence_ids):
+            if not evidence_id.startswith(VERIFIED_FACT_EVIDENCE_PREFIX):
+                unresolved_evidence_ids.append(evidence_id)
+                continue
+            fact_id = evidence_id.removeprefix(VERIFIED_FACT_EVIDENCE_PREFIX)
+            fact = facts_by_id.get(fact_id)
+            if fact is None:
+                unresolved_evidence_ids.append(evidence_id)
+                continue
+            selected_facts[fact_id] = fact
+    if unresolved_evidence_ids:
+        raise AppError(
+            code="artifact_final_insight_lineage_invalid",
+            message=(
+                "Verified summary evidence must resolve every selected insight "
+                "binding to an admitted verified fact"
+            ),
+            retryable=False,
+            context={
+                "unresolved_verified_evidence_ids": list(
+                    dict.fromkeys(unresolved_evidence_ids)
+                )
+            },
+        )
+    return _dump_json(canonical_verified_evidence_packs(selected_facts))
 
 
 def _semantic_theme_coverage_insights_json(
@@ -4099,44 +4161,36 @@ def generate_artifacts(
                 candidate_insights=insights_candidates,
                 current_insights=insights_final,
             )
-            repair_feedback = {
-                "failure": {
-                    "code": error.code,
-                    "message": error.message,
-                    "omitted_themes": semantic_theme_repair["omitted_themes"],
-                    "omitted_central_themes": semantic_theme_repair[
-                        "omitted_central_themes"
-                    ],
-                },
-                "assessment": semantic_theme_coverage_result,
-                "material_gaps": deepcopy(error.context.get("material_gaps", [])),
-                "targeted_insight_ids": targeted_insight_ids,
-                "repair_scope": repair_scope,
-                "targeted_final_insights": [
-                    deepcopy(insight)
-                    for insight in insights_final
-                    if _s(insight.get("id")).strip() in set(targeted_insight_ids)
-                ],
-                "selection_diagnostics": error.context["coverage_diagnostics"],
-                "eligible_admitted_candidate_alternatives": [
-                    {
-                        key: candidate[key]
-                        for key in (
-                            "id",
-                            "text",
-                            "evidence_id",
-                            "evidence_ids",
-                            "metric",
-                            "coverage_role",
-                            "report_type_lens",
-                        )
-                        if key in candidate
-                    }
-                    for candidate in eligible_final_insight_candidates(
-                        insights_candidates
+            targeted_final_insights = [
+                deepcopy(insight)
+                for insight in insights_final
+                if _s(insight.get("id")).strip() in set(targeted_insight_ids)
+            ]
+            eligible_admitted_candidate_alternatives = [
+                {
+                    key: candidate[key]
+                    for key in (
+                        "id",
+                        "text",
+                        "evidence_id",
+                        "evidence_ids",
+                        "metric",
+                        "coverage_role",
+                        "report_type_lens",
                     )
-                    if _s(candidate.get("id")).strip() in scoped_candidate_ids
-                ],
+                    if key in candidate
+                }
+                for candidate in eligible_final_insight_candidates(insights_candidates)
+                if _s(candidate.get("id")).strip() in scoped_candidate_ids
+            ]
+            # The repair model needs only the independent diagnosis, exact
+            # source-bound gaps, and affected theme identities.  Scope,
+            # focal facts, candidate alternatives, and authorized IDs remain
+            # separate canonical inputs below.
+            repair_feedback = {
+                "diagnosis": semantic_theme_repair["diagnosis"],
+                "material_gaps": deepcopy(error.context.get("material_gaps", [])),
+                "affected_theme_ids": list(repair_scope.get("affected_themes", [])),
             }
 
             def validate_scoped_final_insight_patch(
@@ -4161,18 +4215,18 @@ def generate_artifacts(
                     variables={
                         **insights_final_vars,
                         "insights_candidates_json": _dump_json(
-                            repair_feedback["eligible_admitted_candidate_alternatives"]
+                            eligible_admitted_candidate_alternatives
                         ),
                         "final_insight_allowed_candidate_ids_json": _dump_json(
                             repair_scope.get("authorized_candidate_ids", [])
                         ),
                         "verified_editorial_obligations_json": "",
-                        "current_insights_final_json": _dump_json(insights_final),
+                        "current_insights_final_json": "",
                         "semantic_theme_targeted_insight_ids_json": _dump_json(
                             targeted_insight_ids
                         ),
                         "semantic_theme_targeted_insights_json": _dump_json(
-                            repair_feedback["targeted_final_insights"]
+                            targeted_final_insights
                         ),
                         "semantic_theme_repair_scope_json": _dump_json(repair_scope),
                         "semantic_theme_focal_facts_json": _dump_json(
@@ -4638,6 +4692,14 @@ def generate_artifacts(
             for insight in insights_final
         ]
     )
+    selected_summary_evidence_json = (
+        _selected_verified_summary_evidence_json(
+            final_insights=insights_final,
+            verified_facts=visual_authority_verified_facts,
+        )
+        if visual_authority_admitter is not None
+        else summary_evidence_json
+    )
     summary_task = ArtifactRenderTask(
         schema_version="1.0",
         step_name="summary",
@@ -4645,7 +4707,7 @@ def generate_artifacts(
         variables={
             **base_vars,
             **editorial_plan_dependency_vars,
-            "evidence_json": summary_evidence_json,
+            "evidence_json": selected_summary_evidence_json,
             "editorial_plan_json": editorial_plan_json,
             "selected_lead_insight_json": selected_lead_insight_json,
             "selected_final_insights_json": (

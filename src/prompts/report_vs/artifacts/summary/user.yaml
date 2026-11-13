@@ -37,11 +37,18 @@ text: |
   }
   `claim_provenance` is retained metadata only. Bind each distinct material sentence in `tldr`, `card_tldr_compact`, and `executive_summary` once. Copy each `claim` verbatim from the public sentence, including punctuation; do not combine or paraphrase sentences or omit any. Use exact existing IDs, keep IDs out of public prose, and give every factual binding at least one evidence ID.
   - Keep claims specific and tied to evidence identifiers present in the provided context.
-  - If selected lead insight JSON is present, lead both TLDRs and the opening
-    executive_summary sentence with it. Preserve its subject, relationship,
-    values, period, and evidence ID; do not substitute an introductory
-    statistic or recommendation. If absent, use the strongest direct finding
-    or abstain when none is supportable.
+  - If selected lead insight JSON is present, lead the standard `tldr` and the
+    opening `executive_summary` sentence with it. Preserve its subject,
+    relationship, values, period, and evidence ID; do not substitute an
+    introductory statistic or recommendation. The verified-mode compact TLDR
+    may instead use another accepted final insight when that fact supports a
+    complete, independently understandable sentence of 18 words or fewer.
+    Bind that compact claim directly to the accepted fact and include it in
+    the claim map and provenance. Do not clip the lead or another claim, omit a
+    material qualifier, or invent a short fallback to meet the limit. If no
+    accepted fact supports a safe compact claim, preserve abstention. If the
+    lead is absent, use the strongest direct finding or abstain when none is
+    supportable.
   - Use the plan only for coherence. Priority order or section summaries do not prove cross-section links or report-wide centrality.
   - Facts must stay within evidence. Non-contradictory interpretation may explain why a finding matters; advice may be conditional MarketLense guidance tied to it. Add no new factual premise, promised outcome, or false source attribution.
   - A numeric claim must preserve each exact source value, metric/category,
