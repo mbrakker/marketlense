@@ -372,6 +372,11 @@ def test_verified_semantic_recovery_replaces_selected_fact_with_admitted_alterna
         }
     }
     verified_plan = _verified_plan_for_candidates(verified_plan, candidates)
+    central_theme = verified_plan["editorial_plan"]["themes"][0]
+    central_theme["required_evidence_ids"] = []
+    central_theme["alternative_evidence_groups"] = [
+        ["verified-fact:insight-f2-0.98", "verified-fact:insight-f6-0.94"]
+    ]
     narrow_final = [
         {
             **deepcopy(candidate),

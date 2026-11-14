@@ -18,8 +18,8 @@ from tests._test_artifact_generator._shared import (
 from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _doc_map,
     _generation_evidence,
-    _generation_responses,
     _insight,
+    _verified_generation_responses,
 )
 from tests.test_verified_claims_visual_authority_canary import _verified_admission
 
@@ -47,7 +47,9 @@ def test_generation_fails_with_typed_minimum_coverage_error_after_remap(tmp_path
     def admit(shortlisted):
         return _verified_admission(shortlisted[:1], digest="g" * 64)
 
-    responses = _generation_responses(candidates, plan_evidence_ids=["f1", "f1"])
+    responses = _verified_generation_responses(
+        candidates, plan_evidence_ids=["f1", "f1"]
+    )
 
     with pytest.raises(AppError, match="minimum insight coverage") as error:
         generate_artifacts(

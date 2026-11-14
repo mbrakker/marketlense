@@ -197,9 +197,11 @@ def test_verified_authoritative_plan_is_generated_from_admitted_facts(tmp_path):
                 "theme": theme,
                 "status": "covered",
                 "resolution": "retained",
-                "supporting_insight_ids": [
-                    candidates[0 if index == 1 else index]["id"]
-                ],
+                "supporting_insight_ids": (
+                    [candidates[0]["id"], candidates[1]["id"]]
+                    if index == 0
+                    else [candidates[0 if index == 1 else index]["id"]]
+                ),
                 "explanation": "The final wording develops the verified proposition.",
             }
             for index, (theme, _evidence_ids) in enumerate(theme_specs)

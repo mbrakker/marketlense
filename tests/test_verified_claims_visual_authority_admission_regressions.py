@@ -20,8 +20,8 @@ from tests._test_artifact_generator._shared import (
 from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _doc_map,
     _generation_evidence,
-    _generation_responses,
     _insight,
+    _verified_generation_responses,
 )
 from tests.test_verified_claims_visual_authority_canary import (
     SOURCE_IDENTITY,
@@ -383,7 +383,7 @@ def test_full_verified_roster_keeps_authority_without_prompt_fact_duplication(
         }
         return _verified_admission(shortlisted, digest="e" * 64)
 
-    responses = _generation_responses(
+    responses = _verified_generation_responses(
         candidates,
         plan_evidence_ids=[f"f{index}" for index in range(1, 8)],
     )

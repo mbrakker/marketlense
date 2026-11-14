@@ -656,7 +656,7 @@ def test_verified_finding_fallback_preserves_stable_fact_identity() -> None:
 
 def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> None:
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION == (
-        "evidence_backed_shortlisting:32"
+        "evidence_backed_shortlisting:34"
     )
     assert artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION != (
         "stable_id_unique_selection:2"
@@ -671,6 +671,8 @@ def test_selection_version_invalidates_the_previous_shortlisting_behavior() -> N
     [
         "stable_id_unique_selection:2",
         "evidence_backed_shortlisting:2",
+        "evidence_backed_shortlisting:32",
+        "evidence_backed_shortlisting:33",
         "evidence_backed_shortlisting:3",
         "evidence_backed_shortlisting:4",
         "evidence_backed_shortlisting:5",
