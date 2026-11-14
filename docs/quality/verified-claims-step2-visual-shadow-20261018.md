@@ -13360,3 +13360,10 @@ reproduction did not establish promotion through downstream semantic checks.
 Conversely, an invalid sibling claim can cause misleading scope errors for a
 legitimately rewritten LinkedIn claim; the invalid candidate still fails closed.
 These boundaries require claim-level authorization, not blanket root exemption.
+Scope and audit now authorize individually verified provenance rows only when
+their unique text hashes correspond to explicitly scoped sentence changes.
+Component regressions reject unrelated same-family and cross-family binding
+changes and duplicate identities. The existing whole-root verification
+prerequisite remains: when a sibling claim has invalid provenance, the
+candidate is rejected and secondary scope diagnostics may still be reported.
+No live repair success follows from these component results.

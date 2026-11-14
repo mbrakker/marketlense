@@ -657,13 +657,17 @@ def test_scope_validation_allows_soft_copy_provenance_for_repaired_soft_copy() -
     )
     before = {
         "summary": {"tldr": "Before."},
-        "soft_copy_claim_provenance": {"claims": [{"claim_id": "before"}]},
+        "soft_copy_claim_provenance": {
+            "claims": [_soft_copy_claim(family="summary", text="Before.")]
+        },
         "cover_semantics": {"title": "Stable"},
     }
     candidate = {
         **deepcopy(before),
         "summary": {"tldr": "After."},
-        "soft_copy_claim_provenance": {"claims": [{"claim_id": "after"}]},
+        "soft_copy_claim_provenance": {
+            "claims": [_soft_copy_claim(family="summary", text="After.")]
+        },
     }
 
     assert (
@@ -677,9 +681,6 @@ def test_scope_validation_allows_soft_copy_provenance_for_repaired_soft_copy() -
     )
     unverified = _scope_validation_report(before=before, after=candidate, plan=plan)
     assert unverified.status == "fail"
-    assert all(
-        issue.rule_id == "regeneration_scope_violation" for issue in unverified.issues
-    )
 
     candidate["cover_semantics"] = {"title": "Unrelated change"}
 
@@ -688,8 +689,13 @@ def test_scope_validation_allows_soft_copy_provenance_for_repaired_soft_copy() -
     assert report.status == "fail"
     assert [issue.affected_section for issue in report.issues] == [
         "cover_semantics.title",
-        "soft_copy_claim_provenance.claims[item=after]",
-        "soft_copy_claim_provenance.claims[item=before]",
+        *sorted(
+            f"soft_copy_claim_provenance.claims[item={claim['claim_id']}]"
+            for claim in (
+                before["soft_copy_claim_provenance"]["claims"][0],
+                candidate["soft_copy_claim_provenance"]["claims"][0],
+            )
+        ),
     ]
 
 

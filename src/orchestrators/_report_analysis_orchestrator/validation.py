@@ -13,6 +13,7 @@ import math
 import re
 from copy import deepcopy
 from dataclasses import asdict, dataclass, replace
+from difflib import SequenceMatcher
 from time import perf_counter
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -2651,10 +2652,21 @@ def _scope_validation_report(
     }
     declared_source_roots = {_path_root(value) for value in allowed_paths}
     dependent_roots = regeneration_dependent_roots(changed_source_roots)
+    provenance_paths = (
+        _scoped_soft_copy_provenance_paths(
+            before=before,
+            after=after,
+            allowed_paths=allowed_paths,
+            declared_family_roots=declared_family_roots,
+        )
+        if "soft_copy_claim_provenance" in verified_derived_roots
+        else set()
+    )
     violations = sorted(
         path
         for path in changed_paths
-        if not _path_is_declared(path, allowed_paths, declared_family_roots)
+        if path not in provenance_paths
+        and not _path_is_declared(path, allowed_paths, declared_family_roots)
         and not _is_allowed_derived_artifact_change(
             path=path,
             dependent_roots=dependent_roots,
@@ -3166,6 +3178,8 @@ def _is_allowed_derived_artifact_change(
     """Allow only deterministic projections of an explicitly scoped repair."""
 
     root = _path_root(path)
+    if root == "soft_copy_claim_provenance":
+        return False
     dependencies: frozenset[str] = ARTIFACT_ROOT_DEPENDENCIES.get(root, frozenset())
     if root in REGENERATION_PRIVATE_METADATA_ROOTS:
         # These audit/cache records have their own integrity checks; they are
@@ -3174,6 +3188,94 @@ def _is_allowed_derived_artifact_change(
             dependencies & declared_source_roots
         )
     return root in verified_derived_roots and root in dependent_roots
+
+
+def _scoped_soft_copy_provenance_paths(
+    *,
+    before: Dict[str, Any],
+    after: Dict[str, Any],
+    allowed_paths: set[str],
+    declared_family_roots: frozenset[str] = frozenset(),
+) -> set[str]:
+    """Bind added and removed provenance rows to explicitly scoped text changes."""
+    payloads = [
+        before.get("soft_copy_claim_provenance"),
+        after.get("soft_copy_claim_provenance"),
+    ]
+    rows: list[dict[str, dict[str, Any]]] = []
+    for payload in payloads:
+        if not isinstance(payload, dict) or not isinstance(payload.get("claims"), list):
+            return set()
+        index: dict[str, dict[str, Any]] = {}
+        for row in payload["claims"]:
+            if not isinstance(row, dict):
+                return set()
+            identity = row.get("claim_id")
+            if not isinstance(identity, str) or not identity or identity in index:
+                return set()
+            index[identity] = row
+        rows.append(index)
+
+    authorized: list[set[tuple[str, str]]] = [set(), set()]
+    family_text: list[dict[str, list[str]]] = [{}, {}]
+    for field in _SOFT_COPY_DIFF_PATHS:
+        family = _path_root(field)
+        values = []
+        for artifacts, family_sentences in zip(
+            (before, after), family_text, strict=True
+        ):
+            value = artifacts.get(family)
+            if family == "summary":
+                value = (
+                    value.get(field.split(".", 1)[1]) if isinstance(value, dict) else ""
+                )
+            sentences = soft_copy_material_sentences(
+                value if isinstance(value, str) else ""
+            )
+            values.append(sentences)
+            family_sentences.setdefault(family, []).extend(sentences)
+        for op, old_start, old_end, new_start, new_end in SequenceMatcher(
+            a=values[0], b=values[1], autojunk=False
+        ).get_opcodes():
+            if op == "equal":
+                continue
+            indices = (range(old_start, old_end), range(new_start, new_end))
+            paths = {f"{field}[claim_index={i}]" for group in indices for i in group}
+            if not paths or not (
+                field in allowed_paths
+                or family in declared_family_roots
+                or all(_path_is_declared(path, allowed_paths) for path in paths)
+            ):
+                continue
+            for side, group in enumerate(indices):
+                authorized[side].update(
+                    (family, _summary_copy_text_hash(values[side][i])) for i in group
+                )
+
+    result: set[str] = set()
+    for side, (old, other) in enumerate(((rows[0], rows[1]), (rows[1], rows[0]))):
+        for identity in old.keys() - other.keys():
+            row = old[identity]
+            row_family, text_hash = row.get("artifact_family"), row.get("text_hash")
+            if not isinstance(row_family, str) or not isinstance(text_hash, str):
+                continue
+            sentences = family_text[side].get(row_family, [])
+            other_sentences = family_text[1 - side].get(row_family, [])
+            if (
+                (row_family, text_hash) in authorized[side]
+                and sum(_summary_copy_text_hash(s) == text_hash for s in sentences) == 1
+                and all(
+                    _summary_copy_text_hash(s) != text_hash for s in other_sentences
+                )
+                and sum(
+                    r.get("artifact_family") == row_family
+                    and r.get("text_hash") == text_hash
+                    for r in old.values()
+                )
+                == 1
+            ):
+                result.add(f"soft_copy_claim_provenance.claims[item={identity}]")
+    return result
 
 
 def _verified_dependent_paths(
@@ -3195,10 +3297,18 @@ def _verified_dependent_paths(
     }
     declared_source_roots = {_path_root(value) for value in allowed_paths}
     dependent_roots = regeneration_dependent_roots(changed_source_roots)
+    provenance_paths = (
+        _scoped_soft_copy_provenance_paths(
+            before=before, after=after, allowed_paths=allowed_paths
+        )
+        if "soft_copy_claim_provenance" in verified_derived_roots
+        else set()
+    )
     return sorted(
         path
         for path in changed_paths
-        if _is_allowed_derived_artifact_change(
+        if path in provenance_paths
+        or _is_allowed_derived_artifact_change(
             path=path,
             dependent_roots=dependent_roots,
             declared_source_roots=declared_source_roots,
