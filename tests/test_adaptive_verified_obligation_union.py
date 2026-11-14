@@ -142,6 +142,33 @@ def test_verified_replan_requires_the_complete_original_fact_union() -> None:
     )
 
 
+def test_semantic_coverage_requires_named_support_for_each_mandatory_fact() -> None:
+    plan = _coverage_plan()
+    plan["themes"][0]["required_evidence_ids"] = [
+        "verified-fact:f1",
+        "verified-fact:f2",
+    ]
+    plan["themes"][0]["alternative_evidence_groups"] = []
+    payload = {
+        "theme_coverage": [
+            _assessment("Theme 1", status="covered", resolution="retained", ids=["i1"]),
+            _assessment("Theme 2", status="covered", resolution="retained", ids=["i2"]),
+        ]
+    }
+    insights = [
+        {"id": "i1", "text": "Signal one.", "evidence_id": "verified-fact:f1"},
+        {"id": "i2", "text": "Signal two.", "evidence_id": "verified-fact:f2"},
+    ]
+    with pytest.raises(AppError):
+        validate_substantive_editorial_theme_coverage(
+            payload=payload, editorial_plan=plan, final_insights=insights
+        )
+    payload["theme_coverage"][0]["supporting_insight_ids"].append("i2")
+    validate_substantive_editorial_theme_coverage(
+        payload=payload, editorial_plan=plan, final_insights=insights
+    )
+
+
 @pytest.mark.parametrize(
     ("status", "supporting_ids"),
     [("partial", ["i1"]), ("uncovered", [])],

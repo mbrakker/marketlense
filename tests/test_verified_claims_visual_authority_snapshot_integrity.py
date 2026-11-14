@@ -52,6 +52,7 @@ def _theme_coverage_response(
         for candidate in candidates
         if candidate.get("evidence_id") and candidate.get("id")
     }
+
     names = theme_names or [
         f"Theme {index}" for index in range(1, len(plan_evidence_ids) + 1)
     ]
@@ -98,6 +99,36 @@ def _theme_coverage_response(
             else "targeted_rewrite"
         ),
     }
+
+
+def test_new_verified_generation_rejects_missing_fact_decisions(tmp_path):
+    class LegacyPlanProvider(FakeOpenAI):
+        def _verified_plan_response(self, response):
+            payload = super()._verified_plan_response(response)
+            for theme in payload.get("editorial_plan", {}).get("themes", []):
+                theme.pop("required_evidence_ids", None)
+                theme.pop("alternative_evidence_groups", None)
+            return payload
+
+    candidates = [_insight(f"f{i}", score=1 - i / 100) for i in range(1, 6)]
+    with pytest.raises(AppError) as error:
+        generate_artifacts(
+            report_id="missing-verified-fact-decisions",
+            report_name="Missing Verified Fact Decisions",
+            doc_map=_doc_map(5),
+            evidence_packs=_generation_evidence(5),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=LegacyPlanProvider(
+                _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+            ),
+            prompt_client=CapturingPromptClient(),
+            analysis_store=FakeAnalysisStore(),
+            visual_authority_admitter=lambda shortlisted: _verified_admission(
+                shortlisted, digest="s" * 64
+            ),
+        )
+    assert error.value.context["planning_mode"] == "verified_facts"
 
 
 def test_same_id_result_with_only_a_changed_evidence_span_fails_closed():

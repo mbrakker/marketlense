@@ -631,6 +631,8 @@ def _verified_plan_for_candidates(
                 ),
                 "feasible_candidate_ids": feasible_ids,
                 "evidence_ids": evidence_ids,
+                "required_evidence_ids": evidence_ids,
+                "alternative_evidence_groups": [],
             }
         )
     return {

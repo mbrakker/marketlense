@@ -1822,7 +1822,7 @@ def generate_artifacts(
         normalize_artifact_editorial_plan(payload.get("editorial_plan"))
         plan_evidence_ids = (
             {
-                normalize_text(value)
+                _s(value).strip() if verified_boundary else normalize_text(value)
                 for value in candidate_allowed_evidence_ids
                 if isinstance(value, str) and normalize_text(value)
             }
@@ -1852,7 +1852,7 @@ def generate_artifacts(
                 if fact_id:
                     evidence_ids.add(f"verified-fact:{fact_id}")
                 candidate_evidence_by_id[candidate_id] = {
-                    normalize_text(value) for value in evidence_ids if value
+                    value for value in evidence_ids if value
                 }
             limitation_ids = {
                 f"verified-fact:{_s(fact.get('fact_id')).strip()}"
@@ -1871,6 +1871,7 @@ def generate_artifacts(
                 },
                 admitted_limitation_evidence_ids=limitation_ids,
                 admitted_candidate_evidence_ids=candidate_evidence_by_id,
+                require_fact_requirements=True,
             )
             payload["editorial_plan"] = normalized_verified_plan
         validate_required_evidence_references(payload, task_ctx)

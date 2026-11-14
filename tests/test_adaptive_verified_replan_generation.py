@@ -157,6 +157,7 @@ def test_verified_replan_rebuilds_theme_coverage_with_the_accepted_plan(tmp_path
         {
             "theme": "Theme 3",
             "evidence_ids": [f"verified-fact:{candidates[2]['id']}"],
+            "required_evidence_ids": [f"verified-fact:{candidates[2]['id']}"],
             "coverage_obligation": "Develop proposition 3.",
             "feasible_candidate_ids": [candidates[2]["id"]],
         }

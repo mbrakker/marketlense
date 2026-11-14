@@ -82,6 +82,33 @@ def test_verified_plan_rejects_a_missing_decision_array():
         validate_verified_editorial_plan(plan, **_arguments())
 
 
+@pytest.mark.parametrize("theme_index", [0, 1])
+def test_new_verified_plan_requires_fact_decisions_for_each_theme(theme_index):
+    plan = _plan()
+    del plan["themes"][theme_index]["required_evidence_ids"]
+    del plan["themes"][theme_index]["alternative_evidence_groups"]
+    with pytest.raises(AppError) as error:
+        validate_verified_editorial_plan(
+            plan, **_arguments(), require_fact_requirements=True
+        )
+    assert error.value.context["planning_contract_failure"] is True
+
+
+def test_legacy_verified_plan_without_fact_decisions_remains_valid():
+    plan = _plan()
+    for theme in plan["themes"]:
+        del theme["required_evidence_ids"]
+        del theme["alternative_evidence_groups"]
+    assert validate_verified_editorial_plan(plan, **_arguments())
+
+
+def test_new_verified_plan_accepts_explicit_fact_decisions():
+    result = validate_verified_editorial_plan(
+        _plan(), **_arguments(), require_fact_requirements=True
+    )
+    assert result["themes"][0]["alternative_evidence_groups"] == [["f2", "f3"]]
+
+
 def test_verified_plan_rejects_unavailable_indispensable_fact():
     arguments = _arguments()
     arguments["admitted_candidate_evidence_ids"]["c1"] = {"f4"}
@@ -137,8 +164,4 @@ def test_replan_can_choose_one_original_alternative_as_required():
     revised["themes"][0]["required_evidence_ids"] = ["f1", "f2"]
     revised["themes"][0]["alternative_evidence_groups"] = []
     revised["themes"][0]["evidence_ids"] = ["f1", "f2"]
-    # Existing replan coverage also preserves the original fact vocabulary.
-    revised["themes"][1]["evidence_ids"].append("f3")
-    revised["themes"][1]["required_evidence_ids"].append("f3")
-    revised["themes"][1]["importance"] = "essential"
     assert validate_verified_editorial_plan_revision(original, revised, **_arguments())

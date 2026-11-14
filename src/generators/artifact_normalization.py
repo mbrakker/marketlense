@@ -31,7 +31,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.4"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:33"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:34"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 EDITORIAL_PLAN_IMPORTANCE_VALUES = {"essential", "optional"}
@@ -739,6 +739,7 @@ def validate_verified_editorial_plan(
     admitted_candidate_ids: set[str],
     admitted_limitation_evidence_ids: set[str],
     admitted_candidate_evidence_ids: Dict[str, set[str]] | None = None,
+    require_fact_requirements: bool = False,
 ) -> Dict[str, Any]:
     """Validate the stricter executable plan used after verified-fact admission.
 
@@ -749,15 +750,38 @@ def validate_verified_editorial_plan(
 
     plan = normalize_artifact_editorial_plan(value)
     validate_editorial_plan_evidence_ids(plan, canonical_evidence_ids)
+    if require_fact_requirements:
+        unknown = {
+            evidence_id
+            for theme in plan["themes"]
+            for evidence_id in theme["evidence_ids"]
+            if evidence_id not in canonical_evidence_ids
+        }
+        unknown.update(
+            evidence_id
+            for evidence_id in plan.get("material_limitation_evidence_ids", [])
+            if evidence_id not in canonical_evidence_ids
+        )
+        if unknown:
+            raise AppError(
+                code="editorial_plan_invalid",
+                message="Editorial plan references non-canonical evidence IDs",
+                retryable=False,
+                context={
+                    "rule_id": "verified_editorial_plan.evidence_vocabulary",
+                    "field": "evidence_ids",
+                    "unknown_evidence_ids": sorted(unknown),
+                    "planning_contract_failure": True,
+                },
+            )
+    identity_key = _s if require_fact_requirements else normalize_for_lookup
     admitted_keys = {
-        normalize_for_lookup(item)
-        for item in admitted_candidate_ids
-        if normalize_for_lookup(item)
+        identity_key(item) for item in admitted_candidate_ids if identity_key(item)
     }
     limitation_keys = {
-        normalize_for_lookup(item)
+        identity_key(item)
         for item in admitted_limitation_evidence_ids
-        if normalize_for_lookup(item)
+        if identity_key(item)
     }
     raw_plan = value if isinstance(value, dict) else {}
     if "material_limitation_evidence_ids" not in raw_plan or not isinstance(
@@ -792,13 +816,13 @@ def validate_verified_editorial_plan(
     normalized_candidate_bindings: dict[str, set[str]] = {}
     candidate_binding_records: list[tuple[str, set[str]]] = []
     for candidate_id, evidence_ids in (admitted_candidate_evidence_ids or {}).items():
-        candidate_key = normalize_for_lookup(candidate_id)
+        candidate_key = identity_key(candidate_id)
         if not candidate_key or candidate_key not in admitted_keys:
             continue
         evidence_keys = {
-            normalize_for_lookup(evidence_id)
+            identity_key(evidence_id)
             for evidence_id in evidence_ids
-            if normalize_for_lookup(evidence_id)
+            if identity_key(evidence_id)
         }
         normalized_candidate_bindings[candidate_key] = evidence_keys
         candidate_binding_records.append((_s(candidate_id).strip(), evidence_keys))
@@ -812,6 +836,8 @@ def validate_verified_editorial_plan(
             == normalize_for_lookup(theme_name)
         )
         required_fields: tuple[str, ...] = ("importance", "coverage_obligation")
+        if require_fact_requirements:
+            required_fields += ("required_evidence_ids", "alternative_evidence_groups")
         if not candidate_binding_authority:
             required_fields += ("feasible_candidate_ids",)
         if any(field not in raw_theme for field in required_fields):
@@ -828,6 +854,11 @@ def validate_verified_editorial_plan(
                         if not candidate_binding_authority
                         else ""
                     )
+                    + (
+                        ", and fact requirement declarations"
+                        if require_fact_requirements
+                        else ""
+                    )
                 ),
                 retryable=False,
                 context={
@@ -839,7 +870,7 @@ def validate_verified_editorial_plan(
                 },
             )
         theme_keys = {
-            normalize_for_lookup(evidence_id) for evidence_id in theme["evidence_ids"]
+            identity_key(evidence_id) for evidence_id in theme["evidence_ids"]
         }
         theme_evidence_ids = [
             _s(evidence_id).strip()
@@ -875,12 +906,11 @@ def validate_verified_editorial_plan(
                 *(keys for _, keys in candidate_binding_records)
             )
             required_keys = {
-                normalize_for_lookup(item)
-                for item in theme.get("required_evidence_ids", [])
+                identity_key(item) for item in theme.get("required_evidence_ids", [])
             }
             groups = theme.get("alternative_evidence_groups", [])
             if not required_keys.issubset(available_keys) or any(
-                not {normalize_for_lookup(item) for item in group} & available_keys
+                not {identity_key(item) for item in group} & available_keys
                 for group in groups
             ):
                 raise AppError(
@@ -894,9 +924,7 @@ def validate_verified_editorial_plan(
             for candidate_id in theme.get("feasible_candidate_ids") or []
             if _s(candidate_id).strip()
         ]
-        feasible_ids = {
-            normalize_for_lookup(candidate_id) for candidate_id in raw_feasible_ids
-        }
+        feasible_ids = {identity_key(candidate_id) for candidate_id in raw_feasible_ids}
         if not feasible_ids.issubset(admitted_keys):
             raise AppError(
                 code="editorial_plan_invalid",
@@ -910,7 +938,7 @@ def validate_verified_editorial_plan(
                         {
                             candidate_id
                             for candidate_id in raw_feasible_ids
-                            if normalize_for_lookup(candidate_id) not in admitted_keys
+                            if identity_key(candidate_id) not in admitted_keys
                         },
                         key=str.casefold,
                     ),
@@ -940,9 +968,9 @@ def validate_verified_editorial_plan(
                     },
                 )
     selected_limitations = {
-        normalize_for_lookup(evidence_id)
+        identity_key(evidence_id)
         for evidence_id in plan.get("material_limitation_evidence_ids", [])
-        if normalize_for_lookup(evidence_id)
+        if identity_key(evidence_id)
     }
     raw_selected_limitations = [
         _s(evidence_id).strip()
@@ -964,7 +992,7 @@ def validate_verified_editorial_plan(
                     {
                         evidence_id
                         for evidence_id in raw_selected_limitations
-                        if normalize_for_lookup(evidence_id) not in limitation_keys
+                        if identity_key(evidence_id) not in limitation_keys
                     },
                     key=str.casefold,
                 ),
@@ -1048,6 +1076,10 @@ def validate_verified_editorial_plan_revision(
     )
     for original_binding in editorial_plan_theme_bindings(original):
         if original_binding["importance"] != "essential":
+            continue
+        if "required_evidence_ids" in original_binding:
+            # The explicit requirements above preserve each mandatory premise
+            # and one member of every alternative group.
             continue
         original_keys = set(original_binding["coverage_keys"])
         if not original_keys.issubset(revised_essential_keys):
@@ -2025,12 +2057,43 @@ def select_artifact_insights(
     selection_limit = (
         max_count if isinstance(max_count, int) and max_count > 0 else None
     )
+    if selection_limit is not None:
+        for binding in theme_bindings:
+            required = binding.get("required_evidence_ids")
+            groups = binding.get("alternative_evidence_groups")
+            if (
+                binding["importance"] != "essential"
+                or not isinstance(required, list)
+                or not isinstance(groups, list)
+            ):
+                continue
+            for requirement in [[item] for item in required] + groups:
+                requirement_keys = set(requirement)
+                if any(
+                    requirement_keys & set(_ordered_item_evidence_ids(insight))
+                    for insight in selected
+                ):
+                    continue
+                if len(selected) >= selection_limit:
+                    break
+                matching = [
+                    item
+                    for item in ranked
+                    if requirement_keys & set(_ordered_item_evidence_ids(item[1]))
+                ]
+                while matching and len(selected) < selection_limit:
+                    best = _best_ranked_insight(matching)
+                    before = len(selected)
+                    _append_distinct_insight(selected, selected_keys, best[1])
+                    if len(selected) > before:
+                        break
+                    matching.remove(best)
     # A high-scored final claim may still lack its source binding; allow only
     # evidence-bound candidates to bypass the editorial plan's coverage order.
     grounded_ranked = [
         item for item in ranked if _s(item[1].get("evidence_id")).strip()
     ]
-    if grounded_ranked:
+    if grounded_ranked and (selection_limit is None or len(selected) < selection_limit):
         _append_distinct_insight(
             selected, selected_keys, _best_ranked_insight(grounded_ranked)[1]
         )
@@ -3173,6 +3236,37 @@ def validate_substantive_editorial_theme_coverage(
                         "assessment_contract_failure": True,
                     },
                 )
+            required = theme_binding.get("required_evidence_ids")
+            groups = theme_binding.get("alternative_evidence_groups")
+            if status == "covered" and (required is not None or groups is not None):
+                supporting_exact = {
+                    evidence_id
+                    for insight_id in supporting_ids
+                    for evidence_id in _ordered_item_evidence_ids(
+                        final_facts.get(insight_id)
+                    )
+                }
+                if (
+                    not isinstance(required, list)
+                    or not isinstance(groups, list)
+                    or not all(
+                        isinstance(item, str) and item in supporting_exact
+                        for item in required
+                    )
+                    or not all(
+                        isinstance(group, list)
+                        and bool(group)
+                        and all(isinstance(item, str) for item in group)
+                        and any(item in supporting_exact for item in group)
+                        for group in groups
+                    )
+                ):
+                    raise AppError(
+                        code="artifact_final_insight_coverage_invalid",
+                        message="Semantic theme support omits required facts",
+                        retryable=False,
+                        context={"theme": theme, "assessment_contract_failure": True},
+                    )
         if status == "uncovered" and supporting_ids:
             raise AppError(
                 code="artifact_final_insight_coverage_invalid",
