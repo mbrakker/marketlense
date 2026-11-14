@@ -225,6 +225,14 @@ def _verified_editorial_obligation_context(
                 "importance": _s(binding.get("importance")).strip(),
                 "coverage_obligation": _s(binding.get("coverage_obligation")).strip(),
                 "evidence_ids": list(dict.fromkeys(exact_evidence_ids)),
+                **{
+                    field: deepcopy(raw_theme[field])
+                    for field in (
+                        "required_evidence_ids",
+                        "alternative_evidence_groups",
+                    )
+                    if field in raw_theme
+                },
                 "feasible_candidate_ids": feasible_ids,
                 "merge_group": _s(binding.get("merge_group")).strip(),
                 "verified_fact_ids": list(dict.fromkeys(theme_fact_ids)),
@@ -3199,6 +3207,14 @@ def generate_artifacts(
                 "evidence_ids": list(theme["evidence_ids"]),
                 "importance": theme.get("importance", "essential"),
                 "coverage_obligation": theme.get("coverage_obligation", ""),
+                **{
+                    field: deepcopy(theme[field])
+                    for field in (
+                        "required_evidence_ids",
+                        "alternative_evidence_groups",
+                    )
+                    if field in theme
+                },
             }
             for theme in editorial_plan["themes"]
             if theme.get("importance", "essential") == "essential"

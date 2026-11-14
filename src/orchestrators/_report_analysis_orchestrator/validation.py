@@ -464,6 +464,7 @@ def _validate_original_essential_obligation_assessments(
         expected[theme] = obligation
 
     public_item_evidence: dict[str, set[str]] = {}
+    malformed_item_evidence: set[str] = set()
     allowed_support_ids: set[str] = set()
     for item in items:
         item_id = str(item.get("public_item_id") or "").strip()
@@ -496,6 +497,16 @@ def _validate_original_essential_obligation_assessments(
         for alias in aliases:
             allowed_support_ids.add(alias)
             public_item_evidence[alias] = evidence_ids
+            raw_evidence = item.get("evidence_ids")
+            if (
+                not isinstance(raw_evidence, list)
+                or any(
+                    not isinstance(value, str) or not value or value != value.strip()
+                    for value in raw_evidence
+                )
+                or len(raw_evidence) != len(evidence_ids)
+            ):
+                malformed_item_evidence.add(alias)
 
     assessment_themes = [
         str(assessment.get("theme") or "").strip()
@@ -570,6 +581,74 @@ def _validate_original_essential_obligation_assessments(
             for value in expected[theme].get("evidence_ids") or []
             if str(value).strip()
         }
+        obligation = expected[theme]
+        explicit = (
+            "required_evidence_ids" in obligation
+            or "alternative_evidence_groups" in obligation
+        )
+        required_ids = obligation_evidence_ids
+        alternative_groups: list[set[str]] = []
+        if explicit:
+            required = obligation.get("required_evidence_ids")
+            groups = obligation.get("alternative_evidence_groups")
+            raw_obligation_ids = obligation.get("evidence_ids")
+            if not isinstance(required, list) or not isinstance(groups, list):
+                raise AppError(
+                    code="public_editorial_quality_obligation_contract_invalid",
+                    message="Original obligation has malformed evidence requirements",
+                    retryable=False,
+                    context={"theme": theme},
+                )
+            valid = (
+                isinstance(raw_obligation_ids, list)
+                and all(
+                    isinstance(value, str) and bool(value) and value == value.strip()
+                    for value in raw_obligation_ids
+                )
+                and len(raw_obligation_ids) == len(obligation_evidence_ids)
+            )
+            if valid:
+                valid = all(
+                    isinstance(value, str) and bool(value) and value == value.strip()
+                    for value in required
+                ) and all(
+                    isinstance(group, list)
+                    and len(group) >= 2
+                    and all(
+                        isinstance(value, str)
+                        and bool(value)
+                        and value == value.strip()
+                        for value in group
+                    )
+                    for group in groups
+                )
+            if valid:
+                declared = required + [value for group in groups for value in group]
+                valid = (
+                    bool(declared)
+                    and len(declared) == len(set(declared))
+                    and set(declared) == obligation_evidence_ids
+                )
+            if not valid:
+                raise AppError(
+                    code="public_editorial_quality_obligation_contract_invalid",
+                    message="Original obligation has malformed evidence requirements",
+                    retryable=False,
+                    context={"theme": theme},
+                )
+            required_ids = set(required)
+            alternative_groups = [set(group) for group in groups]
+            raw_assessment_ids = assessment.get("evidence_ids")
+            if not isinstance(raw_assessment_ids, list) or any(
+                not isinstance(value, str) or not value or value != value.strip()
+                for value in raw_assessment_ids
+            ):
+                raise AppError(
+                    code="public_editorial_quality_obligation_review_evidence_mismatch",
+                    message="Original obligation assessment has malformed evidence IDs",
+                    retryable=False,
+                    context={"theme": theme},
+                )
         assessment_evidence_ids = [
             str(value).strip()
             for value in assessment.get("evidence_ids") or []
@@ -605,6 +684,20 @@ def _validate_original_essential_obligation_assessments(
             for value in assessment.get("supporting_insight_ids") or []
             if str(value).strip()
         ]
+        raw_supporting_ids = assessment.get("supporting_insight_ids")
+        if explicit and (
+            not isinstance(raw_supporting_ids, list)
+            or any(
+                not isinstance(value, str) or not value or value != value.strip()
+                for value in raw_supporting_ids
+            )
+        ):
+            raise AppError(
+                code="public_editorial_quality_obligation_review_support_mismatch",
+                message="Original obligation assessment has malformed supporting IDs",
+                retryable=False,
+                context={"theme": theme},
+            )
         duplicate_insight_ids = sorted(
             {
                 insight_id
@@ -613,7 +706,11 @@ def _validate_original_essential_obligation_assessments(
             }
         )
         invalid_insight_ids = sorted(set(supporting_ids) - allowed_support_ids)
-        if duplicate_insight_ids or invalid_insight_ids:
+        if (
+            duplicate_insight_ids
+            or invalid_insight_ids
+            or (explicit and set(supporting_ids) & malformed_item_evidence)
+        ):
             raise AppError(
                 code="public_editorial_quality_obligation_review_support_mismatch",
                 message=(
@@ -649,7 +746,11 @@ def _validate_original_essential_obligation_assessments(
                 },
             )
         if status == "covered" and (
-            set(assessment_evidence_ids) != obligation_evidence_ids
+            not required_ids <= set(assessment_evidence_ids)
+            or any(
+                not group.intersection(assessment_evidence_ids)
+                for group in alternative_groups
+            )
             or not obligation_evidence_ids
             or not supporting_ids
         ):

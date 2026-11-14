@@ -35,6 +35,8 @@
               },
               "importance": { "type": "string", "enum": ["essential", "optional"] },
               "coverage_obligation": { "type": "string", "minLength": 1 },
+              "required_evidence_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+              "alternative_evidence_groups": { "type": "array", "items": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } } },
               "feasible_candidate_ids": {
                 "type": "array",
                 "items": { "type": "string", "minLength": 1 }

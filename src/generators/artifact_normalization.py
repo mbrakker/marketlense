@@ -30,8 +30,8 @@ from src.utils.quantity import (
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
-EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.3"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:32"
+EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.4"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:33"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 EDITORIAL_PLAN_IMPORTANCE_VALUES = {"essential", "optional"}
@@ -592,6 +592,43 @@ def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:
             "priority": priority,
             "evidence_ids": evidence_ids,
         }
+        if (
+            "required_evidence_ids" in raw_theme
+            or "alternative_evidence_groups" in raw_theme
+        ):
+            required = raw_theme.get("required_evidence_ids")
+            groups = raw_theme.get("alternative_evidence_groups")
+            if (
+                not isinstance(required, list)
+                or not isinstance(groups, list)
+                or not all(isinstance(item, str) and item.strip() for item in required)
+                or not all(
+                    isinstance(group, list)
+                    and len(group) >= 2
+                    and all(isinstance(item, str) and item.strip() for item in group)
+                    for group in groups
+                )
+            ):
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message="Invalid explicit fact requirements",
+                    retryable=False,
+                    context={"theme": theme},
+                )
+            required = [item.strip() for item in required]
+            groups = [[item.strip() for item in group] for group in groups]
+            declared = required + [item for group in groups for item in group]
+            if len(declared) != len(set(declared)) or set(declared) != set(
+                evidence_ids
+            ):
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message="Fact requirements must partition the theme evidence IDs",
+                    retryable=False,
+                    context={"theme": theme},
+                )
+            normalized_theme["required_evidence_ids"] = required
+            normalized_theme["alternative_evidence_groups"] = groups
         if "importance" in raw_theme:
             importance = _s(raw_theme.get("importance")).strip().casefold()
             if importance not in EDITORIAL_PLAN_IMPORTANCE_VALUES:
@@ -834,6 +871,24 @@ def validate_verified_editorial_plan(
                     },
                 )
             theme["feasible_candidate_ids"] = derived_candidate_ids
+            available_keys = set().union(
+                *(keys for _, keys in candidate_binding_records)
+            )
+            required_keys = {
+                normalize_for_lookup(item)
+                for item in theme.get("required_evidence_ids", [])
+            }
+            groups = theme.get("alternative_evidence_groups", [])
+            if not required_keys.issubset(available_keys) or any(
+                not {normalize_for_lookup(item) for item in group} & available_keys
+                for group in groups
+            ):
+                raise AppError(
+                    code="editorial_plan_invalid",
+                    message="Fact requirements have no admitted candidate binding",
+                    retryable=False,
+                    context={"theme": theme_name, "planning_contract_failure": True},
+                )
         raw_feasible_ids = [
             _s(candidate_id).strip()
             for candidate_id in theme.get("feasible_candidate_ids") or []
@@ -952,6 +1007,38 @@ def validate_verified_editorial_plan_revision(
         admitted_candidate_evidence_ids=admitted_candidate_evidence_ids,
     )
     revised_bindings = editorial_plan_theme_bindings(revised)
+    revised_themes = [
+        theme for theme in revised["themes"] if _theme_importance(theme) == "essential"
+    ]
+    revised_required = {
+        item
+        for theme in revised_themes
+        for item in theme.get("required_evidence_ids", [])
+    }
+    revised_groups = [
+        set(group)
+        for theme in revised_themes
+        for group in theme.get("alternative_evidence_groups", [])
+    ]
+    for theme in original["themes"]:
+        if (
+            _theme_importance(theme) != "essential"
+            or "required_evidence_ids" not in theme
+        ):
+            continue
+        if not set(theme["required_evidence_ids"]).issubset(revised_required) or any(
+            not (
+                set(group) & revised_required
+                or any(candidate.issubset(set(group)) for candidate in revised_groups)
+            )
+            for group in theme["alternative_evidence_groups"]
+        ):
+            raise AppError(
+                code="editorial_plan_invalid",
+                message="Verified replanning cannot weaken original fact requirements",
+                retryable=False,
+                context={"theme": theme["theme"]},
+            )
     revised_essential_keys = set().union(
         *(
             set(binding["coverage_keys"])
@@ -2114,6 +2201,7 @@ def final_insight_editorial_coverage(
         if _fallback_evidence_key(evidence_id)
     }
     selected_evidence_keys: set[str] = set()
+    selected_evidence_ids: set[str] = set()
     for insight in final_insights:
         if not isinstance(insight, dict):
             continue
@@ -2140,16 +2228,38 @@ def final_insight_editorial_coverage(
         selected_evidence_keys.update(
             _fallback_evidence_key(evidence_id) for evidence_id in evidence_ids
         )
+        selected_evidence_ids.update(evidence_ids)
 
     theme_bindings = editorial_plan_theme_bindings(editorial_plan)
     theme_coverage: List[Dict[str, Any]] = []
     for binding in theme_bindings:
         coverage_keys = set(binding["coverage_keys"])
+        required = binding.get("required_evidence_ids")
+        groups = binding.get("alternative_evidence_groups")
+        if required is not None or groups is not None:
+            selected = (
+                isinstance(required, list)
+                and isinstance(groups, list)
+                and bool(required or groups)
+                and all(
+                    isinstance(item, str) and item in selected_evidence_ids
+                    for item in required
+                )
+                and all(
+                    isinstance(group, list)
+                    and bool(group)
+                    and all(isinstance(item, str) for item in group)
+                    and any(item in selected_evidence_ids for item in group)
+                    for group in groups
+                )
+            )
+        else:
+            selected = bool(coverage_keys & selected_evidence_keys)
         theme_coverage.append(
             {
                 "theme": binding["theme"],
                 "priority": binding["priority"],
-                "selected": bool(coverage_keys & selected_evidence_keys),
+                "selected": selected,
                 "importance": binding["importance"],
                 "coverage_obligation": binding["coverage_obligation"],
                 "merge_group": binding["merge_group"],
@@ -2731,9 +2841,62 @@ def validate_substantive_editorial_theme_coverage(
                     final_facts.get(insight_id, {})
                 )
             }
-            if status == "covered" and not obligation_evidence_keys.issubset(
-                supporting_evidence_keys
-            ):
+            original = next(
+                item
+                for item in expected_obligations
+                if normalize_for_lookup(item.get("theme")) == obligation_key[0]
+                and tuple(
+                    sorted(
+                        normalize_for_lookup(value)
+                        for value in item.get("evidence_ids", [])
+                    )
+                )
+                == obligation_key[1]
+            )
+            required = original.get("required_evidence_ids")
+            groups = original.get("alternative_evidence_groups")
+            if required is not None or groups is not None:
+                if (
+                    not isinstance(required, list)
+                    or not isinstance(groups, list)
+                    or any(
+                        not isinstance(group, list) or len(group) < 2
+                        for group in groups
+                    )
+                ):
+                    raise AppError(
+                        code="artifact_final_insight_coverage_invalid",
+                        message="Invalid original fact requirements",
+                        retryable=False,
+                        context={"assessment_contract_failure": True},
+                    )
+                declared = required + [item for group in groups for item in group]
+                if (
+                    any(not isinstance(item, str) or not item for item in declared)
+                    or len(declared) != len(set(declared))
+                    or set(declared) != set(obligation_ids)
+                ):
+                    raise AppError(
+                        code="artifact_final_insight_coverage_invalid",
+                        message="Invalid original fact requirements",
+                        retryable=False,
+                        context={"assessment_contract_failure": True},
+                    )
+                supported_ids = {
+                    evidence_id
+                    for insight_id in normalized_supporting_ids
+                    for evidence_id in _ordered_item_evidence_ids(
+                        final_facts.get(insight_id, {})
+                    )
+                }
+                requirements_met = set(required).issubset(supported_ids) and all(
+                    set(group) & supported_ids for group in groups
+                )
+            else:
+                requirements_met = obligation_evidence_keys.issubset(
+                    supporting_evidence_keys
+                )
+            if status == "covered" and not requirements_met:
                 raise AppError(
                     code="artifact_final_insight_coverage_invalid",
                     message=(
@@ -4690,6 +4853,11 @@ def editorial_plan_theme_bindings(
                 "priority": theme.get("priority"),
                 "importance": _theme_importance(theme),
                 "coverage_obligation": _theme_coverage_obligation(theme),
+                **{
+                    key: theme[key]
+                    for key in ("required_evidence_ids", "alternative_evidence_groups")
+                    if key in theme
+                },
                 "feasible_candidate_ids": [
                     _s(candidate_id).strip()
                     for candidate_id in theme.get("feasible_candidate_ids") or []

@@ -142,6 +142,32 @@ def test_verified_obligations_bind_complete_essential_source_context() -> None:
     )
 
 
+def test_first_pass_context_preserves_model_declared_fact_requirements() -> None:
+    plan = _plan()
+    plan["themes"][0]["required_evidence_ids"] = ["verified-fact:f1"]
+    plan["themes"][0]["alternative_evidence_groups"] = [
+        ["verified-fact:f2", "verified-fact:f3"]
+    ]
+    plan["themes"][0]["evidence_ids"].append("verified-fact:f3")
+    context = _verified_editorial_obligation_context(
+        plan,
+        [
+            _candidate("candidate-1", "f1"),
+            _candidate("candidate-2", "f2"),
+            _candidate("candidate-3", "f3"),
+        ],
+        [
+            _fact("f1", "First.", qualifier=""),
+            _fact("f2", "Second.", qualifier=""),
+            _fact("f3", "Third.", qualifier=""),
+        ],
+    )
+    assert context["themes"][0]["required_evidence_ids"] == ["verified-fact:f1"]
+    assert context["themes"][0]["alternative_evidence_groups"] == [
+        ["verified-fact:f2", "verified-fact:f3"]
+    ]
+
+
 def test_verified_first_pass_prompt_receives_executable_obligations(tmp_path) -> None:
     candidates = [
         _insight(f"f{index}", score=1.0 - index / 100) for index in range(1, 6)

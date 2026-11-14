@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -430,6 +431,11 @@ def _verified_editorial_obligation_issues(
             "evidence_ids": list(theme["evidence_ids"]),
             "importance": theme.get("importance", "essential"),
             "coverage_obligation": theme.get("coverage_obligation", ""),
+            **{
+                field: deepcopy(theme[field])
+                for field in ("required_evidence_ids", "alternative_evidence_groups")
+                if field in theme
+            },
         }
         for theme in normalized_original_plan["themes"]
         if theme.get("importance", "essential") == "essential"

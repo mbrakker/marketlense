@@ -124,3 +124,9 @@ text: |
   report_verdict with status=pass is invalid if any original essential
   obligation is partial or uncovered. Legacy report scopes without this plan
   contract do not require the additional assessment field.
+
+  For an explicit fact-requirement contract, each required_evidence_id must
+  be supported and each alternative_evidence_group needs one supported member.
+  Cite only the facts actually bound to the named insights; do not bind an
+  unused alternative. Assess the actual substantive proposition and its
+  qualifications, not just the listed IDs.

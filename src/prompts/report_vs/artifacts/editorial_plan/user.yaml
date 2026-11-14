@@ -18,6 +18,8 @@ text: |
 
   During a verified replan, revise only the organization of the original plan: preserve every original essential proposition and its canonical fact bindings, and do not add candidates or facts. You may merge themes when one final insight can develop both, or omit an optional redundant theme when the independent assessment supports it. Never downgrade an essential theme to optional, discard a material counter-signal, or use replan to turn insufficient evidence into a PASS. Return the same executable plan contract for the next writer and coverage review.
 
+  In verified mode, explicitly partition each theme's evidence_ids into required_evidence_ids and alternative_evidence_groups. Every required ID is indispensable; each alternative group represents a separate requirement satisfied by at least one member. Group facts only when either can independently support the same obligation with all material relationships and qualifications; related but distinct facts are not alternatives. Include every theme evidence ID exactly once, use empty arrays when appropriate, and preserve original essential requirements during replan. Do not infer or invent bindings.
+
   Task: Return exactly this JSON object:
   {
     "editorial_plan": {
@@ -29,6 +31,8 @@ text: |
           "evidence_ids": ["<one or more existing evidence IDs from the supplied context>"]{% if verified_facts_json|default("") %},
           "importance": "essential|optional",
           "coverage_obligation": "<the proposition, relationship and material qualification that must survive>",
+          "required_evidence_ids": ["<each indispensable canonical fact ID>"],
+          "alternative_evidence_groups": [["<canonical fact ID>", "<genuinely interchangeable canonical fact ID>"]],
           "feasible_candidate_ids": [],
           "merge_group": "<shared group only when a single insight genuinely develops this theme with another>"{% endif %}
         }

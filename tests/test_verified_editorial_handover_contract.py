@@ -181,6 +181,152 @@ def test_public_review_obligation_diagnostics_identify_omitted_obligations():
     assert exc_info.value.context["missing_obligation_ids"] == ["Second signal"]
 
 
+def _explicit_obligation_review(required, groups, assessment_ids, bound_ids):
+    scope = _obligation_review_scope()
+    obligation = scope["original_editorial_plan_coverage"][
+        "original_essential_obligations"
+    ][0]
+    obligation.update(
+        evidence_ids=["verified-fact:f1", "verified-fact:f2", "verified-fact:f3"],
+        required_evidence_ids=required,
+        alternative_evidence_groups=groups,
+    )
+    payload = {
+        "original_essential_obligation_assessments": [
+            {
+                "theme": "Essential signal",
+                "status": "covered",
+                "explanation": "The primary insight covers the source obligation.",
+                "evidence_ids": assessment_ids,
+                "supporting_insight_ids": ["insight:i1"],
+            }
+        ]
+    }
+    items = _obligation_review_items()
+    items[0]["evidence_ids"] = bound_ids
+    return _validate_original_essential_obligation_assessments(
+        payload=payload, items=items, report_scope=scope
+    )
+
+
+@pytest.mark.parametrize("alternative", ["verified-fact:f2", "verified-fact:f3"])
+def test_public_review_accepts_declared_bound_alternative(alternative):
+    assert _explicit_obligation_review(
+        ["verified-fact:f1"],
+        [["verified-fact:f2", "verified-fact:f3"]],
+        ["verified-fact:f1", alternative],
+        ["verified-fact:f1", alternative],
+    ) == ["covered"]
+
+
+@pytest.mark.parametrize(
+    ("required", "groups", "cited", "bound"),
+    [
+        (
+            ["verified-fact:f1", "verified-fact:f2"],
+            [],
+            ["verified-fact:f1"],
+            ["verified-fact:f1"],
+        ),
+        (
+            ["verified-fact:f1"],
+            [["verified-fact:f2", "verified-fact:f3"]],
+            ["verified-fact:f1"],
+            ["verified-fact:f1"],
+        ),
+        (
+            ["verified-fact:f1"],
+            [["verified-fact:f2", "verified-fact:f3"]],
+            ["verified-fact:f1", "verified-fact:f2"],
+            ["verified-fact:f1"],
+        ),
+        (
+            ["verified-fact:f1", "verified-fact:f1"],
+            [["verified-fact:f2", "verified-fact:f3"]],
+            ["verified-fact:f1", "verified-fact:f2"],
+            ["verified-fact:f1", "verified-fact:f2"],
+        ),
+        (
+            ["verified-fact:f1"],
+            [["verified-fact:f2", "verified-fact:unknown"]],
+            ["verified-fact:f1", "verified-fact:f2"],
+            ["verified-fact:f1", "verified-fact:f2"],
+        ),
+        (
+            ["verified-fact:f1"],
+            [["verified-fact:f1", "verified-fact:f2"]],
+            ["verified-fact:f1", "verified-fact:f2"],
+            ["verified-fact:f1", "verified-fact:f2"],
+        ),
+        (
+            ["verified-fact:f1"],
+            [["verified-fact:f2"]],
+            ["verified-fact:f1", "verified-fact:f2"],
+            ["verified-fact:f1", "verified-fact:f2"],
+        ),
+        (
+            ["verified-fact:f1"],
+            [["verified-fact:f2", "verified-fact:f3"]],
+            ["verified-fact:f1", "verified-fact:unknown"],
+            ["verified-fact:f1", "verified-fact:unknown"],
+        ),
+        (
+            ["verified-fact:f1", "verified-fact:f2", "verified-fact:f3"],
+            [],
+            ["verified-fact:f1", "verified-fact:f2"],
+            ["verified-fact:f1", "verified-fact:f2"],
+        ),
+        (
+            ["verified-fact:f1"],
+            [["verified-fact:f2", "verified-fact:f3"]],
+            ["verified-fact:f1", " verified-fact:f2 "],
+            ["verified-fact:f1", "verified-fact:f2"],
+        ),
+        (
+            ["verified-fact:f1"],
+            [["verified-fact:f2", "verified-fact:f3"]],
+            ["verified-fact:f1", "verified-fact:f2", "verified-fact:f2"],
+            ["verified-fact:f1", "verified-fact:f2"],
+        ),
+    ],
+)
+def test_public_review_rejects_invalid_or_unmet_explicit_obligations(
+    required, groups, cited, bound
+):
+    with pytest.raises(AppError):
+        _explicit_obligation_review(required, groups, cited, bound)
+
+
+def test_public_review_legacy_obligation_still_requires_every_fact():
+    scope = _obligation_review_scope()
+    scope["original_editorial_plan_coverage"]["original_essential_obligations"][0][
+        "evidence_ids"
+    ].append("verified-fact:f2")
+    payload = {
+        "original_essential_obligation_assessments": [
+            {
+                "theme": "Essential signal",
+                "status": "covered",
+                "explanation": "The primary insight covers the source obligation.",
+                "evidence_ids": ["verified-fact:f1"],
+                "supporting_insight_ids": ["insight:i1"],
+            }
+        ]
+    }
+    with pytest.raises(AppError):
+        _validate_original_essential_obligation_assessments(
+            payload=payload, items=_obligation_review_items(), report_scope=scope
+        )
+
+
+@pytest.mark.parametrize("required,groups", [(None, []), ([], None), ([], [])])
+def test_public_review_rejects_incomplete_explicit_contract(required, groups):
+    with pytest.raises(AppError):
+        _explicit_obligation_review(
+            required, groups, ["verified-fact:f1"], ["verified-fact:f1"]
+        )
+
+
 def test_verified_strategic_context_requires_retained_sentence_binding() -> None:
     summary = {
         "tldr": "A retained source-backed planning signal.",

@@ -35,6 +35,46 @@ def _assessment(theme: str, *, status: str, resolution: str, ids: list[str]) -> 
     }
 
 
+def test_verified_replan_accepts_one_explicit_alternative() -> None:
+    obligations = [
+        {
+            "theme": "Theme 1",
+            "evidence_ids": ["verified-fact:f1", "verified-fact:f2"],
+            "required_evidence_ids": [],
+            "alternative_evidence_groups": [["verified-fact:f1", "verified-fact:f2"]],
+        }
+    ]
+    payload = {
+        "theme_coverage": [
+            _assessment("Theme 1", status="covered", resolution="retained", ids=["i1"]),
+            _assessment("Theme 2", status="covered", resolution="retained", ids=["i2"]),
+        ],
+        "report_completeness": "complete",
+        "diagnosis": "planned_theme_execution",
+        "recovery_action": "none",
+        "original_essential_obligation_assessments": [
+            {
+                "theme": "Theme 1",
+                "evidence_ids": ["verified-fact:f1", "verified-fact:f2"],
+                "status": "covered",
+                "supporting_insight_ids": ["i1"],
+                "explanation": "The first alternative develops the proposition.",
+            }
+        ],
+    }
+    result = validate_substantive_editorial_theme_coverage(
+        payload=payload,
+        editorial_plan=_coverage_plan(),
+        final_insights=[
+            {"id": "i1", "text": "Signal one.", "evidence_id": "verified-fact:f1"},
+            {"id": "i2", "text": "Signal two.", "evidence_id": "verified-fact:f2"},
+        ],
+        original_essential_obligations=obligations,
+        require_original_obligation_assessment=True,
+    )
+    assert result["original_essential_obligation_assessments"][0]["status"] == "covered"
+
+
 def test_verified_replan_requires_the_complete_original_fact_union() -> None:
     obligations = [
         {

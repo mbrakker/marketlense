@@ -131,6 +131,30 @@ def test_verified_regeneration_accepts_unchanged_editorial_obligations():
     )
 
 
+def test_verified_regeneration_preserves_explicit_fact_requirements():
+    current, _ = _valid_artifact_pair()
+    cache = current["_cache"]["visual_authority_canary"]["audit"][
+        "editorial_plan_coverage"
+    ]
+    plan = cache["original_editorial_plan"]
+    for theme, obligation in zip(
+        plan["themes"][:2], cache["original_essential_obligations"], strict=True
+    ):
+        theme["required_evidence_ids"] = list(theme["evidence_ids"])
+        theme["alternative_evidence_groups"] = []
+        obligation["required_evidence_ids"] = list(theme["evidence_ids"])
+        obligation["alternative_evidence_groups"] = []
+    cache["original_plan_identity"] = sha256_json(plan)
+    current["editorial_plan"] = deepcopy(plan)
+
+    assert (
+        _verified_editorial_obligation_issues(
+            current_artifacts=current, candidate_artifacts=deepcopy(current)
+        )
+        == []
+    )
+
+
 def test_verified_regeneration_rejects_missing_obligation_metadata():
     issues = _verified_editorial_obligation_issues(
         current_artifacts={},

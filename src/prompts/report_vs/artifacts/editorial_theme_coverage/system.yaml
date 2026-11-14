@@ -29,5 +29,11 @@ text: |
   generic or descriptive sentence as substantive development. Return exact
   source-bound material gaps when admitted facts are not developed.
 
+  When an obligation declares required_evidence_ids and
+  alternative_evidence_groups, each required fact is indispensable and each
+  alternative group requires one of its facts. Judge the factual wording and
+  its actual bindings, not the mere presence of an ID. Do not require all
+  members of an alternative group, or omit a required premise.
+
   Return only the schema-valid assessment. The application derives mechanical
   resolution and recovery-action fields after this semantic judgment.
