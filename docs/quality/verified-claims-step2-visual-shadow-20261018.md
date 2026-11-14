@@ -13292,3 +13292,23 @@ metric public copy and unresolved editorial review; Capgemini had a material
 limitations omission. They are not resolved merely by the null correction.
 E18 remains **Active/PARTIAL** and Step 2 **PARTIAL/NO-GO** pending fresh
 provider-backed first-pass, repair, factual and editorial acceptance.
+
+The corrected `508d0f23` Activate replay admitted 10/10 visual candidates but
+failed at `artifact_structured_output_invalid` for `insights_final` after a
+rolled-back repair. It used 539 provider calls, 3,045,462 input tokens,
+471,164 output tokens, eight structured-output repair calls, ten file-search
+calls and $0.559395. The retained ledger does not identify the terminal
+schema field; the earlier null failure must not be asserted as its cause.
+The first candidate corrected a news-reader qualification, but retained an
+unsupported revenue distinction and introduced an unsupported inference from
+views to unique audience reach; independent grounding correctly rejected it.
+
+The repair planner had quarantined the validated canonical fact supporting
+the revenue insight and its derived key figure after a wording-level
+`not_established` verdict. A targeted correction now keeps that fact available
+only when the exact issue binding agrees with the retained item and the
+complete verified-fact snapshot validates; malformed or mismatched bindings
+remain quarantined. Provider-free replay of the retained failure changes the
+planned target from quarantined to the exact selected verified fact. This is
+planning evidence only: the disputed wording remains blocked and neither
+successful model repair nor publication readiness has been demonstrated.

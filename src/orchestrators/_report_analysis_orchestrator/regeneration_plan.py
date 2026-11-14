@@ -518,6 +518,27 @@ def _normalize_regeneration_issue(
     excluded_evidence_ids = (
         list(evidence_ids) if _quarantines_failed_evidence(issue) else []
     )
+    is_insight_text = (
+        _insight_issue_field(issue.entity_id, issue.affected_section) == "text"
+    )
+    is_figure_copy = str(issue.entity_id or "").startswith("key_figure:")
+    if (
+        excluded_evidence_ids
+        and issue.rule_id == "grounding"
+        and issue.violation_type in {"not_established", "unsupported_factual_claim"}
+        and (is_insight_text or is_figure_copy)
+        and verified_facts_mode(artifacts)
+        and supplied_evidence_ids
+        and set(supplied_evidence_ids) == set(derived_evidence_ids)
+    ):
+        try:
+            facts = validated_verified_facts(artifacts)
+        except AppError:
+            facts = {}
+        if facts and all(
+            fact_for_evidence_id(facts, value) is not None for value in evidence_ids
+        ):
+            excluded_evidence_ids = []
     fingerprint_section = issue.affected_section
     fingerprint_entity_id = issue.entity_id
     if str(issue.entity_id or "").startswith("soft_copy:"):
