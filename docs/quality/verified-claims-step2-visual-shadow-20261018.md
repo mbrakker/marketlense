@@ -13367,3 +13367,11 @@ changes and duplicate identities. The existing whole-root verification
 prerequisite remains: when a sibling claim has invalid provenance, the
 candidate is rejected and secondary scope diagnostics may still be reported.
 No live repair success follows from these component results.
+
+The existing visual-verification prompt now asks the verifier to retain a
+clearly visible forecast author or source attribution in the canonical fact
+or qualifiers and its page note, without inferring forecast authorship from a
+source list. This uses the existing visual call and fact fields. The retained
+Activate fact is not amended: a fresh visual verification is necessary to
+assess whether this instruction preserves the label in practice. This is not
+evidence of a live grounding or editorial-readiness improvement.

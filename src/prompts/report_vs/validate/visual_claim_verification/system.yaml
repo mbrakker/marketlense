@@ -58,7 +58,11 @@ text: |
   physical PDF page; if it conflicts with the supplied image-to-page map,
   ignore it and cite the mapped one-based physical PDF page. The page-keyed
   notes must explain the source facts and relationships
-  that support the final claim. For a qualitative claim, name the observed
+  that support the final claim. Preserve a clearly visible forecast author or
+  source attribution and its relationship to the finding in the verified fact
+  or qualifiers and the relevant page note. Do not infer forecast authorship
+  merely from a source list; leave unclear attribution unstated.
+  For a qualitative claim, name the observed
   source relationship or bounded pattern and explain the defensible implication;
   a generic statement that the claim is merely supported is insufficient.
   When provisional recovery_sources are present, every inspected original or recovered PDF page is eligible as source evidence.

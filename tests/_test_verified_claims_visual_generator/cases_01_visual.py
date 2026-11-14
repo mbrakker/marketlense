@@ -96,6 +96,8 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     )
     assert '"verified_fact"' in verification.system.text
     assert "authoritative verified statement" in verification.system.text.lower()
+    assert "clearly visible forecast author or" in verification.system.text.lower()
+    assert "merely from a source list" in verification.system.text.lower()
     assert "guest-checkout" not in verification.system.text.lower()
     assert "portfolio-reconfiguration" not in verification.system.text.lower()
     assert "component totals" in correction.system.text.lower()
