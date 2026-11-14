@@ -13404,3 +13404,7 @@ results, not proof of a successful model repair or live editorial quality.
 The validation cache identity was advanced so older cached issues without the
 explicit outcome do not bypass this handover. Source-authority violation types
 remain distinct even when a claim verdict is contradicted.
+Reused grounding payloads now reject conflicting violation types between a
+check and its unsupported projection; this prevents an evidence-identity
+failure from being silently reclassified as a wording failure. The validation
+cache identity was advanced again for the stricter consistency contract.

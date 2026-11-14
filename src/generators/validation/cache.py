@@ -35,7 +35,7 @@ from src.utils.model_resolver import resolve_model
 
 from .shared import LOGGER_NAME, logger
 
-VALIDATION_RULESET_VERSION = "9"
+VALIDATION_RULESET_VERSION = "10"
 
 
 def validation_cache_meta(

@@ -27,7 +27,10 @@ from tests._test_validation_generator._shared import (
 )
 
 
-def test_legacy_cached_verdicts_cannot_bypass_explicit_outcome_handover(tmp_path):
+@pytest.mark.parametrize("old_version", ["8", "9"])
+def test_legacy_cached_verdicts_cannot_bypass_explicit_outcome_handover(
+    tmp_path, old_version
+):
     current = validation_cache_meta(
         request=ValidationRequest(
             schema_version="1.0",
@@ -42,7 +45,7 @@ def test_legacy_cached_verdicts_cannot_bypass_explicit_outcome_handover(tmp_path
         md5="source-md5",
         grounding_retrieval_mode="chat",
     )
-    old = {**current, "validation_ruleset_version": "8"}
+    old = {**current, "validation_ruleset_version": old_version}
     assert validation_cache_key(current) != validation_cache_key(old)
 
 

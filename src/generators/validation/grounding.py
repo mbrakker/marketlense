@@ -2478,6 +2478,13 @@ def _validate_grounding_check_coverage(
     ) -> bool:
         """Require the model-owned unsupported record to mirror its check."""
 
+        check_violation = s(check.get("violation_type") or check.get("failure_type"))
+        unsupported_violation = normalize_violation_type(
+            s(
+                unsupported_entry.get("violation_type")
+                or unsupported_entry.get("failure_type")
+            )
+        )
         return (
             _grounding_text_matches(
                 s(check.get("text")), s(unsupported_entry.get("text"))
@@ -2489,14 +2496,11 @@ def _validate_grounding_check_coverage(
             == s(check.get("entailment_outcome"))
             and s(unsupported_entry.get("entailment_outcome"))
             in {"contradicted", "not_established"}
-            and bool(
-                normalize_violation_type(
-                    s(
-                        unsupported_entry.get("violation_type")
-                        or unsupported_entry.get("failure_type")
-                    )
-                )
+            and (
+                not check_violation
+                or normalize_violation_type(check_violation) == unsupported_violation
             )
+            and bool(unsupported_violation)
             and _grounding_reason_is_substantive(unsupported_entry.get("reason"))
         )
 
