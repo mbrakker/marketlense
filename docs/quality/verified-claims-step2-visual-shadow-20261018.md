@@ -13375,3 +13375,11 @@ source list. This uses the existing visual call and fact fields. The retained
 Activate fact is not amended: a fresh visual verification is necessary to
 assess whether this instruction preserves the label in practice. This is not
 evidence of a live grounding or editorial-readiness improvement.
+An isolated `subscription-share-of-growth` shadow replay at `4764f74d` used
+the retained fact and hash-verified original PDF, but failed closed with
+`source_binding_conflict` before any provider call: the replay supplied
+`Activate|pdf-sha256:...` while the retained span used its canonical
+`source:...|pdf-sha256:...` identity. The PDF hash matched. No identity was
+overridden; the retained result is
+`C:\ml-contract-acceptance-20261114\activate-attribution-replay-4764f74d.json`.
+It does not establish live effectiveness of the prompt change.
