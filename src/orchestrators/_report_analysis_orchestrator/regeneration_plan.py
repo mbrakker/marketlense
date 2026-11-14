@@ -522,7 +522,10 @@ def _normalize_regeneration_issue(
         _insight_issue_field(issue.entity_id, issue.affected_section) == "text"
     )
     is_figure_copy = str(issue.entity_id or "").startswith("key_figure:")
-    claim_verdict = issue.entailment_outcome in {"contradicted", "not_established"}
+    claim_verdict = getattr(issue, "entailment_outcome", "") in {
+        "contradicted",
+        "not_established",
+    }
     source_failure = issue.violation_type in SOURCE_AUTHORITY_VIOLATIONS
     if (
         excluded_evidence_ids

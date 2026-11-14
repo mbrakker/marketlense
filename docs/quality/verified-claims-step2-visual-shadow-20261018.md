@@ -13408,3 +13408,7 @@ Reused grounding payloads now reject conflicting violation types between a
 check and its unsupported projection; this prevents an evidence-identity
 failure from being silently reclassified as a wording failure. The validation
 cache identity was advanced again for the stricter consistency contract.
+Hosted CI for `5f63750e` found two multifact repair failures because legacy
+`RegenerationIssue` instances lack the optional outcome field. The planner now
+treats that absent outcome conservatively, and both previously failing tests
+pass locally; no outcome is inferred for legacy issues.
