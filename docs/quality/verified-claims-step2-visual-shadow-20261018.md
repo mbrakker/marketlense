@@ -13412,3 +13412,6 @@ Hosted CI for `5f63750e` found two multifact repair failures because legacy
 `RegenerationIssue` instances lack the optional outcome field. The planner now
 treats that absent outcome conservatively, and both previously failing tests
 pass locally; no outcome is inferred for legacy issues.
+The same hosted run also exposed a test-module size violation caused by the
+new grounding regressions; those cases were moved into a focused test module,
+and the existing ownership gate passes locally without changing its threshold.

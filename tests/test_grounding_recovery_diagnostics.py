@@ -681,8 +681,6 @@ def test_verified_grounding_rejection_retains_missing_retained_claim_id():
         ("text", "text_identity_mismatch"),
         ("incomplete", "incomplete_semantic_fields"),
         ("pair", "unsupported_pair_mismatch"),
-        ("pair_type", "unsupported_pair_mismatch"),
-        ("pair_source_type", "unsupported_pair_mismatch"),
         ("fact", "entailed_protected_fact_conflict"),
     ],
 )
@@ -713,31 +711,17 @@ def test_verified_grounding_retained_contract_failures_are_typed(
         check["text"] = "A different retained proposition."
     elif variant == "incomplete":
         check.pop("protected_facts")
-    elif variant in {"pair", "pair_type", "pair_source_type"}:
+    elif variant == "pair":
         check["entailment_outcome"] = "not_established"
-        check["violation_type"] = (
-            "hallucinated_evidence_id"
-            if variant == "pair_source_type"
-            else "not_established"
-        )
+        check["violation_type"] = "not_established"
         check["proposition_status"] = "unknown"
         unsupported = [
             {
                 "item_id": claim_id,
-                "text": (
-                    "A different retained proposition."
-                    if variant == "pair"
-                    else inputs[0].candidate.text
-                ),
+                "text": "A different retained proposition.",
                 "classification": "factual_claim",
                 "entailment_outcome": "not_established",
-                "violation_type": (
-                    "hallucinated_evidence_id"
-                    if variant == "pair_type"
-                    else "unsupported_number"
-                    if variant == "pair_source_type"
-                    else "not_established"
-                ),
+                "violation_type": "not_established",
                 "reason": "The canonical evidence does not establish the claim.",
             }
         ]
