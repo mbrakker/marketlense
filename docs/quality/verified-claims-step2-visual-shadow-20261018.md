@@ -13261,3 +13261,34 @@ forecast already represented by `insight_02`; this overlap does not establish
 a general equivalence rule. No evidence ID was automatically added, no
 review gate was relaxed, and no selection contract was changed without a
 resolved interpretation.
+
+### Explicit fact obligations and failed live replay — 2026-11-14
+
+The verified editorial plan now declares indispensable fact IDs and groups of
+alternative support; selection, semantic review, public review and repair
+retain and enforce that decision. Newly generated verified plans must supply
+the declaration; legacy retained plans remain compatible. The model owns the
+semantic decision and no evidence ID is added to satisfy a gate. Focused
+regressions covered required facts, alternatives, exact IDs, bounded selection,
+replanning and regeneration. Hosted CI for `6e7bde5b` passed tests, both
+mutation partitions and release evidence.
+
+A fresh isolated two-report run of production revision `4848a13e` is retained
+at `C:\ml-contract-acceptance-20261114\live-4848a13e\frozen-reliability-v1p1vmug`.
+Both reports failed closed at the artifact schema: Activate had
+`insights_final[0].evidence_ids` equal to null; Capgemini had the same type
+failure for index 1. Activate used 529 calls, 3,028,409 input tokens, 495,075
+output tokens and $0.561863; Capgemini used 130 calls, 1,393,673 input tokens,
+203,313 output tokens and $0.255303. Cohort wall time was 6,071.230 seconds.
+Neither report passed readiness and no publication write occurred.
+
+The null failure is reproducible in candidate factual restoration when a
+final rewrite supplies null and the authoritative candidate has only its
+primary evidence ID. The correction omits that optional field in this case,
+and preserves a genuine multi-fact candidate binding when present. Retained
+diagnostics do not prove the exact origin of either failing in-memory null.
+Earlier repair candidates were separately rolled back: Activate had missing
+metric public copy and unresolved editorial review; Capgemini had a material
+limitations omission. They are not resolved merely by the null correction.
+E18 remains **Active/PARTIAL** and Step 2 **PARTIAL/NO-GO** pending fresh
+provider-backed first-pass, repair, factual and editorial acceptance.
