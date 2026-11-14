@@ -13383,3 +13383,11 @@ the retained fact and hash-verified original PDF, but failed closed with
 overridden; the retained result is
 `C:\ml-contract-acceptance-20261114\activate-attribution-replay-4764f74d.json`.
 It does not establish live effectiveness of the prompt change.
+
+At `be3295ec`, hosted CI reported eight report-analysis failures: scoped
+summary repair compared separately segmented fields against provenance built
+from the combined summary. The scope check now uses the canonical combined
+summary sentence grid when every changed summary field is authorized, while
+retaining independent provenance verification and rejecting unrelated edits.
+The eight failing tests and targeted negative scope cases pass locally. This
+does not establish first-pass or first-repair live acceptance.

@@ -3218,6 +3218,8 @@ def _scoped_soft_copy_provenance_paths(
 
     authorized: list[set[tuple[str, str]]] = [set(), set()]
     family_text: list[dict[str, list[str]]] = [{}, {}]
+    summary_changed = False
+    summary_changes_scoped = True
     for field in _SOFT_COPY_DIFF_PATHS:
         family = _path_root(field)
         values = []
@@ -3239,6 +3241,8 @@ def _scoped_soft_copy_provenance_paths(
         ).get_opcodes():
             if op == "equal":
                 continue
+            if family == "summary":
+                summary_changed = True
             indices = (range(old_start, old_end), range(new_start, new_end))
             paths = {f"{field}[claim_index={i}]" for group in indices for i in group}
             if not paths or not (
@@ -3246,11 +3250,39 @@ def _scoped_soft_copy_provenance_paths(
                 or family in declared_family_roots
                 or all(_path_is_declared(path, allowed_paths) for path in paths)
             ):
+                if family == "summary":
+                    summary_changes_scoped = False
                 continue
             for side, group in enumerate(indices):
                 authorized[side].update(
                     (family, _summary_copy_text_hash(values[side][i])) for i in group
                 )
+
+    # Summary provenance is built from the combined public summary, not each
+    # field separately. Field boundaries need not be sentence boundaries.
+    summary_sentences = [
+        soft_copy_material_sentences(
+            soft_copy_public_text("summary", item.get("summary"))
+        )
+        for item in (before, after)
+    ]
+    for side in (0, 1):
+        family_text[side]["summary"] = summary_sentences[side]
+        authorized[side] = {
+            entry for entry in authorized[side] if entry[0] != "summary"
+        }
+    if summary_changed and summary_changes_scoped:
+        for op, old_start, old_end, new_start, new_end in SequenceMatcher(
+            a=summary_sentences[0], b=summary_sentences[1], autojunk=False
+        ).get_opcodes():
+            if op != "equal":
+                for side, summary_indices in enumerate(
+                    (range(old_start, old_end), range(new_start, new_end))
+                ):
+                    authorized[side].update(
+                        ("summary", _summary_copy_text_hash(summary_sentences[side][i]))
+                        for i in summary_indices
+                    )
 
     result: set[str] = set()
     for side, (old, other) in enumerate(((rows[0], rows[1]), (rows[1], rows[0]))):

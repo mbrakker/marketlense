@@ -118,6 +118,55 @@ def test_explicit_family_repair_accepts_verified_changed_claim_rows():
     assert scope.status == "pass"
 
 
+def test_summary_scope_uses_combined_canonical_sentence_grid():
+    before = {
+        "summary": {
+            "tldr": "Before",
+            "card_tldr_compact": "Stable card",
+            "executive_summary": "Stable summary.",
+        },
+        "soft_copy_claim_provenance": {
+            "claims": [
+                _soft_copy_claim(
+                    family="summary", text="Before Stable card Stable summary."
+                )
+            ]
+        },
+    }
+    after = deepcopy(before)
+    after["summary"]["tldr"] = "After"
+    after["soft_copy_claim_provenance"]["claims"] = [
+        _soft_copy_claim(family="summary", text="After Stable card Stable summary.")
+    ]
+    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["summary.tldr"])])
+    scope = _scope_validation_report(
+        before=before,
+        after=after,
+        plan=plan,
+        verified_derived_roots=frozenset({"soft_copy_claim_provenance"}),
+    )
+    assert not any(
+        issue.affected_section.startswith("soft_copy_claim_provenance")
+        for issue in scope.issues
+    )
+    after["summary"]["card_tldr_compact"] = "Unauthorized card"
+    after["soft_copy_claim_provenance"]["claims"] = [
+        _soft_copy_claim(
+            family="summary", text="After Unauthorized card Stable summary."
+        )
+    ]
+    scope = _scope_validation_report(
+        before=before,
+        after=after,
+        plan=plan,
+        verified_derived_roots=frozenset({"soft_copy_claim_provenance"}),
+    )
+    assert any(
+        issue.affected_section.startswith("soft_copy_claim_provenance")
+        for issue in scope.issues
+    )
+
+
 def test_duplicate_claim_identity_fails_closed():
     current, candidate, evidence = _candidate()
     candidate["soft_copy_claim_provenance"]["claims"].append(
