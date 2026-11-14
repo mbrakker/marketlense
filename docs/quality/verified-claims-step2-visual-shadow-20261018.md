@@ -13303,6 +13303,14 @@ The first candidate corrected a news-reader qualification, but retained an
 unsupported revenue distinction and introduced an unsupported inference from
 views to unique audience reach; independent grounding correctly rejected it.
 
+The same `508d0f23` two-report run ended with Capgemini failing closed at
+`regeneration_evidence_rebind_unresolved`, after 145 provider calls, 1,564,245
+input tokens, 213,697 output tokens, ten structured-output repair calls and
+$0.272062. The cohort total was 684 calls, $0.831457 and 6,315.621 seconds.
+Neither report passed readiness, and no publication write occurred. The null
+type error from the preceding run was not the terminal error in either report;
+this does not prove the correction fixed every possible source of null values.
+
 The repair planner had quarantined the validated canonical fact supporting
 the revenue insight and its derived key figure after a wording-level
 `not_established` verdict. A targeted correction now keeps that fact available
@@ -13312,3 +13320,43 @@ remain quarantined. Provider-free replay of the retained failure changes the
 planned target from quarantined to the exact selected verified fact. This is
 planning evidence only: the disputed wording remains blocked and neither
 successful model repair nor publication readiness has been demonstrated.
+
+The subsequent fresh isolated Activate-only run at `f88da8ab` is retained at
+`C:\ml-contract-acceptance-20261114\live-f88da8ab-activate\frozen-reliability-zf32i0ue`.
+It admitted 10/10 visual candidates, then failed validation after three
+bounded repair attempts; all three candidates were rolled back. The terminal
+report recorded two unsupported and zero unresolved retained factual claims.
+It used 517 provider calls, 2,151,907 input and 448,913 output tokens, eleven
+structured-output repair calls, $0.456671 and 4,082.625 seconds. The first
+repair candidate had grounding and editorial failures and a soft-copy
+provenance scope violation; the second still had grounding and editorial
+redundancy failures; the third also violated the original verified editorial
+obligations. None demonstrates a successful atomic repair or first-pass
+readiness. The different admitted facts and output are normal model-run
+variability and are not evidence of a causal quality improvement.
+
+Independent inspection of the original Activate PDF confirmed that physical
+page 7 labels the $165B subscription-growth chart “ACTIVATE FORECAST”; the
+grounding rejection of that attribution reflects missing usable attribution in
+the canonical fact context, not a demonstrated error in the PDF-based claim.
+Page 38 separately distinguishes the forecast AR spending mix from expected
+adoption sequence. The disputed recommendation was explicitly MarketLense's
+own, which the existing grounding policy permits; the retained model verdict
+nevertheless rejected it. Page 69 shows 50%, 19%, and less than 1% churn and
+separate virtual-pay-TV and SVOD periods. The insight named those periods;
+explicitly noting the lack of a narrower Pay TV period would improve clarity.
+These observations do not establish that any repair candidate or report passed.
+
+For Capgemini, the retained diagnostics do not identify the rejected insight,
+evidence ID, or failing condition of the rebind guard. The guard and remediation
+ledger now retain bounded identifiers and a reason category for future runs;
+this is diagnostic only and does not establish the cause or relax eligibility.
+First-pass and successful transactional repair acceptance remain **PARTIAL**.
+
+An additional component-level scope reproduction found that whole-root
+authorization of otherwise valid soft-copy provenance can permit an unscoped
+sibling claim's evidence binding to change during a LinkedIn-only repair. The
+reproduction did not establish promotion through downstream semantic checks.
+Conversely, an invalid sibling claim can cause misleading scope errors for a
+legitimately rewritten LinkedIn claim; the invalid candidate still fails closed.
+These boundaries require claim-level authorization, not blanket root exemption.

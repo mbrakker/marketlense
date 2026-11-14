@@ -599,6 +599,9 @@ def test_insight_evidence_rebind_requires_relevant_direct_source_with_page(
                 prompt_client=_FakePromptClient(),
             )
         assert error.value.code == "regeneration_evidence_rebind_unresolved"
+        assert error.value.context["insight_id"] == "insight-1"
+        assert error.value.context["evidence_ids"] == [selected_evidence_id]
+        assert error.value.context["reason"] == "evidence_outside_package"
         return
 
     response = regenerate_artifacts(

@@ -630,6 +630,36 @@ def test_terminal_lineage_failure_retains_only_invalid_insight_identifiers(
     assert "must never persist" not in json.dumps(record.diagnostics)
 
 
+def test_rebind_failure_retains_bounded_identifier_diagnostics(tmp_path) -> None:
+    record = record_workflow_failure(
+        state_db=str(tmp_path / "state.sqlite"),
+        workflow="report_generation",
+        stage="artifact_generation",
+        operation="generate_artifacts",
+        ctx=_ctx(),
+        workflow_run_id="run-rebind",
+        report_id="report-rebind",
+        error=AppError(
+            code="regeneration_evidence_rebind_unresolved",
+            message="rebind failed",
+            retryable=False,
+            context={
+                "insight_id": "candidate-1",
+                "evidence_ids": ["verified-fact:f1"],
+                "reason": "missing_canonical_span",
+                "raw_response": "secret prose",
+            },
+        ),
+    )
+    assert record is not None
+    assert record.diagnostics["error_context"] == {
+        "insight_id": "candidate-1",
+        "evidence_ids": ["verified-fact:f1"],
+        "reason": "missing_canonical_span",
+    }
+    assert "secret prose" not in json.dumps(record.diagnostics)
+
+
 def test_terminal_artifact_failure_retains_bounded_filesystem_diagnostics(
     tmp_path,
 ) -> None:

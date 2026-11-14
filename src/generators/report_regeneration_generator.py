@@ -6185,6 +6185,20 @@ def _regenerate_one_final_insight(
             )
             or not canonical_spans
         ):
+            if not rebound_evidence_ids:
+                reason = "missing_evidence_ids"
+            elif any(
+                value.casefold() in quarantined_evidence_ids
+                for value in rebound_evidence_ids
+            ):
+                reason = "quarantined_evidence"
+            elif any(
+                value.casefold() not in package_evidence_ids
+                for value in rebound_evidence_ids
+            ):
+                reason = "evidence_outside_package"
+            else:
+                reason = "missing_canonical_span"
             raise AppError(
                 code="regeneration_evidence_rebind_unresolved",
                 message=(
@@ -6196,6 +6210,7 @@ def _regenerate_one_final_insight(
                     "report_id": execution.runtime.request.report_id,
                     "insight_id": insight_id,
                     "evidence_ids": rebound_evidence_ids,
+                    "reason": reason,
                 },
             )
         repaired["evidence_id"] = rebound_evidence_ids[0]
