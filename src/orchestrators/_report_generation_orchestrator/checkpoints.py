@@ -269,6 +269,7 @@ def _validation_report_from_dict(raw_report: object) -> Optional[ValidationRepor
                     if isinstance(value, str)
                 ],
                 classification=str(raw_issue.get("classification") or ""),
+                entailment_outcome=str(raw_issue.get("entailment_outcome") or ""),
                 schema_version=str(raw_issue.get("schema_version") or "1.0"),
             )
         )

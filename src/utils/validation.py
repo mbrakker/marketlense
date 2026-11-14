@@ -121,6 +121,7 @@ def parse_validation_report_payload(
                         if isinstance(value, str)
                     ],
                     classification=str(item.get("classification", "")),
+                    entailment_outcome=str(item.get("entailment_outcome") or ""),
                 )
             )
     status = str(data.get("status") or "fail")

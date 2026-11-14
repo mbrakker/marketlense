@@ -35,7 +35,7 @@ from src.utils.model_resolver import resolve_model
 
 from .shared import LOGGER_NAME, logger
 
-VALIDATION_RULESET_VERSION = "8"
+VALIDATION_RULESET_VERSION = "9"
 
 
 def validation_cache_meta(
@@ -255,6 +255,7 @@ def validation_report_from_payload(payload: dict, path: str) -> ValidationReport
                     if isinstance(value, str)
                 ],
                 classification=str(entry.get("classification") or ""),
+                entailment_outcome=str(entry.get("entailment_outcome") or ""),
             )
         )
     return ValidationReport(

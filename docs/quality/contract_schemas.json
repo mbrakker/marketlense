@@ -45969,6 +45969,9 @@
         "classification": {
           "type": "string"
         },
+        "entailment_outcome": {
+          "type": "string"
+        },
         "entity_id": {
           "type": "string"
         },

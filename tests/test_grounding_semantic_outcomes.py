@@ -22,6 +22,8 @@ from tests._test_validation_generator._shared import (
     [
         ("contradicted", "contradicted", "error", "fail"),
         ("not_established", "not_established", "error", "fail"),
+        ("contradicted", "hallucinated_evidence_id", "error", "fail"),
+        ("not_established", "missing_material_evidence", "error", "fail"),
     ],
 )
 def test_grounding_semantic_outcome_preserves_distinct_disposition(
@@ -69,6 +71,7 @@ def test_grounding_semantic_outcome_preserves_distinct_disposition(
                         "text": "Adoption surged in 2025.",
                         "classification": "factual_claim",
                         "entailment_outcome": outcome,
+                        "violation_type": expected_violation,
                         "proposition_status": "unknown",
                         "protected_facts": protected_facts,
                         "reason": (
@@ -107,6 +110,7 @@ def test_grounding_semantic_outcome_preserves_distinct_disposition(
     grounding_issues = [item for item in result.issues if item.rule_id == "grounding"]
     assert grounding_issues
     assert grounding_issues[0].severity == expected_severity
+    assert grounding_issues[0].entailment_outcome == outcome
     assert result.status == expected_status
     assert f"[factual_claim|{expected_violation}]" in grounding_issues[0].message
 

@@ -90,6 +90,7 @@ def issue(
     violation_type: str = "",
     evidence_ids: Sequence[str] = (),
     classification: str = "",
+    entailment_outcome: str = "",
 ) -> ValidationIssue:
     return ValidationIssue(
         schema_version="1.0",
@@ -102,6 +103,7 @@ def issue(
         entity_id=entity_id,
         evidence_ids=list(dict.fromkeys(str(value) for value in evidence_ids if value)),
         classification=classification,
+        entailment_outcome=entailment_outcome,
     )
 
 
@@ -132,6 +134,7 @@ def downgrade_issues_for_data_gap(
             entity_id=issue.entity_id,
             evidence_ids=list(issue.evidence_ids),
             classification=issue.classification,
+            entailment_outcome=issue.entailment_outcome,
         )
         for issue in issues
     ]

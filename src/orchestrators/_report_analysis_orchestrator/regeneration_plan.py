@@ -23,7 +23,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
 )
-from src.contracts.validation import ValidationIssue
+from src.contracts.validation import SOURCE_AUTHORITY_VIOLATIONS, ValidationIssue
 from src.utils.editorial_identity import (
     failed_insight_id,
     insight_entity_id,
@@ -522,11 +522,18 @@ def _normalize_regeneration_issue(
         _insight_issue_field(issue.entity_id, issue.affected_section) == "text"
     )
     is_figure_copy = str(issue.entity_id or "").startswith("key_figure:")
+    claim_verdict = issue.entailment_outcome in {"contradicted", "not_established"}
+    source_failure = issue.violation_type in SOURCE_AUTHORITY_VIOLATIONS
     if (
         excluded_evidence_ids
         and issue.rule_id == "grounding"
-        and issue.violation_type in {"not_established", "unsupported_factual_claim"}
-        and (is_insight_text or is_figure_copy)
+        and (
+            (claim_verdict and not source_failure)
+            or (
+                issue.violation_type in {"not_established", "unsupported_factual_claim"}
+                and (is_insight_text or is_figure_copy)
+            )
+        )
         and verified_facts_mode(artifacts)
         and supplied_evidence_ids
         and set(supplied_evidence_ids) == set(derived_evidence_ids)

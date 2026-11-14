@@ -13391,3 +13391,16 @@ summary sentence grid when every changed summary field is authorized, while
 retaining independent provenance verification and rejecting unrelated edits.
 The eight failing tests and targeted negative scope cases pass locally. This
 does not establish first-pass or first-repair live acceptance.
+
+Grounding issues now retain their explicit semantic entailment outcome across
+serialization and recovery; legacy issues without it remain unchanged. For an
+explicit rejected claim, the repair planner may retain the exact bound evidence
+only after canonical verified-fact validation; source retrieval or binding
+failures remain quarantined. This supplies evidence for correction, not
+approval of the disputed wording. The isolated replay harness also now reuses
+the verified snapshot's source identity after checking the original PDF hash;
+conflicting spans and snapshots remain ineligible. These are component-level
+results, not proof of a successful model repair or live editorial quality.
+The validation cache identity was advanced so older cached issues without the
+explicit outcome do not bypass this handover. Source-authority violation types
+remain distinct even when a claim verdict is contradicted.

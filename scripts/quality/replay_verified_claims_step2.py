@@ -43,7 +43,9 @@ from src.generators.verified_claims_visual_generator import (
     evaluate_shortlisted_claims,
 )
 from src.services.config_service import load_settings
+from src.utils.errors import AppError
 from src.utils.text_normalization import normalize_for_lookup
+from src.utils.verified_facts import validated_verified_facts
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 REFERENCE_PATH = (
@@ -427,6 +429,19 @@ def _load_explicit_cohort_inputs(
             if source.get("exists") and source.get("sha256_expected")
             else "source_pdf_hash_missing_or_unavailable"
         )
+        row["source_identity"] = (
+            f"{report}|pdf-sha256:{source.get('sha256_expected', '')}"
+        )
+        if source_valid and artifact.get("verified_facts"):
+            try:
+                facts = validated_verified_facts(
+                    artifact, expected_pdf_sha256=str(source["sha256_actual"])
+                )
+            except AppError:
+                source_valid = False
+                source_reason = "verified_fact_snapshot_invalid"
+            else:
+                row["source_identity"] = next(iter(facts.values()))["source_identity"]
         for position, insight in enumerate(insights):
             if not isinstance(insight, Mapping):
                 row["unavailable"].append(
@@ -2379,9 +2394,7 @@ def replay_live_explicit_cohort(
                 artifact_path
             )
             request, request_audit = build_verified_claims_shadow_request(
-                source_identity=(
-                    f"{report}|pdf-sha256:{source.get('sha256_expected', '')}"
-                ),
+                source_identity=input_report["source_identity"],
                 pdf_path=str(pdf_path),
                 output_dir=str(root),
                 report_name=_safe_report_name(report),

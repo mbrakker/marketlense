@@ -9,6 +9,14 @@ from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.report_models import ReportPayload
 from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
+SOURCE_AUTHORITY_VIOLATIONS = frozenset(
+    {
+        "evidence_retrieval_failure",
+        "hallucinated_evidence_id",
+        "missing_material_evidence",
+    }
+)
+
 
 @dataclass(frozen=True)
 class ValidationIssue:
@@ -60,6 +68,15 @@ class ValidationIssue:
     schema_version: str = field(
         default="1.0", metadata={"doc": "Validation issue schema version."}
     )
+    entailment_outcome: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Explicit grounding verdict: entailed, contradicted, or "
+                "not_established; empty when unavailable."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -107,6 +124,11 @@ class ValidationReport:
                     **(
                         {"classification": issue.classification}
                         if issue.classification
+                        else {}
+                    ),
+                    **(
+                        {"entailment_outcome": issue.entailment_outcome}
+                        if issue.entailment_outcome
                         else {}
                     ),
                 }

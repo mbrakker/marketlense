@@ -36,7 +36,11 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_sentence_hash,
 )
 from src.contracts.structured_output import StructuredOutputExecutionRequest
-from src.contracts.validation import ValidationIssue, ValidationRequest
+from src.contracts.validation import (
+    SOURCE_AUTHORITY_VIOLATIONS,
+    ValidationIssue,
+    ValidationRequest,
+)
 from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.claim_validation_generator import (
     apply_retained_claim_semantic_results,
@@ -1737,6 +1741,7 @@ def run_grounding_check(
                             ),
                             evidence_ids=canonical_item.get("evidence_ids", ()),
                             classification=classification,
+                            entailment_outcome=outcome,
                         )
                     )
                     failed_check_item_ids.add(item_id)
@@ -1765,7 +1770,9 @@ def run_grounding_check(
                     and not incompatible_dimensions
                 )
                 violation_type = (
-                    "not_established"
+                    model_violation_type
+                    if model_violation_type in SOURCE_AUTHORITY_VIOLATIONS
+                    else "not_established"
                     if unresolved
                     else model_violation_type
                     if model_violation_type
@@ -1803,6 +1810,7 @@ def run_grounding_check(
                         entity_id=entity_id,
                         evidence_ids=canonical_item.get("evidence_ids", ()),
                         classification=classification,
+                        entailment_outcome=outcome,
                     )
                 )
                 failed_check_item_ids.add(item_id)
@@ -1858,7 +1866,10 @@ def run_grounding_check(
                         retryable=False,
                         context={"item_id": s(entry.get("item_id"))},
                     )
-                if entailment_outcome == "contradicted":
+                if (
+                    entailment_outcome == "contradicted"
+                    and violation_type not in SOURCE_AUTHORITY_VIOLATIONS
+                ):
                     violation_type = "contradicted"
                 elif (
                     entailment_outcome == "not_established"
@@ -1899,6 +1910,7 @@ def run_grounding_check(
                             entity_id=entity_id,
                             evidence_ids=canonical_item.get("evidence_ids", ()),
                             classification=classification,
+                            entailment_outcome=entailment_outcome,
                         )
                     )
     except AppError as exc:

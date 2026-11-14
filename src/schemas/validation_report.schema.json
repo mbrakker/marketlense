@@ -20,6 +20,7 @@
           "affected_section": { "type": "string" },
           "rule_id": { "type": "string" },
           "violation_type": { "type": "string" },
+          "entailment_outcome": { "type": "string", "enum": ["entailed", "contradicted", "not_established"] },
           "repair_target": { "type": "string" },
           "entity_id": { "type": "string" },
           "evidence_ids": {
