@@ -31,7 +31,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.4"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:34"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:35"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 EDITORIAL_PLAN_IMPORTANCE_VALUES = {"essential", "optional"}
@@ -4187,6 +4187,8 @@ def _restore_candidate_factual_fields(
             restored.pop("evidence_ids", None)
     elif len(candidate_evidence_ids) > 1:
         restored["evidence_ids"] = candidate_evidence_ids
+    elif restored.get("evidence_ids") is None:
+        restored.pop("evidence_ids", None)
     return restored
 
 
