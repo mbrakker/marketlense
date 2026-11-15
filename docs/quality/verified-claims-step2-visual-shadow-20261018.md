@@ -13524,3 +13524,25 @@ separate targets for the same soft-copy family can reach a stale provenance
 grid after the first replacement. That case remains unresolved; an attempted
 local fix was withdrawn after it reached another stale-grid boundary. No
 additional live acceptance run has validated this prompt/context change.
+
+At `a76d9804`, the local full suite passed (8,874 passed, two skipped),
+and hosted CI passed. An isolated Activate rerun at
+`C:\ml-acceptance-a76d9804\activate\ias-first-attempt-52h523bo` failed
+first-pass validation and all three repair candidates rolled back. Initial
+grounding rejected an expert recommendation because the evidence did not
+establish that MarketLense authored the recommendation, despite the prompt's
+allowance for self-authored advice. First-repair validation additionally
+rejected four web-video percentages that appeared in the *initial* insight:
+its canonical verified fact contained only a qualitative comparison and an
+empty metric object. First-repair public review also failed closed after
+responses included an unbound evidence ID. Second and third repairs failed
+independent grounding or editorial review. Terminal outcome: `validation_failed`.
+
+The first repair targeted only an expert-comment claim, so it did not exercise
+the new grouped LinkedIn context. Its effectiveness remains established only
+by provider-boundary regressions, not by this live run. The run used 536
+provider calls, 11 file-search calls, 2,853,113 input and 485,755 output tokens,
+estimated $0.534017 and 4,180.125 seconds end-to-end; no WordPress write
+occurred. Capgemini was not rerun because Activate remained unsuccessful.
+The separate-target provenance defect and first-pass/first-repair acceptance
+remain open; status is **PARTIAL**.
