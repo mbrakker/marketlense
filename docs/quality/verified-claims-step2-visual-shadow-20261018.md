@@ -13532,9 +13532,14 @@ first-pass validation and all three repair candidates rolled back. Initial
 grounding rejected an expert recommendation because the evidence did not
 establish that MarketLense authored the recommendation, despite the prompt's
 allowance for self-authored advice. First-repair validation additionally
-rejected four web-video percentages that appeared in the *initial* insight:
-its canonical verified fact contained only a qualitative comparison and an
-empty metric object. First-repair public review also failed closed after
+rejected four web-video percentages that appeared in the *initial* insight.
+The canonical verified fact has an empty metric object, but its page-54
+provenance notes explicitly contain the percentages; the original PDF page
+also contains those chart labels. Initial grounding explicitly cited those
+notes and accepted the insight. The later rejection is therefore an observed
+grounding disagreement, not evidence that the percentages were unsupported;
+the retained audit does not establish why the model reached a different
+verdict. First-repair public review also failed closed after
 responses included an unbound evidence ID. Second and third repairs failed
 independent grounding or editorial review. Terminal outcome: `validation_failed`.
 
