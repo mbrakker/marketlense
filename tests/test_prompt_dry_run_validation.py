@@ -491,6 +491,30 @@ def test_insight_rebinding_prompt_requires_direct_source_evidence() -> None:
 @pytest.mark.parametrize(
     "namespace",
     [
+        "report_vs/artifacts/regenerate/summary",
+        "report_vs/artifacts/regenerate/expert_comment",
+        "report_vs/artifacts/regenerate/linkedin_post",
+    ],
+)
+def test_claim_repair_prompt_matches_action_payload_contract(namespace: str) -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace, force_reload=True),
+        _ctx(),
+    )
+    prompt = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+    assert (
+        "For `remove` or `abstain`, use empty replacement text and evidence IDs"
+        in prompt
+    )
+    assert (
+        "Use `remove` only if `repair_context_json.repair_action` is "
+        "`REMOVE_CLAIM`" in prompt
+    )
+
+
+@pytest.mark.parametrize(
+    "namespace",
+    [
         "report_vs/evidence_packs/findings",
         "report_vs/artifacts/insights_candidates",
         "report_vs/artifacts/insights_final",

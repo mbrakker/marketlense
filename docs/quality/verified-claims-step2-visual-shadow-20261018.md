@@ -13415,3 +13415,32 @@ pass locally; no outcome is inferred for legacy issues.
 The same hosted run also exposed a test-module size violation caused by the
 new grounding regressions; those cases were moved into a focused test module,
 and the existing ownership gate passes locally without changing its threshold.
+
+At `56fe3d2e`, isolated provider-backed runs used the two requested reports,
+without WordPress writes. Activate failed validation after three repairs
+(`C:\ml-acceptance-56fe3d2e\activate\ias-first-attempt-yr7qjtpr`):
+562 provider calls, 3,087,470 input and 610,703 output tokens, 8 file-search
+calls, estimated $0.611747 and 4,488.862 seconds. Its first repair was rolled
+back; it corrected one source-scoped sentence but another proposed removal
+was not authorized, and independent validation identified additional
+grounding and editorial issues. In particular, a complete sentence beginning
+“For 2018E, U.S. Pay TV” was split into an incomplete “For 2018E, U.S.”
+claim. Its sentence segmentation and downstream consequences remain open.
+
+Capgemini reached readiness only after a second candidate was promoted, not
+on the first repair (`C:\ml-acceptance-56fe3d2e\capgemini\ias-first-attempt-gmuyynv3`):
+215 provider calls, 2,293,470 input and 422,432 output tokens, 9 file-search
+calls, estimated $0.425794 and 2,167.837 seconds. The first repair abstained
+after an invalid action payload and was rolled back; its independent
+grounding response also failed the existing consistency contract. The later
+promotion does not meet the first-repair acceptance target. Both outcomes
+remain **PARTIAL** pending same-SHA first-pass or first-repair acceptance and
+independent source/HTML review.
+
+The shared claim-repair prompt now states that remove/abstain require empty
+replacement text and evidence IDs, and that removal is permitted only for an
+authorized `REMOVE_CLAIM` action. This resolves a contradiction with the
+unchanged deterministic proposal validator, not evidence that live repairs
+now succeed. Focused prompt and proposal tests pass; the unchanged prompt
+fixture regression gate passes. No source binding, semantic validation, or
+publication gate is relaxed.
