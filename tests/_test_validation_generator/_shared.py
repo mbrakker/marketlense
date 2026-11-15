@@ -599,8 +599,18 @@ def _set_test_soft_copy_provenance(
 
     claims = []
     for family, (classification, evidence_ids) in declarations.items():
-        text = soft_copy_public_text(family, artifacts.get(family))
-        sentences = soft_copy_material_sentences(text)
+        artifact = artifacts.get(family)
+        if family == "summary" and isinstance(artifact, dict):
+            sentences = [
+                sentence
+                for field in ("tldr", "executive_summary")
+                for sentence in soft_copy_material_sentences(artifact.get(field, ""))
+            ]
+        else:
+            sentences = soft_copy_material_sentences(
+                soft_copy_public_text(family, artifact)
+            )
+        text = soft_copy_public_text(family, artifact)
         if not sentences:
             continue
         claims.extend(
