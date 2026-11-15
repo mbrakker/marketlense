@@ -12,6 +12,16 @@ The existing `public_editorial_quality_before.json`, `public_editorial_quality_a
 
 `PublicEditorialQualityReport` is a versioned private audit artifact. It records the report ID, stable rule ID, severity, affected artifact and field, retained evidence IDs, deterministic explanation, repair eligibility and status, validator version, and schema version. It is never rendered as reader-facing content.
 
+For a collective analytical-depth or distinctness failure, the independent
+semantic review may nominate exact evidence-bound insight `so_what` or
+`now_what` items for scoped repair. Each must be classified as interpretation
+or recommendation, retain an item-bound evidence ID, and name that item's
+permitted target. A nomination cannot authorize a factual claim, quote, source
+rebind, or whole-insight removal. Invalid nominations fail closed; an empty or
+absent list remains an abstention. The report-level failure remains blocking
+until the repaired candidate passes independent validation and editorial review.
+The versioned review identity prevents reuse of incompatible earlier verdicts.
+
 The retained Summary `tldr`, `card_tldr_compact`, and `executive_summary` share
 the same evidence-linked public-prose checks and the existing `summary` repair
 target. This ensures the short standalone report-card sentence is validated

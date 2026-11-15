@@ -408,6 +408,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
     if schema_name in {
         "public_editorial_quality_review_v3",
         "public_editorial_quality_review_v4",
+        "public_editorial_quality_review_v5",
     }:
         public_items = _public_review_items_from_call(call)
         report_evidence_ids = list(
@@ -466,6 +467,8 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 },
             },
         }
+        if schema_name == "public_editorial_quality_review_v5":
+            responses[schema_name]["report_verdict"]["repair_items"] = []
     if schema_name not in responses:
         raise AssertionError(f"missing full-chain model fixture for {schema_name}")
     return FakeOpenAIResult(

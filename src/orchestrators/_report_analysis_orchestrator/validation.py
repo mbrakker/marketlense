@@ -175,9 +175,9 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v28"
-_PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.1"
-_PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v4"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v29"
+_PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.2"
+_PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v5"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
     "material_coverage",
     "analytical_depth",
@@ -1173,6 +1173,68 @@ def _validate_public_editorial_review_payload(
             context={"item_id": affected_item_id},
         )
     repair_target = str(report_verdict.get("repair_target") or "").strip()
+    repair_items = report_verdict.get("repair_items") or []
+    if repair_items:
+        if (
+            report_status not in {"fail", "unresolved"}
+            or report_hard_fail_class
+            not in {"editorial_quality", "report_editorial_acceptance"}
+            or not failed_dimensions.intersection({"analytical_depth", "distinctness"})
+            or affected_item_id
+            or repair_target
+        ):
+            raise AppError(
+                code="public_editorial_quality_report_review_target_mismatch",
+                message=(
+                    "Collective editorial repairs require an untargeted "
+                    "failing report verdict"
+                ),
+                retryable=False,
+            )
+        nominated_ids: set[str] = set()
+        for nomination in repair_items:
+            item_id = str(nomination.get("item_id") or "").strip()
+            item = expected.get(item_id)
+            target = str(nomination.get("repair_target") or "").strip()
+            evidence_ids = [
+                str(value).strip() for value in nomination.get("evidence_ids") or []
+            ]
+            allowed_ids = {
+                str(value).strip() for value in (item or {}).get("evidence_ids") or []
+            }
+            if (
+                not item
+                or item_id in nominated_ids
+                or not target
+                or item.get("artifact") != "insights_final"
+                or target != "insights_bundle"
+                or str(actual[item_id].get("classification") or "").strip()
+                not in {"analyst_interpretation", "prescriptive_recommendation"}
+                or (
+                    actual[item_id].get("status") != "pass"
+                    and actual[item_id].get("hard_fail_class") != "editorial_quality"
+                )
+                or not str(
+                    item.get("repair_field") or item.get("field") or ""
+                ).endswith((".so_what", ".now_what"))
+                or not str(item.get("evidence_text") or "").strip()
+                or target != str(item.get("repair_target") or "").strip()
+                or not str(nomination.get("reason") or "").strip()
+                or not evidence_ids
+                or not all(evidence_ids)
+                or len(set(evidence_ids)) != len(evidence_ids)
+                or not set(evidence_ids).issubset(allowed_ids)
+            ):
+                raise AppError(
+                    code="public_editorial_quality_report_review_target_mismatch",
+                    message=(
+                        "Collective editorial repair nomination has invalid "
+                        "scope or evidence"
+                    ),
+                    retryable=False,
+                    context={"item_id": item_id},
+                )
+            nominated_ids.add(item_id)
     if repair_target and not affected_item_id:
         raise AppError(
             code="public_editorial_quality_report_review_target_mismatch",
@@ -1637,6 +1699,25 @@ def _public_editorial_semantic_review(
         if dimension_reasons:
             report_reason = f"{report_reason} Dimensions: {dimension_reasons}"
         affected_item_id = str(report_verdict.get("affected_item_id") or "").strip()
+        for nomination in report_verdict.get("repair_items") or []:
+            item_id = str(nomination["item_id"]).strip()
+            issues.append(
+                _public_editorial_review_issue(
+                    report_id=report_id,
+                    item=item_by_id[item_id],
+                    rule_id="public_editorial_quality.semantic_collective_editorial_repair",
+                    severity="error",
+                    hard_fail_class=str(
+                        report_verdict.get("hard_fail_class") or ""
+                    ).strip(),
+                    explanation=str(nomination["reason"]).strip(),
+                    evidence_ids=list(nomination["evidence_ids"]),
+                    repair_target=str(nomination["repair_target"]).strip(),
+                    classification=str(
+                        verdict_by_id[item_id].get("classification") or ""
+                    ).strip(),
+                )
+            )
         issues.append(
             _public_editorial_review_issue(
                 report_id=report_id,

@@ -8,17 +8,22 @@ from typing import Any
 import pytest
 
 from src.contracts.openai import OpenAIResponseResult
+from src.contracts.regeneration import repair_strategy_fingerprint
 from src.contracts.report_analysis import AnalysisPackPathResponse
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.public_editorial_quality_generator import (
     public_editorial_report_review_scope,
     public_editorial_semantic_review_items,
 )
+from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
+    _build_regeneration_plan,
+)
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _evaluate_and_store_public_editorial_quality,
     _merge_public_editorial_quality,
     _public_editorial_review_input_identity,
     _public_editorial_semantic_review,
+    _scope_validation_report,
     _validate_public_editorial_review_payload,
 )
 from src.utils.errors import AppError
@@ -129,6 +134,220 @@ def test_public_editorial_review_declares_allowed_repair_targets_to_model(
     for item in items:
         sent = sent_by_id[str(item["public_item_id"])]
         assert sent["allowed_repair_target"] == str(item.get("repair_target") or "")
+
+
+def test_collective_editorial_failure_keeps_model_selected_repairs_scoped(tmp_path):
+    runtime = _runtime(tmp_path)
+    artifacts = _artifacts()
+    for insight in artifacts["insights_final"]:
+        insight["so_what"] = "The commercial implication requires more analysis."
+    items = public_editorial_semantic_review_items(artifacts)
+    selected = [
+        item
+        for item in items
+        if item.get("artifact") == "insights_final"
+        and str(item.get("field") or "").endswith(".so_what")
+        and item.get("evidence_ids")
+    ][:2]
+    assert len(selected) == 2
+
+    class CollectiveReviewClient(_SemanticPassClient):
+        def openai_chat_json(self, request, ctx):
+            response = super().openai_chat_json(request, ctx)
+            payload = response.parsed_json
+            selected_ids = {item["public_item_id"] for item in selected}
+            for verdict in payload["verdicts"]:
+                if verdict["item_id"] in selected_ids:
+                    verdict["classification"] = "analyst_interpretation"
+            report = payload["report_verdict"]
+            report.update(
+                status="fail",
+                severity="error",
+                rule_id="public_editorial_quality.semantic_analytical_depth",
+                hard_fail_class="editorial_quality",
+                reason="The primary insights collectively lack distinct analysis.",
+                repair_items=[
+                    {
+                        "item_id": item["public_item_id"],
+                        "reason": "Develop the decision implication of this finding.",
+                        "evidence_ids": list(item["evidence_ids"]),
+                        "repair_target": item["repair_target"],
+                    }
+                    for item in selected
+                ],
+            )
+            report["dimensions"]["analytical_depth"] = {
+                "status": "fail",
+                "reason": "The primary insights repeat facts.",
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                model=request.model,
+            )
+
+    quality, _ = _run_quality_review(
+        runtime=runtime,
+        dependencies=_deps(
+            analysis_store_pack=lambda request, _ctx: AnalysisPackPathResponse(
+                schema_version="1.0", output_path=request.pack_name
+            )
+        ),
+        artifacts=artifacts,
+        client=CollectiveReviewClient(items),
+        pack_name="public_editorial_quality_before",
+    )
+    assert quality.status == "fail"
+    targeted = [issue for issue in quality.issues if issue.repair_target]
+    assert {issue.entity_id for issue in targeted} == {
+        item["public_item_id"] for item in selected
+    }
+    assert all(issue.repair_target == "insights_bundle" for issue in targeted)
+    assert any(not issue.repair_target for issue in quality.issues)
+    plan = _build_regeneration_plan(
+        issues=quality.issues, artifacts=artifacts, broad_retry_available=False
+    )
+    assert plan.mode == "targeted"
+    paths = {path for target in plan.targets for path in target.allowed_paths}
+    assert paths == {
+        "insights_final[item=insight-1].so_what",
+        "insights_final[item=insight-2].so_what",
+    }
+    assert {e for target in plan.targets for e in target.selected_evidence_ids} == {
+        "f1",
+        "f2",
+    }
+    assert not any(target.quarantined_evidence_ids for target in plan.targets)
+    assert plan.unmappable_issues
+    changed_evidence = deepcopy(artifacts)
+    changed_evidence["insights_final"][0]["evidence_id"] = "f3"
+    evidence_scope = _scope_validation_report(
+        before=artifacts, after=changed_evidence, plan=plan
+    )
+    assert evidence_scope.status == "fail"
+    assert any(
+        i.rule_id == "regeneration_scope_violation" for i in evidence_scope.issues
+    )
+    removed_insight = deepcopy(artifacts)
+    removed_insight["insights_final"] = removed_insight["insights_final"][1:]
+    removal_scope = _scope_validation_report(
+        before=artifacts, after=removed_insight, plan=plan
+    )
+    assert removal_scope.status == "fail"
+    assert any(
+        i.rule_id == "regeneration_scope_violation" for i in removal_scope.issues
+    )
+    rejected = {
+        repair_strategy_fingerprint(
+            [issue.failure_fingerprint for issue in target.issues],
+            target.repair_strategy,
+            target.selected_evidence_ids,
+        )
+        for target in plan.targets
+    }
+    exhausted = _build_regeneration_plan(
+        issues=quality.issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected,
+    )
+    assert exhausted.mode == "skip"
+    assert exhausted.targets == []
+    grounding_warning = ValidationIssue(
+        schema_version="1.0",
+        message="Retained grounding context for the same insight.",
+        severity="warning",
+        affected_section="insights:insight-1",
+        rule_id="grounding",
+        entity_id="insight:insight-1:text",
+        evidence_ids=["f1"],
+    )
+    with_warning = _build_regeneration_plan(
+        issues=[*quality.issues, grounding_warning],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+    assert {
+        path for target in with_warning.targets for path in target.allowed_paths
+    } == paths
+    rejected_with_warning = {
+        repair_strategy_fingerprint(
+            [issue.failure_fingerprint for issue in target.issues],
+            target.repair_strategy,
+            target.selected_evidence_ids,
+        )
+        for target in with_warning.targets
+    }
+    exhausted_with_warning = _build_regeneration_plan(
+        issues=[*quality.issues, grounding_warning],
+        artifacts=artifacts,
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_with_warning,
+    )
+    assert exhausted_with_warning.mode == "skip"
+    assert not exhausted_with_warning.targets
+    independent_editorial_issue = ValidationIssue(
+        schema_version="1.0",
+        message="This implication also lacks specific analysis.",
+        severity="error",
+        affected_section="insights:insight-1.so_what",
+        rule_id="public_editorial_quality.semantic_generic_copy",
+        violation_type="editorial_quality",
+        entity_id="insight:insight-1:so_what",
+        repair_target="insights_bundle",
+        evidence_ids=["f1"],
+    )
+    mixed_issues = [*quality.issues, independent_editorial_issue]
+    mixed = _build_regeneration_plan(
+        issues=mixed_issues, artifacts=artifacts, broad_retry_available=False
+    )
+    rejected_mixed = {
+        repair_strategy_fingerprint(
+            [issue.failure_fingerprint for issue in target.issues],
+            target.repair_strategy,
+            target.selected_evidence_ids,
+        )
+        for target in mixed.targets
+    }
+    exhausted_mixed = _build_regeneration_plan(
+        issues=mixed_issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_mixed,
+    )
+    assert exhausted_mixed.mode == "skip"
+    assert not exhausted_mixed.targets
+    deterministic_issue = ValidationIssue(
+        schema_version="1.0",
+        message="The same implication contains a placeholder.",
+        severity="error",
+        affected_section="insights:insight-1.so_what",
+        rule_id="public_editorial_quality.placeholder",
+        entity_id="insight:insight-1:so_what",
+        repair_target="insights_bundle",
+        evidence_ids=["f1"],
+    )
+    mixed_issues = [*quality.issues, deterministic_issue]
+    mixed = _build_regeneration_plan(
+        issues=mixed_issues, artifacts=artifacts, broad_retry_available=False
+    )
+    rejected_mixed = {
+        repair_strategy_fingerprint(
+            [issue.failure_fingerprint for issue in target.issues],
+            target.repair_strategy,
+            target.selected_evidence_ids,
+        )
+        for target in mixed.targets
+    }
+    exhausted_mixed = _build_regeneration_plan(
+        issues=mixed_issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_mixed,
+    )
+    assert exhausted_mixed.mode == "skip"
+    assert not exhausted_mixed.targets
 
 
 def test_localized_report_failure_carries_independent_item_classification(tmp_path):

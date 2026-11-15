@@ -13580,3 +13580,29 @@ unresolved claims; independent full-PDF factual acceptance was not completed
 because the report failed editorial readiness. No WordPress write occurred.
 Capgemini was not rerun. Both-report first-pass/first-repair acceptance
 remains **PARTIAL**.
+
+The final-insight prompt also explicitly distinguishes a commercial
+interpretation or conditional decision from merely repeating a finding or a
+qualifier reminder, while retaining the source-integrity requirements. This
+addresses the observed output pattern but does not by itself establish a live
+quality improvement.
+
+The review response contract now permits an independent reviewer to nominate
+multiple exact, evidence-bound insight interpretation or recommendation leaves
+when analytical depth or distinctness fails collectively. Factual text, quotes,
+and other surfaces are not eligible for this report-level nomination path.
+Each nomination is checked against the item's own permitted repair target and
+evidence; invalid, duplicate, unbound, or mixed-scope nominations fail closed.
+For these editorial-only targets, failed regeneration cannot escalate into
+source rebinding or removal of the whole insight; grounding warnings remain
+diagnostic context without widening the authorized leaf.
+The aggregate report failure remains blocking and a fresh independent review
+is still required after a candidate repair. An absent or empty nomination is
+still an abstention, including for the retained `ec1551c8` verdict; no target
+is inferred from its prose. The review schema and cache identities changed so
+older checkpoints cannot be silently reinterpreted. Focused tests demonstrate
+the review-to-scoped-plan handover, not live editorial improvement. A local
+replay of the retained `ec1551c8` review through the current validator
+confirmed its failed report and zero nominations remain an abstention. A fresh
+Activate run and, after it succeeds, Capgemini on the same implementation SHA
+remain necessary for acceptance.

@@ -68,6 +68,21 @@ text: |
   affected_item_id with that item's exact allowed repair target may request a
   report repair; an unlocalized report defect must leave both fields empty.
 
+  For a report fail or unresolved editorial-quality verdict, you may nominate
+  one or more insight so_what or now_what items in report_verdict.repair_items when
+  analytical depth or distinctness fails collectively, even if each item is
+  factually accurate on its own. Nominate only items you classify as analyst
+  interpretation or prescriptive recommendation, and do not nominate an item
+  whose own failure concerns factual or source integrity. Do not nominate
+  factual text, quotes, or other public surfaces through this mechanism. Each
+  nomination must contain the exact item_id, a substantive reason describing
+  the specific editorial repair, at least one evidence_id drawn only from that
+  item's bindings, and its exact allowed_repair_target as repair_target. Return
+  an empty repair_items list to abstain or when the report passes. Nominations
+  require empty affected_item_id and repair_target; use the existing
+  single-target contract instead when that is the appropriate scope.
+  Do not request a broad rewrite or invent facts or evidence.
+
   Use status=pass only for a defensible final item. Use status=fail for a
   source-grounded contradiction, unsupported material assertion, or material
   editorial-quality defect. Use status=unresolved when evidence is missing,

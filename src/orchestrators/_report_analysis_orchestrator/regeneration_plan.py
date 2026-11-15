@@ -778,6 +778,13 @@ def _allowed_paths(
                 and str(issue.rule_id or "").strip().lower() == "grounding"
                 and _issue_insight_identity(issue, artifacts) in blocking_identities
             ]
+            if any(
+                issue.rule_id
+                == "public_editorial_quality.semantic_collective_editorial_repair"
+                for issue in blocking_issues
+            ):
+                # Keep warnings as diagnostic context, not writable scope.
+                grounding_context = []
             path_issues = [*blocking_issues, *grounding_context]
         else:
             path_issues = blocking_issues or issues
@@ -1455,7 +1462,17 @@ def _strategy_options(
     """Return the ordered (repair_action, repair_strategy) ladder for a target."""
 
     options: List[tuple[str, str]] = []
-    if target_key == "report_identity":
+    hard_issues = [
+        issue for issue in ordered_issues if str(issue.severity).lower() == "error"
+    ]
+    collective_rule = "public_editorial_quality.semantic_collective_editorial_repair"
+    if target_key == "insights_bundle" and any(
+        issue.rule_id == collective_rule for issue in hard_issues
+    ):
+        # A report-level editorial nomination authorizes only this wording
+        # leaf, not rebinding its source or removing the underlying insight.
+        options.append(("REGENERATE_ITEM", "current_evidence"))
+    elif target_key == "report_identity":
         # Report identity has exactly one source-provable correction and one
         # safe terminal.  A generic model rewrite of an identity failure is
         # never a distinct strategy.
