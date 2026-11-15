@@ -5,7 +5,12 @@ from __future__ import annotations
 from difflib import SequenceMatcher
 from typing import Any
 
-from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
+from src.contracts.soft_copy_claim_provenance import (
+    resolve_soft_copy_public_text_partition,
+    soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
+)
+from src.utils.errors import AppError
 
 _SOFT_COPY_DIFF_PATHS = frozenset(
     {
@@ -18,11 +23,25 @@ _SOFT_COPY_DIFF_PATHS = frozenset(
 )
 
 
-def artifact_diff_paths(before: Any, after: Any, path: str = "") -> set[str]:
+def artifact_diff_paths(
+    before: Any, after: Any, path: str = "", *, _claims: object = None
+) -> set[str]:
     """Return changed leaf paths, using stable IDs and the canonical sentence grid."""
 
     if before == after:
         return set()
+    if not path and isinstance(before, dict) and isinstance(after, dict):
+        try:
+            _claims = tuple(
+                soft_copy_claim_provenance_from_payload(
+                    item["soft_copy_claim_provenance"]
+                )
+                if "soft_copy_claim_provenance" in item
+                else []
+                for item in (before, after)
+            )
+        except AppError:
+            _claims = (None, None)
     if isinstance(before, dict) and isinstance(after, dict):
         changed: set[str] = set()
         for key in sorted(set(before) | set(after)):
@@ -30,7 +49,9 @@ def artifact_diff_paths(before: Any, after: Any, path: str = "") -> set[str]:
             if key not in before or key not in after:
                 changed.add(child)
             else:
-                changed.update(artifact_diff_paths(before[key], after[key], child))
+                changed.update(
+                    artifact_diff_paths(before[key], after[key], child, _claims=_claims)
+                )
         return changed
     if isinstance(before, list) and isinstance(after, list):
         before_ids = _stable_list_ids(before)
@@ -38,8 +59,8 @@ def artifact_diff_paths(before: Any, after: Any, path: str = "") -> set[str]:
         if before_ids is not None and after_ids is not None:
             if set(before_ids) == set(after_ids) and before_ids != after_ids:
                 return {path or "$"}
-            before_by_id = dict(zip(before_ids, before))
-            after_by_id = dict(zip(after_ids, after))
+            before_by_id = dict(zip(before_ids, before, strict=True))
+            after_by_id = dict(zip(after_ids, after, strict=True))
             changed = {
                 changed_path
                 for identity in before_ids
@@ -48,6 +69,7 @@ def artifact_diff_paths(before: Any, after: Any, path: str = "") -> set[str]:
                     before_by_id[identity],
                     after_by_id[identity],
                     f"{path}[item={identity}]",
+                    _claims=_claims,
                 )
             }
             changed.update(
@@ -65,14 +87,18 @@ def artifact_diff_paths(before: Any, after: Any, path: str = "") -> set[str]:
             if index >= len(before) or index >= len(after):
                 changed.add(child)
             else:
-                changed.update(artifact_diff_paths(before[index], after[index], child))
+                changed.update(
+                    artifact_diff_paths(
+                        before[index], after[index], child, _claims=_claims
+                    )
+                )
         return changed
     if (
         path in _SOFT_COPY_DIFF_PATHS
         and isinstance(before, str)
         and isinstance(after, str)
     ):
-        return _soft_copy_changed_claim_paths(path, before, after)
+        return _soft_copy_changed_claim_paths(path, before, after, _claims)
     return {path} if path else {"$"}
 
 
@@ -95,9 +121,7 @@ def _stable_list_ids(values: list[Any]) -> list[str] | None:
     return identities if len(set(identities)) == len(identities) else None
 
 
-def _unique_removed_list_item_index(
-    before: list[Any], after: list[Any]
-) -> int | None:
+def _unique_removed_list_item_index(before: list[Any], after: list[Any]) -> int | None:
     """Return the removed row only when ordered list alignment is unique."""
 
     prefix_matches = [True] * len(before)
@@ -121,9 +145,28 @@ def _unique_removed_list_item_index(
     return removed_indices[0] if len(removed_indices) == 1 else None
 
 
-def _soft_copy_changed_claim_paths(path: str, before: str, after: str) -> set[str]:
-    before_sentences = soft_copy_material_sentences(before)
-    after_sentences = soft_copy_material_sentences(after)
+def _soft_copy_changed_claim_paths(
+    path: str, before: str, after: str, claims: object = None
+) -> set[str]:
+    family = path.split(".", 1)[0]
+    if isinstance(claims, tuple):
+        if any(value is None for value in claims):
+            return {path}
+        try:
+            before_sentences, after_sentences = (
+                resolve_soft_copy_public_text_partition(
+                    text=text,
+                    retained_claims=[
+                        claim for claim in records if claim.artifact_family == family
+                    ],
+                )
+                for text, records in zip((before, after), claims, strict=True)
+            )
+        except AppError:
+            return {path}
+    else:
+        before_sentences = soft_copy_material_sentences(before)
+        after_sentences = soft_copy_material_sentences(after)
     matcher = SequenceMatcher(a=before_sentences, b=after_sentences, autojunk=False)
     changed: set[str] = set()
     for operation, old_start, old_end, new_start, new_end in matcher.get_opcodes():

@@ -496,31 +496,29 @@ def test_regeneration_keeps_unchanged_summary_with_retained_provenance() -> None
     )
 
 
-def test_finalization_omits_unbound_linkedin_sentence_before_retention() -> None:
-    """Optional social copy retains only sentences with declared semantics."""
+def test_finalization_rejects_unbound_linkedin_copy() -> None:
+    """Unbound copy is not split or silently removed without semantic authority."""
     supported = "Execution readiness is becoming more visible."
-    payload = _assemble_soft_copy(
-        linkedin_post=(
-            f"{supported} This unsupported bridge must not be retained publicly."
-        ),
-        evidence_packs={
-            "findings": {
-                "findings": [{"id": "f1", "evidence": supported, "pages": [1]}]
-            }
-        },
-        soft_copy_claim_bindings={
-            "linkedin_post": [
-                {
-                    "claim": supported,
-                    "classification": "factual",
-                    "evidence_ids": ["f1"],
+    with pytest.raises(AppError, match="cover every material"):
+        _assemble_soft_copy(
+            linkedin_post=(
+                f"{supported} This unsupported bridge must not be retained publicly."
+            ),
+            evidence_packs={
+                "findings": {
+                    "findings": [{"id": "f1", "evidence": supported, "pages": [1]}]
                 }
-            ]
-        },
-    )
-
-    assert payload["linkedin_post"] == supported
-    assert_retained_soft_copy_claims_match_public_copy(payload)
+            },
+            soft_copy_claim_bindings={
+                "linkedin_post": [
+                    {
+                        "claim": supported,
+                        "classification": "factual",
+                        "evidence_ids": ["f1"],
+                    }
+                ]
+            },
+        )
 
 
 def test_finalization_does_not_promote_summary_claims_without_model_authority() -> None:

@@ -23,6 +23,7 @@ from src.contracts.report_models import REQUIRED_REPORT_PAYLOAD_INSIGHTS
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    resolve_soft_copy_public_text_partition,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
@@ -1097,9 +1098,16 @@ def retained_soft_copy_claim_grounding_for_target(
     current_text = _s(artifacts.get(target.target_section))
     claim_data: Dict[str, Dict[str, List[str]]] = {}
     sentence_data: Dict[str, List[tuple[int, str]]] = {}
-    for index, (_start, _end, sentence) in enumerate(
-        _soft_copy_sentence_spans(current_text)
-    ):
+    try:
+        spans = _soft_copy_sentence_spans(
+            current_text,
+            retained_claims=[
+                c for c in claims if c.artifact_family == target.target_section
+            ],
+        )
+    except AppError:
+        return {}
+    for index, (_start, _end, sentence) in enumerate(spans):
         sentence_data.setdefault(
             soft_copy_sentence_hash(sentence),
             [],
@@ -2020,11 +2028,34 @@ def _preserve_atomic_target_families(
                 if allowed_path in state_only_paths
                 else updated_artifacts.get(root, family_state[root])
             )
+            original_claims = None
+            target_claims = None
+            if (
+                root in {"summary", "expert_comment", "linkedin_post"}
+                and "[claim_index=" in allowed_path
+            ):
+                original_claims = [
+                    c
+                    for c in soft_copy_claim_provenance_from_payload(
+                        original_artifacts.get("soft_copy_claim_provenance")
+                    )
+                    if c.artifact_family == root
+                ]
+                target_claims = [
+                    c
+                    for c in soft_copy_claim_provenance_from_payload(
+                        updated_artifacts.get("soft_copy_claim_provenance")
+                    )
+                    if c.artifact_family == root
+                ]
+                original_claims += target_claims
             merged_family = _copy_allowed_mutation_path(
                 original_family=merged_family,
                 target_family=source_for_copy,
                 full_path=allowed_path,
                 root=root,
+                original_claims=original_claims,
+                target_claims=target_claims,
             )
         updated_artifacts[root] = merged_family
     for root, value in family_state.items():
@@ -2082,6 +2113,8 @@ def _copy_allowed_mutation_path(
     target_family: Any,
     full_path: str,
     root: str,
+    original_claims=None,
+    target_claims=None,
 ) -> Any:
     """Copy one declared value from assembly onto its last-promoted family."""
 
@@ -2130,16 +2163,20 @@ def _copy_allowed_mutation_path(
         index = int(claim_index_match.group(1))
         if not isinstance(original_text, str) or not isinstance(target_text, str):
             return original_family
-        original_spans = _soft_copy_sentence_spans(original_text)
-        target_sentences = soft_copy_material_sentences(target_text)
+        original_spans = _soft_copy_sentence_spans(
+            original_text, retained_claims=original_claims
+        )
+        target_spans = _soft_copy_sentence_spans(
+            target_text, retained_claims=target_claims
+        )
+        target_sentences = [span[2] for span in target_spans]
         if index >= len(original_spans):
             return original_family
         matcher = SequenceMatcher(
-            a=soft_copy_material_sentences(original_text),
+            a=[span[2] for span in original_spans],
             b=target_sentences,
             autojunk=False,
         )
-        target_spans = _soft_copy_sentence_spans(target_text)
         repaired_text = original_text
         for operation, old_start, old_end, new_start, new_end in matcher.get_opcodes():
             if operation == "equal":
@@ -2971,7 +3008,14 @@ def _render_regeneration_model(
             found, original_text = _read_repair_path(
                 _current_repair_artifacts(execution.state), base_path
             )
-            if found and isinstance(original_text, str):
+            if (
+                found
+                and isinstance(original_text, str)
+                and (
+                    root_key != "summary"
+                    or not execution.state.existing_soft_copy_claim_provenance
+                )
+            ):
                 replacement = _preserve_soft_copy_claim_boundary(
                     original_text, int(raw_index), replacement
                 )
@@ -3210,7 +3254,7 @@ def _is_atomic_claim_repair_scope(
 
 
 def _current_repair_artifacts(state: _RegenerationState) -> Dict[str, Any]:
-    return {
+    artifacts = {
         "summary": deepcopy(state.summary),
         "insights_candidates": deepcopy(state.insights_candidates),
         "insights_final": deepcopy(state.insights_final),
@@ -3218,6 +3262,10 @@ def _current_repair_artifacts(state: _RegenerationState) -> Dict[str, Any]:
         "expert_comment": state.expert_comment,
         "linkedin_post": state.linkedin_post,
     }
+    provenance = getattr(state, "existing_soft_copy_claim_provenance", None)
+    if provenance is not None:
+        artifacts["soft_copy_claim_provenance"] = deepcopy(provenance)
+    return artifacts
 
 
 def _repair_memory_prompt_payload(memory) -> List[Dict[str, Any]]:
@@ -3679,7 +3727,23 @@ def _repair_protected_fields_preserved(
             or not isinstance(after_text, str)
         ):
             return False
-        before_spans = _soft_copy_sentence_spans(before_text)
+        before_spans = _repair_text_spans(before, base_path, before_text)
+        if base_path in _REPAIR_SOFT_COPY_PATHS and before.get(
+            "soft_copy_claim_provenance"
+        ):
+            protected = [
+                before_text[before_spans[index][0] : before_spans[index][1]]
+                for index in indices
+                if index < len(before_spans)
+            ]
+            if len(protected) != len(indices):
+                return False
+            if any(
+                after_text.count(text) < protected.count(text)
+                for text in set(protected)
+            ):
+                return False
+            continue
         after_spans = _soft_copy_sentence_spans(after_text)
         required_values = [
             before_text[start:end].strip()
@@ -3734,7 +3798,7 @@ def _required_repair_protected_fields(
     for root in roots:
         if root not in artifacts:
             return None
-        leaves = _repair_leaf_paths(artifacts[root], root)
+        leaves = _repair_leaf_paths(artifacts[root], root, artifacts=artifacts)
         if not writable.intersection(leaves):
             return None
         if any(
@@ -3764,11 +3828,11 @@ _REPAIR_SOFT_COPY_PATHS = frozenset(
 )
 
 
-def _repair_leaf_paths(value: Any, path: str) -> set[str]:
+def _repair_leaf_paths(value: Any, path: str, *, artifacts=None) -> set[str]:
     """Flatten one retained artifact family into its immutable leaf paths."""
 
     if isinstance(value, str) and path in _REPAIR_SOFT_COPY_PATHS:
-        spans = _soft_copy_sentence_spans(value)
+        spans = _repair_text_spans(artifacts, path, value)
         return (
             {f"{path}[claim_index={index}]" for index in range(len(spans))}
             if spans
@@ -3780,7 +3844,7 @@ def _repair_leaf_paths(value: Any, path: str) -> set[str]:
         return {
             leaf
             for key, child in value.items()
-            for leaf in _repair_leaf_paths(child, f"{path}.{key}")
+            for leaf in _repair_leaf_paths(child, f"{path}.{key}", artifacts=artifacts)
         }
     if isinstance(value, list):
         if not value:
@@ -3805,9 +3869,26 @@ def _repair_leaf_paths(value: Any, path: str) -> set[str]:
                 else ""
             )
             selector = f"[item={identity}]" if identity else f"[{index}]"
-            leaves.update(_repair_leaf_paths(child, f"{path}{selector}"))
+            leaves.update(
+                _repair_leaf_paths(child, f"{path}{selector}", artifacts=artifacts)
+            )
         return leaves
     return {path}
+
+
+def _repair_text_spans(artifacts: Any, path: str, text: str):
+    family = path.split(".", 1)[0]
+    retained = None
+    if (
+        family in {"summary", "expert_comment", "linkedin_post"}
+        and isinstance(artifacts, dict)
+        and "soft_copy_claim_provenance" in artifacts
+    ):
+        claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+        retained = [claim for claim in claims if claim.artifact_family == family]
+    return _soft_copy_sentence_spans(text, retained_claims=retained)
 
 
 def _read_repair_path(value: Any, path: str) -> tuple[bool, Any]:
@@ -3817,7 +3898,7 @@ def _read_repair_path(value: Any, path: str) -> tuple[bool, Any]:
         found, text = _read_repair_path(value, base_path)
         if not found or not isinstance(text, str):
             return False, None
-        spans = _soft_copy_sentence_spans(text)
+        spans = _repair_text_spans(value, base_path, text)
         index = int(raw_index)
         return (
             (True, text[spans[index][0] : spans[index][1]])
@@ -3871,12 +3952,17 @@ def _write_repair_path(value: Dict[str, Any], path: str, replacement: Any) -> bo
         found, text = _read_repair_path(value, base_path)
         if not found or not isinstance(text, str) or not isinstance(replacement, str):
             return False
-        spans = _soft_copy_sentence_spans(text)
+        spans = _repair_text_spans(value, base_path, text)
         index = int(raw_index)
         if index >= len(spans):
             return False
         start, end = spans[index][:2]
-        replacement = _preserve_soft_copy_claim_boundary(text, index, replacement)
+        replacement = (
+            replacement.strip()
+            if base_path in _REPAIR_SOFT_COPY_PATHS
+            and value.get("soft_copy_claim_provenance")
+            else _preserve_soft_copy_claim_boundary(text, index, replacement)
+        )
         _write_mutation_path(value, base_path, text[:start] + replacement + text[end:])
         return True
     found, _ = _read_repair_path(value, path)
@@ -3992,6 +4078,7 @@ def _record_soft_copy_claim_bindings(
                 classification=repaired_claim.claim.classification,
                 evidence_ids=decision.evidence_ids_used,
                 allow_unbound_editorial=(result.get("_editorial_only_repair") is True),
+                declared_atomic=True,
             )
             or []
         )
@@ -4142,8 +4229,9 @@ def _valid_claim_replacement(
     text: str,
     evidence_ids: Sequence[str],
     allow_unbound_editorial: bool = False,
+    declared_atomic: bool = False,
 ) -> bool:
-    """Accept only one newly bound sentence for a claim-scoped model reply."""
+    """Validate the classification and evidence for a claim-scoped reply."""
 
     return (
         _repair_claim_bindings(
@@ -4151,6 +4239,7 @@ def _valid_claim_replacement(
             classification=classification,
             evidence_ids=evidence_ids,
             allow_unbound_editorial=allow_unbound_editorial,
+            declared_atomic=declared_atomic,
         )
         is not None
     )
@@ -4162,6 +4251,7 @@ def _repair_claim_bindings(
     text: str,
     evidence_ids: Sequence[str],
     allow_unbound_editorial: bool = False,
+    declared_atomic: bool = False,
 ) -> List[Dict[str, Any]] | None:
     """Build one semantic binding from retained identity and selected IDs."""
 
@@ -4175,8 +4265,10 @@ def _repair_claim_bindings(
     }.get(normalized_classification, "")
     if (
         not normalized_text
-        or len(sentences) != 1
-        or sentences[0] != normalized_text
+        or (
+            not declared_atomic
+            and (len(sentences) != 1 or sentences[0] != normalized_text)
+        )
         or not persisted_classification
     ):
         return None
@@ -4191,7 +4283,7 @@ def _repair_claim_bindings(
         return None
     return [
         {
-            "claim": sentences[0],
+            "claim": normalized_text,
             "classification": persisted_classification,
             "evidence_ids": selected_ids,
         }
@@ -4294,9 +4386,13 @@ def _rebuild_soft_copy_repair_selection(
     execution.state.soft_copy_evidence_selections[key] = rebuilt
 
 
-def _soft_copy_sentence_spans(text: str) -> List[tuple[int, int, str]]:
+def _soft_copy_sentence_spans(
+    text: str, *, retained_claims=None
+) -> List[tuple[int, int, str]]:
     """Return byte-preserving spans on the canonical provenance sentence grid."""
-    sentences = soft_copy_material_sentences(text)
+    sentences = resolve_soft_copy_public_text_partition(
+        text=text, retained_claims=retained_claims
+    )
     spans: List[tuple[int, int, str]] = []
     cursor = 0
     for sentence in sentences:
@@ -4344,7 +4440,13 @@ def _soft_copy_claim_repairs(
             claims_by_hash.setdefault(claim.text_hash, []).append(claim)
             claims_by_id.setdefault(claim.claim_id, []).append(claim)
     candidates: List[_SoftCopyClaimRepair] = []
-    sentence_spans = _soft_copy_sentence_spans(text)
+    try:
+        sentence_spans = _soft_copy_sentence_spans(
+            text,
+            retained_claims=[c for c in claims if c.artifact_family == artifact_family],
+        )
+    except AppError:
+        return None
     for start, end, sentence in sentence_spans:
         matched_claims = claims_by_hash.get(soft_copy_sentence_hash(sentence))
         if matched_claims is None or len(matched_claims) != 1:
@@ -4633,9 +4735,15 @@ def _summary_claim_repairs(
                 if not path_match:
                     continue
                 field, raw_index = path_match.groups()
-                spans = _soft_copy_sentence_spans(
-                    _s(execution.state.summary.get(field))
-                )
+                try:
+                    spans = _soft_copy_sentence_spans(
+                        _s(execution.state.summary.get(field)),
+                        retained_claims=[
+                            c for c in retained_claims if c.artifact_family == "summary"
+                        ],
+                    )
+                except AppError:
+                    return None
                 index = int(raw_index)
                 if index >= len(spans):
                     continue
@@ -4657,6 +4765,8 @@ def _summary_claim_repairs(
                 exact_matches += 1
         if exact_matches:
             continue
+        if matching_claims and _has_soft_copy_claim_leaf_target(execution):
+            return None
         affected = str(issue.affected_section or "").casefold()
         field = next(
             (
@@ -4708,19 +4818,48 @@ def _expand_summary_repairs_to_duplicate_fields(
         return repairs_by_field
     fields = ("tldr", "card_tldr_compact", "executive_summary")
     expanded = {field: list(repairs) for field, repairs in repairs_by_field.items()}
+    retained_claims = [
+        claim
+        for claim in soft_copy_claim_provenance_from_payload(
+            execution.state.existing_soft_copy_claim_provenance
+        )
+        if claim.artifact_family == "summary"
+    ]
     for repairs in repairs_by_field.values():
         for repair in repairs:
             for summary_field in fields:
                 text = _s(execution.state.summary.get(summary_field))
+                if _normalized_soft_copy_text(
+                    repair.text
+                ) not in _normalized_soft_copy_text(text):
+                    continue
                 matching = [
                     (start, end, sentence)
-                    for start, end, sentence in _soft_copy_sentence_spans(text)
+                    for start, end, sentence in _soft_copy_sentence_spans(
+                        text, retained_claims=retained_claims
+                    )
                     if soft_copy_sentence_hash(sentence) == repair.claim.text_hash
                 ]
                 if not matching:
                     continue
                 existing = expanded.setdefault(summary_field, [])
                 for start, end, sentence in matching:
+                    index = next(
+                        index
+                        for index, span in enumerate(
+                            _soft_copy_sentence_spans(
+                                text, retained_claims=retained_claims
+                            )
+                        )
+                        if span[:2] == (start, end)
+                    )
+                    if (
+                        f"summary.{summary_field}[claim_index={index}]"
+                        not in execution.target.allowed_paths
+                    ):
+                        raise _repair_decision_error(
+                            execution, "repair_scope_partition_invalid"
+                        )
                     if any(
                         item.claim.claim_id == repair.claim.claim_id
                         and item.start == start
@@ -5238,6 +5377,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     allow_unbound_editorial=(
                         result.get("_editorial_only_repair") is True
                     ),
+                    declared_atomic=True,
                 ):
                     _replace_rejected_claim_decision(
                         execution,
@@ -7056,6 +7196,7 @@ def _handle_expert_comment_regeneration(
                     classification=repair.claim.classification,
                     text=repaired_text,
                     evidence_ids=decision.evidence_ids_used,
+                    declared_atomic=claim_action == "replace",
                     allow_unbound_editorial=(
                         result.get("_editorial_only_repair") is True
                     ),
@@ -7311,6 +7452,7 @@ def _handle_linkedin_post_regeneration(
                 classification=repair.claim.classification,
                 text=repaired_text,
                 evidence_ids=decision.evidence_ids_used,
+                declared_atomic=claim_action == "replace",
                 allow_unbound_editorial=(result.get("_editorial_only_repair") is True),
             ):
                 _replace_rejected_claim_decision(

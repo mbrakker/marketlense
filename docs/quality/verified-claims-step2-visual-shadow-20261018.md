@@ -13444,3 +13444,16 @@ unchanged deterministic proposal validator, not evidence that live repairs
 now succeed. Focused prompt and proposal tests pass; the unchanged prompt
 fixture regression gate passes. No source binding, semantic validation, or
 publication gate is relaxed.
+
+The subsequent claim-boundary correction uses the existing model-declared
+public claim text as the semantic boundary. Exact retained text hashes recover
+those same boundaries for validation, review and claim-scoped repair; the
+sentence-grid cache version is advanced. Conflicting, incomplete or unmatched
+declarations fail closed rather than being silently split, expanded or merged.
+The retained Activate "U.S. Pay TV" failure and independent regressions cover
+provenance, grounding, editorial inventory, repair and sibling scope. A
+previous stale-identity safe-removal fixture now fails closed; the valid
+source-bound temporal repair remains covered. These are component results,
+not proof that either report meets first-pass or first-repair acceptance. The
+two real-report results above remain **PARTIAL** until rerun and independently
+reviewed on the final implementation SHA.

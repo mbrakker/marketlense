@@ -20,6 +20,7 @@ from src.contracts.regeneration import (
     repair_strategy_fingerprint,
 )
 from src.contracts.soft_copy_claim_provenance import (
+    resolve_soft_copy_public_text_partition,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
 )
@@ -909,6 +910,8 @@ def _issue_allowed_path(
         )
         if len(soft_copy_paths) == 1:
             return soft_copy_paths[0]
+        if entity_id.startswith("soft_copy:"):
+            return ""
         match = re.match(
             r"^(?:summary\.)?(tldr|card_tldr_compact|executive_summary)(?:\.|$)",
             affected,
@@ -960,6 +963,8 @@ def _issue_allowed_path(
         )
         if claim_path:
             return claim_path
+        if entity_id.startswith("soft_copy:"):
+            return ""
         issue_evidence_ids = {
             str(value).strip().casefold()
             for value in issue.evidence_ids
@@ -1381,16 +1386,11 @@ def _soft_copy_claim_paths(
         )
     except AppError:
         return []
-    claim = next(
-        (
-            value
-            for value in claims
-            if value.artifact_family == family and value.claim_id == entity_id
-        ),
-        None,
-    )
-    if claim is None:
+    family_claims = [value for value in claims if value.artifact_family == family]
+    matched_claims = [value for value in family_claims if value.claim_id == entity_id]
+    if len(matched_claims) != 1:
         return []
+    claim = matched_claims[0]
     text_fields = (
         (
             ("summary", "tldr"),
@@ -1407,14 +1407,22 @@ def _soft_copy_claim_paths(
             if field
             else artifacts.get(artifact_root, "")
         )
-        for index, sentence in enumerate(soft_copy_material_sentences(text)):
+        if not isinstance(text, str) or not text.strip():
+            continue
+        try:
+            sentences = resolve_soft_copy_public_text_partition(
+                text=text, retained_claims=family_claims
+            )
+        except AppError:
+            continue
+        for index, sentence in enumerate(sentences):
             text_hash = hashlib.sha256(
                 " ".join(sentence.split()).encode("utf-8")
             ).hexdigest()
             if text_hash == claim.text_hash:
                 base = f"summary.{field}" if field else family
                 matches.append(f"{base}[claim_index={index}]")
-    return sorted(matches)
+    return sorted(matches) if family == "summary" or len(matches) == 1 else []
 
 
 def _soft_copy_claim_path(

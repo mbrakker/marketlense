@@ -793,7 +793,7 @@ def test_editorial_plan_prompt_and_inputs_invalidate_artifact_cache_identity(tmp
     assert first["editorial_plan_transform_version"] == (
         artifact_normalization.EDITORIAL_PLAN_TRANSFORM_VERSION
     )
-    assert first["soft_copy_sentence_grid_version"] == "2"
+    assert first["soft_copy_sentence_grid_version"] == "3"
     assert first["insight_selection_version"] == (
         artifact_normalization.ARTIFACT_INSIGHT_SELECTION_VERSION
     )

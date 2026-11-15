@@ -36,6 +36,7 @@ from src.contracts.protected_facts import (
 )
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    resolve_soft_copy_public_text_partition,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
@@ -550,6 +551,22 @@ def _candidates(
             ),
         )
 
+    def declared_claim_texts(family: str, value: object) -> list[str]:
+        text = str(value or "").strip()
+        family_claims = [
+            claim
+            for (claim_family, _), claim in soft_copy_claims.items()
+            if claim_family == family
+        ]
+        try:
+            return resolve_soft_copy_public_text_partition(
+                text=text, retained_claims=family_claims
+            )
+        except AppError:
+            # Do not fall back to a guessed partition when retained bindings
+            # cannot account for this public surface.
+            return [text] if text else []
+
     summary = artifacts.get("summary")
     if isinstance(summary, dict):
         for index, raw in enumerate(summary.get("claim_evidence_map") or [], start=1):
@@ -568,10 +585,10 @@ def _candidates(
         summary_fields = ("tldr", "card_tldr_compact", "executive_summary")
         field_sentences: dict[str, set[str]] = {}
         for key in summary_fields:
-            for sentence in soft_copy_material_sentences(summary.get(key)):
+            for sentence in declared_claim_texts("summary", summary.get(key)):
                 field_sentences.setdefault(sentence, set()).add(key)
-        for sentence in soft_copy_material_sentences(
-            soft_copy_public_text("summary", summary)
+        for sentence in declared_claim_texts(
+            "summary", soft_copy_public_text("summary", summary)
         ):
             owners = field_sentences.get(sentence, set())
             section = f"summary.{next(iter(owners))}" if len(owners) == 1 else "summary"
@@ -664,7 +681,7 @@ def _candidates(
     for family in ("expert_comment", "linkedin_post"):
         value = artifacts.get(family)
         if isinstance(value, str):
-            for sentence in soft_copy_material_sentences(value):
+            for sentence in declared_claim_texts(family, value):
                 add_soft_copy(family, sentence, affected_section=family)
     for family in ("executive_summary", "executive_takeaways"):
         value = artifacts.get(family)

@@ -585,48 +585,14 @@ def test_summary_safe_removal_combines_map_and_copy_issues_with_stale_provenance
         vector_store_id=None,
         md5="md5",
     )
-    if not map_text_matches_copy:
-        with pytest.raises(AppError) as error:
-            _regenerate_artifacts(
-                request,
-                openai_client=openai_client,
-                prompt_client=_FakePromptClient(),
-            )
-        assert error.value.code == "summary_safe_removal_target_unresolved"
-        assert openai_client.calls == []
-        return
-    if not copy_has_sibling:
-        with pytest.raises(AppError) as error:
-            _regenerate_artifacts(
-                request,
-                openai_client=openai_client,
-                prompt_client=_FakePromptClient(),
-            )
-        assert error.value.code == "regeneration_deterministic_projection_failed"
-        assert error.value.context["projection"] == "summary_status_content"
-        assert openai_client.calls == []
-        return
-
-    response = _regenerate_artifacts(
-        request,
-        openai_client=openai_client,
-        prompt_client=_FakePromptClient(),
-    )
-
-    summary = response.updated_artifacts["summary"]
-    assert summary["tldr"] == current["summary"]["tldr"]
-    assert summary["executive_summary"] == (
-        "Keep executive copy." if copy_has_sibling else ""
-    )
-    assert summary["claim_evidence_map"] == (
-        [current["summary"]["claim_evidence_map"][1]] if copy_has_sibling else []
-    )
+    with pytest.raises(AppError) as error:
+        _regenerate_artifacts(
+            request,
+            openai_client=openai_client,
+            prompt_client=_FakePromptClient(),
+        )
+    assert error.value.code == "summary_safe_removal_target_unresolved"
     assert openai_client.calls == []
-    assert not any(
-        claim["claim_id"] == stale_claim.claim_id
-        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
-    )
-    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
 
 
 @pytest.mark.parametrize("has_claim_specific_issue", [True, False])

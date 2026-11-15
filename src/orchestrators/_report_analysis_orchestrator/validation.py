@@ -54,6 +54,7 @@ from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
 from src.contracts.soft_copy_claim_provenance import (
+    resolve_soft_copy_public_text_partition,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
@@ -3216,6 +3217,21 @@ def _scoped_soft_copy_provenance_paths(
             index[identity] = row
         rows.append(index)
 
+    try:
+        claim_sets = [
+            soft_copy_claim_provenance_from_payload(payload) for payload in payloads
+        ]
+    except AppError:
+        return set()
+
+    def partition(text: str, family: str, side: int) -> list[str]:
+        return resolve_soft_copy_public_text_partition(
+            text=text,
+            retained_claims=[
+                claim for claim in claim_sets[side] if claim.artifact_family == family
+            ],
+        )
+
     authorized: list[set[tuple[str, str]]] = [set(), set()]
     family_text: list[dict[str, list[str]]] = [{}, {}]
     summary_changed = False
@@ -3223,17 +3239,38 @@ def _scoped_soft_copy_provenance_paths(
     for field in _SOFT_COPY_DIFF_PATHS:
         family = _path_root(field)
         values = []
-        for artifacts, family_sentences in zip(
-            (before, after), family_text, strict=True
+        for side, (artifacts, family_sentences) in enumerate(
+            zip((before, after), family_text, strict=True)
         ):
             value = artifacts.get(family)
             if family == "summary":
                 value = (
                     value.get(field.split(".", 1)[1]) if isinstance(value, dict) else ""
                 )
-            sentences = soft_copy_material_sentences(
-                value if isinstance(value, str) else ""
-            )
+            try:
+                sentences = partition(
+                    value if isinstance(value, str) else "", family, side
+                )
+            except AppError:
+                before_family = before.get(family)
+                after_family = after.get(family)
+                field_name = field.split(".", 1)[1] if "." in field else ""
+                unchanged = (
+                    isinstance(before_family, dict)
+                    and isinstance(after_family, dict)
+                    and before_family.get(field_name) == after_family.get(field_name)
+                )
+                if family != "summary" or not (
+                    unchanged
+                    or field in allowed_paths
+                    or family in declared_family_roots
+                ):
+                    return set()
+                # Summary provenance can span its joined fields; the combined
+                # summary partition below remains the authority for row changes.
+                sentences = soft_copy_material_sentences(
+                    value if isinstance(value, str) else ""
+                )
             values.append(sentences)
             family_sentences.setdefault(family, []).extend(sentences)
         for op, old_start, old_end, new_start, new_end in SequenceMatcher(
@@ -3260,12 +3297,15 @@ def _scoped_soft_copy_provenance_paths(
 
     # Summary provenance is built from the combined public summary, not each
     # field separately. Field boundaries need not be sentence boundaries.
-    summary_sentences = [
-        soft_copy_material_sentences(
-            soft_copy_public_text("summary", item.get("summary"))
-        )
-        for item in (before, after)
-    ]
+    try:
+        summary_sentences = [
+            partition(
+                soft_copy_public_text("summary", item.get("summary")), "summary", side
+            )
+            for side, item in enumerate((before, after))
+        ]
+    except AppError:
+        return set()
     for side in (0, 1):
         family_text[side]["summary"] = summary_sentences[side]
         authorized[side] = {

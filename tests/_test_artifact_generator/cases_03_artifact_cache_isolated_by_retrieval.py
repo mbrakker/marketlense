@@ -828,7 +828,7 @@ def test_legacy_soft_copy_reuse_regenerates_missing_provenance(tmp_path) -> None
     assert claim["evidence_ids"] == ["f1"]
 
 
-def test_soft_copy_reuse_regenerates_when_sentence_grid_changes(tmp_path) -> None:
+def test_soft_copy_reuse_preserves_exact_declared_boundaries(tmp_path) -> None:
     family = "report_vs/artifacts/expert_comment"
     public_output = "The U.S. 2017 video metric shows 61% of time."
     old_materialization = {
@@ -921,11 +921,15 @@ def test_soft_copy_reuse_regenerates_when_sentence_grid_changes(tmp_path) -> Non
     )
 
     assert artifacts["expert_comment"] == public_output
-    assert "expert_comment" in [request[2] for request in client.requests]
-    assert (
-        artifacts["_cache"]["family_reuse_telemetry"]["regeneration_reasons"][family]
-        == "soft_copy_provenance_incompatible"
-    )
+    assert "expert_comment" not in [request[2] for request in client.requests]
+    assert [
+        claim["text_hash"]
+        for claim in artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    ] == [
+        sha256(binding["claim"].encode("utf-8")).hexdigest()
+        for binding in old_materialization["claim_provenance"]
+    ]
 
 
 def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:
@@ -1118,7 +1122,7 @@ __all__ = [
     "test_compatible_retained_families_make_zero_model_calls",
     "test_vector_store_identity_is_part_of_family_reuse_proof",
     "test_legacy_soft_copy_reuse_regenerates_missing_provenance",
-    "test_soft_copy_reuse_regenerates_when_sentence_grid_changes",
+    "test_soft_copy_reuse_preserves_exact_declared_boundaries",
     "test_invalidating_one_family_calls_only_its_model_route",
     "test_editorial_plan_change_invalidates_only_linkedin_family_reuse",
 ]

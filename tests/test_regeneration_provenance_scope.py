@@ -167,6 +167,62 @@ def test_summary_scope_uses_combined_canonical_sentence_grid():
     )
 
 
+def test_claim_scope_preserves_model_declared_initialism_boundary():
+    first = "For 2018E, U.S. Pay TV revenue was estimated at $98.1 billion."
+    second = "A separate sentence remains unchanged."
+    replacement = "The 2018E Pay TV estimate was $98.1 billion in the U.S."
+    before = {
+        "linkedin_post": f"{first} {second}",
+        "soft_copy_claim_provenance": {
+            "claims": [
+                _soft_copy_claim(family="linkedin_post", text=first),
+                _soft_copy_claim(family="linkedin_post", text=second),
+            ]
+        },
+    }
+    after = deepcopy(before)
+    after["linkedin_post"] = f"{replacement} {second}"
+    after["soft_copy_claim_provenance"]["claims"][0] = _soft_copy_claim(
+        family="linkedin_post", text=replacement
+    )
+    plan = SimpleNamespace(
+        targets=[SimpleNamespace(allowed_paths=["linkedin_post[claim_index=0]"])]
+    )
+
+    scope = _scope_validation_report(
+        before=before,
+        after=after,
+        plan=plan,
+        verified_derived_roots=frozenset({"soft_copy_claim_provenance"}),
+    )
+
+    assert scope.status == "pass"
+
+
+def test_unresolved_summary_field_cannot_authorize_guessed_claim_index():
+    before = {
+        "summary": {"tldr": "U.S.", "executive_summary": "Pay TV declined."},
+        "soft_copy_claim_provenance": {
+            "claims": [_soft_copy_claim(family="summary", text="U.S. Pay TV declined.")]
+        },
+    }
+    after = deepcopy(before)
+    after["summary"]["tldr"] = "U.K."
+    after["soft_copy_claim_provenance"]["claims"] = [
+        _soft_copy_claim(family="summary", text="U.K. Pay TV declined.")
+    ]
+    plan = SimpleNamespace(
+        targets=[SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])]
+    )
+    scope = _scope_validation_report(
+        before=before,
+        after=after,
+        plan=plan,
+        verified_derived_roots=frozenset({"soft_copy_claim_provenance"}),
+    )
+    assert scope.status == "fail"
+
+
 def test_duplicate_claim_identity_fails_closed():
     current, candidate, evidence = _candidate()
     candidate["soft_copy_claim_provenance"]["claims"].append(

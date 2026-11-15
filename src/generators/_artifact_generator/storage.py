@@ -27,6 +27,7 @@ from src.contracts.soft_copy_claim_provenance import (
     SOFT_COPY_SENTENCE_GRID_VERSION,
     SoftCopyClaimProvenance,
     align_soft_copy_claim_bindings_to_text,
+    resolve_soft_copy_public_text_partition,
     soft_copy_claim_provenance_from_payload,
     soft_copy_claim_provenance_to_payload,
     soft_copy_material_sentences,
@@ -460,7 +461,7 @@ def assemble_artifacts_payload(
         or (
             not summary_repair_in_progress
             and not summary_already_bound
-            and summary_has_unbound_material_sentences(
+            and _summary_has_unbound_copy(
                 summary=summary,
                 claim_bindings=soft_copy_claim_bindings.get("summary"),
             )
@@ -472,13 +473,13 @@ def assemble_artifacts_payload(
         )
         soft_copy_claim_bindings["summary"] = []
     if "expert_comment" not in (soft_copy_repair_texts or {}):
-        expert_comment = retain_bound_optional_soft_copy_sentences(
+        expert_comment = _retain_bound_optional_soft_copy(
             artifact_family="expert_comment",
             public_text=expert_comment,
             claim_bindings=soft_copy_claim_bindings.get("expert_comment"),
         )
     if "linkedin_post" not in (soft_copy_repair_texts or {}):
-        linkedin_post = retain_bound_optional_soft_copy_sentences(
+        linkedin_post = _retain_bound_optional_soft_copy(
             artifact_family="linkedin_post",
             public_text=linkedin_post,
             claim_bindings=soft_copy_claim_bindings.get("linkedin_post"),
@@ -638,6 +639,64 @@ def assemble_artifacts_payload(
     return artifacts_payload
 
 
+def _summary_has_unbound_copy(
+    *, summary: Dict[str, Any], claim_bindings: object
+) -> bool:
+    text = soft_copy_public_text("summary", summary)
+    if not text:
+        return False
+    bindings = claim_bindings if isinstance(claim_bindings, list) else []
+    if bindings:
+        try:
+            resolve_soft_copy_public_text_partition(text=text, claim_bindings=bindings)
+        except AppError as exc:
+            if exc.code == "soft_copy_claim_provenance_ambiguous":
+                raise
+            return True
+        return False
+    return summary_has_unbound_material_sentences(
+        summary=summary, claim_bindings=claim_bindings
+    )
+
+
+def _retain_bound_optional_soft_copy(
+    *, artifact_family: str, public_text: str, claim_bindings: object
+) -> str:
+    normalized = " ".join(public_text.split())
+    bindings = claim_bindings if isinstance(claim_bindings, list) else []
+    if bindings:
+        resolve_soft_copy_public_text_partition(
+            text=normalized, claim_bindings=bindings
+        )
+        return public_text
+    return retain_bound_optional_soft_copy_sentences(
+        artifact_family=artifact_family,
+        public_text=public_text,
+        claim_bindings=claim_bindings,
+    )
+
+
+def _present_soft_copy_hashes(
+    text: str, claims: List[SoftCopyClaimProvenance]
+) -> set[str]:
+    words = text.split()
+    wanted = {claim.text_hash for claim in claims}
+    found: set[str] = set()
+    if not wanted:
+        return found
+    for start in range(len(words)):
+        hasher = hashlib.sha256()
+        for end in range(start + 1, len(words) + 1):
+            if end > start + 1:
+                hasher.update(b" ")
+            hasher.update(words[end - 1].encode("utf-8"))
+            if hasher.hexdigest() in wanted:
+                found.add(hasher.hexdigest())
+                if found == wanted:
+                    return found
+    return found
+
+
 def _soft_copy_claim_provenance_payload(
     *,
     summary: Dict[str, Any],
@@ -688,9 +747,8 @@ def _soft_copy_claim_provenance_payload(
         claims.append(claim)
     public_sentence_hashes = {
         family: {
-            hashlib.sha256(sentence.encode("utf-8")).hexdigest()
-            for sentence in soft_copy_material_sentences(
-                soft_copy_public_text(family, public_output)
+            *_present_soft_copy_hashes(
+                soft_copy_public_text(family, public_output), claims
             )
         }
         for family, public_output in public_output_by_family.items()
@@ -705,7 +763,13 @@ def _soft_copy_claim_provenance_payload(
         text = soft_copy_public_text(family, public_output)
         declared = bindings.get(family)
         if family in repair_texts:
-            final_sentences = soft_copy_material_sentences(text)
+            final_sentences = resolve_soft_copy_public_text_partition(
+                text=text,
+                claim_bindings=declared,
+                retained_claims=[
+                    claim for claim in claims if claim.artifact_family == family
+                ],
+            )
             final_sentence_by_normalized = {
                 " ".join(sentence.split()): sentence for sentence in final_sentences
             }
@@ -807,7 +871,7 @@ def _soft_copy_claim_provenance_payload(
             claim
             for claim in claims
             if claim.artifact_family != family
-            or claim.text_hash in public_sentence_hashes[family]
+            or claim.text_hash in _present_soft_copy_hashes(text, claims)
         ]
         family_claims = [claim for claim in claims if claim.artifact_family == family]
         if regeneration_attempt <= 0 and not retained_soft_copy_claims_cover_text(
@@ -831,11 +895,7 @@ def _summary_bindings_with_retained_claims(
     """Carry retained summary semantics across later deterministic corrections."""
 
     public_text = soft_copy_public_text("summary", summary)
-    aligned = align_soft_copy_claim_bindings_to_text(
-        artifact_family="summary",
-        text=public_text,
-        claim_bindings=bindings,
-    )
+    aligned = [binding for binding in bindings if isinstance(binding, dict)]
     covered_sentences = {
         " ".join(str(binding.get("claim") or "").split())
         for binding in aligned
@@ -845,7 +905,15 @@ def _summary_bindings_with_retained_claims(
     for claim in retained_claims:
         claims_by_hash.setdefault(claim.text_hash, []).append(claim)
     result = [dict(binding) for binding in bindings if isinstance(binding, dict)]
-    for sentence in soft_copy_material_sentences(public_text):
+    try:
+        retained_partition = resolve_soft_copy_public_text_partition(
+            text=public_text, claim_bindings=bindings, retained_claims=retained_claims
+        )
+    except AppError as exc:
+        if exc.code == "soft_copy_claim_provenance_ambiguous":
+            raise
+        return result
+    for sentence in retained_partition:
         normalized = " ".join(sentence.split())
         if normalized in covered_sentences:
             continue
@@ -882,11 +950,16 @@ def _complete_summary_bindings_from_exact_direct_claims(
     if not sentences:
         return declared, 0
 
-    aligned = align_soft_copy_claim_bindings_to_text(
-        artifact_family="summary",
-        text=public_text,
-        claim_bindings=declared,
-    )
+    try:
+        aligned = align_soft_copy_claim_bindings_to_text(
+            artifact_family="summary",
+            text=public_text,
+            claim_bindings=declared,
+        )
+    except AppError as exc:
+        if exc.code != "soft_copy_claim_provenance_coverage_invalid":
+            raise
+        aligned = declared
     covered_sentences = {
         " ".join(str(binding.get("claim") or "").split())
         for binding in aligned
@@ -2605,7 +2678,23 @@ def _rebuild_final_soft_copy_claim_provenance(
         claims_by_hash = {claim.text_hash: claim for claim in family_claims}
         baseline_by_hash = {claim.text_hash: claim for claim in baseline_family_claims}
         rebuilt_hashes: set[str] = set()
-        for sentence in soft_copy_material_sentences(public_text):
+        available = dict(baseline_by_hash)
+        available.update(claims_by_hash)
+        if public_text and not available:
+            raise AppError(
+                code="soft_copy_claim_provenance_sentence_missing",
+                message="Final claim is absent from retained provenance",
+                retryable=False,
+                context={"artifact_family": family},
+            )
+        partition = (
+            resolve_soft_copy_public_text_partition(
+                text=public_text, retained_claims=list(available.values())
+            )
+            if public_text
+            else []
+        )
+        for sentence in partition:
             text_hash = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
             if text_hash in rebuilt_hashes:
                 continue
@@ -2994,7 +3083,18 @@ def _retained_summary_context_sources(
             continue
         by_hash.setdefault(claim.text_hash, []).append(claim)
     sources: List[tuple[str, List[str]]] = []
-    for sentence in soft_copy_material_sentences(context):
+    try:
+        partition = resolve_soft_copy_public_text_partition(
+            text=context,
+            retained_claims=[
+                claim for claim in claims if claim.artifact_family == "summary"
+            ],
+        )
+    except AppError as exc:
+        if exc.code == "soft_copy_claim_provenance_ambiguous":
+            raise
+        return []
+    for sentence in partition:
         sentence_hash = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
         matches = by_hash.get(sentence_hash, [])
         if len(matches) != 1 or not matches[0].evidence_ids:

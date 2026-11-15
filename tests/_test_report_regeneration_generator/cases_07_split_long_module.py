@@ -936,6 +936,22 @@ def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path
             "tldr": "Share fell from 43% in 2025 to 41% in 2025.",
         }
     )
+    current_claim = current_artifacts["summary"]["tldr"]
+    current_hash = hashlib.sha256(current_claim.encode("utf-8")).hexdigest()
+    current_artifacts["soft_copy_claim_provenance"]["claims"].append(
+        {
+            "schema_version": "1.0",
+            "artifact_family": "summary",
+            "claim_id": f"soft_copy:summary:{current_hash[:16]}",
+            "text_hash": current_hash,
+            "classification": "factual",
+            "evidence_ids": ["f1"],
+            "source_spans": [],
+            "producing_prompt_identity": {},
+            "generation_attempt": 1,
+            "regeneration_attempt": 0,
+        }
+    )
     evidence_packs = _evidence_packs()
     evidence_packs["findings"]["findings"][0]["evidence"] = source
 

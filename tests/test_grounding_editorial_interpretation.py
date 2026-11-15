@@ -486,6 +486,102 @@ def test_grounding_inventory_preserves_initialism_claims_and_recommendation_type
     ]
 
 
+def test_grounding_preserves_declared_claim_with_capitalized_initialism() -> None:
+    from src.generators.public_editorial_quality_generator import (
+        public_editorial_semantic_review_items,
+    )
+
+    texts = [
+        "For 2018E, U.S. Pay TV revenue was estimated at $98.1 billion.",
+        "The report also describes advertising.",
+    ]
+    claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:test:{index}",
+            text_hash=hashlib.sha256(text.encode()).hexdigest(),
+            classification="factual",
+            evidence_ids=(f"evidence-{index}",),
+            source_spans=(),
+            producing_prompt_identity={},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, text in enumerate(texts, start=1)
+    ]
+    artifacts = _artifacts_for("expert_comment", " ".join(texts))
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        claims
+    )
+    payload = grounding_payload(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="editorial-grounding",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        artifacts,
+    )
+    audited = [
+        (item["item_id"], item["text"], item["evidence_ids"])
+        for item in payload["public_factual_items"]
+        if item["section"] == "expert_comment"
+    ]
+    assert audited == [
+        (claims[0].claim_id, texts[0], ["evidence-1"]),
+        (claims[1].claim_id, texts[1], ["evidence-2"]),
+    ]
+    reviewed = [
+        (item["public_item_id"], item["text"], item["evidence_ids"])
+        for item in public_editorial_semantic_review_items(artifacts)
+        if item["artifact"] == "expert_comment"
+    ]
+    assert reviewed == audited
+
+
+def test_grounding_does_not_merge_uncovered_copy_into_retained_claim() -> None:
+    claim = "Sales rose."
+    artifacts = _artifacts_for("expert_comment", f"{claim} Costs rose.")
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [
+            SoftCopyClaimProvenance(
+                schema_version="1.0",
+                artifact_family="expert_comment",
+                claim_id="soft_copy:expert_comment:one",
+                text_hash=hashlib.sha256(claim.encode()).hexdigest(),
+                classification="factual",
+                evidence_ids=("evidence-1",),
+                source_spans=(),
+                producing_prompt_identity={},
+                generation_attempt=1,
+                regeneration_attempt=0,
+            )
+        ]
+    )
+    payload = grounding_payload(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="editorial-grounding",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        artifacts,
+    )
+    items = [
+        item
+        for item in payload["public_factual_items"]
+        if item["section"] == "expert_comment"
+    ]
+    assert len(items) == 1
+    assert items[0]["provenance_error"] == "grounding_public_claim_provenance_invalid"
+    assert items[0]["evidence_ids"] == []
+
+
 def test_grounding_failure_retains_atomic_public_item_id(tmp_path) -> None:
     text = "Wallet coverage will certainly determine conversion."
 

@@ -12,7 +12,7 @@ from src.utils.errors import AppError
 
 SOFT_COPY_CLAIM_PROVENANCE_SCHEMA_VERSION = "1.0"
 SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION = "1.0"
-SOFT_COPY_SENTENCE_GRID_VERSION = "2"
+SOFT_COPY_SENTENCE_GRID_VERSION = "3"
 SoftCopyClaimClassification = Literal["factual", "interpretive", "recommendation"]
 _CLASSIFICATIONS = frozenset({"factual", "interpretive", "recommendation"})
 _PROMPT_FAMILY_TO_ARTIFACT_FAMILY = {
@@ -139,7 +139,17 @@ def soft_copy_claim_bindings_match_public_text_grid(
     """Check retained bindings map one-to-one onto the current sentence grid."""
 
     text = soft_copy_public_text(artifact_family, public_output)
-    sentences = soft_copy_material_sentences(text)
+    try:
+        sentences = resolve_soft_copy_public_text_partition(
+            text=text, claim_bindings=claim_bindings
+        )
+    except AppError:
+        return False
+    if isinstance(claim_bindings, list) and any(
+        isinstance(b, dict) and " ".join(str(b.get("claim") or "").split()) in sentences
+        for b in claim_bindings
+    ):
+        return True
     if not sentences:
         return not claim_bindings
     if not isinstance(claim_bindings, list) or not claim_bindings:
@@ -193,6 +203,17 @@ def soft_copy_uncovered_sentences(
 
     text = soft_copy_public_text(artifact_family, public_output)
     if not text:
+        return []
+    try:
+        partition = resolve_soft_copy_public_text_partition(
+            text=text, claim_bindings=claim_bindings
+        )
+    except AppError:
+        return [text]
+    if isinstance(claim_bindings, list) and any(
+        isinstance(b, dict) and " ".join(str(b.get("claim") or "").split()) in partition
+        for b in claim_bindings
+    ):
         return []
     if not isinstance(claim_bindings, list) or not claim_bindings:
         return soft_copy_material_sentences(text)
@@ -251,6 +272,21 @@ def align_soft_copy_claim_bindings_to_text(
     joined = " ".join(str(text or "").split())
     if not joined:
         return [binding for binding in claim_bindings if isinstance(binding, dict)]
+    try:
+        partition = resolve_soft_copy_public_text_partition(
+            text=joined, claim_bindings=claim_bindings
+        )
+    except AppError as exc:
+        if exc.code != "soft_copy_claim_provenance_coverage_invalid":
+            raise
+        return [binding for binding in claim_bindings if isinstance(binding, dict)]
+    exact = {
+        " ".join(str(binding.get("claim") or "").split()): binding
+        for binding in claim_bindings
+        if isinstance(binding, dict)
+    }
+    if partition and all(span in exact for span in partition):
+        return [{**exact[span], "claim": span} for span in partition]
     return _align_bindings_to_sentences(
         sentences=soft_copy_material_sentences(joined),
         claim_bindings=claim_bindings,
@@ -449,6 +485,153 @@ def soft_copy_sentence_hash(sentence: object) -> str:
 
     normalized = " ".join(str(sentence or "").split())
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def resolve_soft_copy_public_text_partition(
+    *,
+    text: str,
+    claim_bindings: object = None,
+    retained_claims: object = None,
+    require_all_retained: bool = False,
+) -> list[str]:
+    """Resolve complete, unambiguous exact claims on whitespace-normalized text.
+
+    Fresh bindings contain claim strings; retained provenance contains hashes.
+    Identical repeated text is returned once per occurrence. A hash identifies
+    normalized text, not an occurrence; conflicting metadata is rejected.
+    Without any exact declaration or retained claims, use the legacy grid.
+    """
+    normalized = " ".join(str(text or "").split())
+    bindings = claim_bindings if isinstance(claim_bindings, list) else []
+    retained = retained_claims if isinstance(retained_claims, list) else []
+    identities: dict[str, tuple[object, ...]] = {}
+    exact: set[str] = set()
+
+    def add_identity(key: str, identity: tuple[object, ...]) -> None:
+        if key in identities and identities[key] != identity:
+            raise AppError(
+                code="soft_copy_claim_provenance_ambiguous",
+                message="Conflicting soft-copy claim bindings",
+                retryable=False,
+            )
+        identities[key] = identity
+
+    for binding in bindings:
+        if not isinstance(binding, dict):
+            continue
+        claim = " ".join(str(binding.get("claim") or "").split())
+        if not claim:
+            continue
+        if f" {claim} " not in f" {normalized} ":
+            raise AppError(
+                code="soft_copy_claim_provenance_coverage_invalid",
+                message="Declared claim does not exactly match public text",
+                retryable=False,
+            )
+        evidence = binding.get("evidence_ids")
+        add_identity(
+            soft_copy_sentence_hash(claim),
+            (
+                str(binding.get("classification") or ""),
+                tuple(evidence) if isinstance(evidence, list) else (),
+            ),
+        )
+        exact.add(claim)
+    for claim in retained:
+        if not isinstance(claim, SoftCopyClaimProvenance):
+            raise AppError(
+                code="soft_copy_claim_provenance_invalid",
+                message="Invalid retained soft-copy claim",
+                retryable=False,
+            )
+        add_identity(claim.text_hash, (claim.classification, claim.evidence_ids))
+    if not exact and not retained:
+        if bindings:
+            raise AppError(
+                code="soft_copy_claim_provenance_coverage_invalid",
+                message="Declared claims do not exactly cover public text",
+                retryable=False,
+            )
+        return soft_copy_material_sentences(normalized)
+    if not normalized and not require_all_retained:
+        return []
+    if not normalized:
+        raise AppError(
+            code="soft_copy_claim_provenance_coverage_invalid",
+            message="Retained claims have no public text",
+            retryable=False,
+        )
+
+    candidates: dict[int, list[tuple[int, str, str]]] = {}
+    found: set[str] = set()
+    words = normalized.split(" ")
+    for start in range(len(words)):
+        hasher = hashlib.sha256()
+        for end in range(start + 1, len(words) + 1):
+            if end > start + 1:
+                hasher.update(b" ")
+            hasher.update(words[end - 1].encode("utf-8"))
+            digest = hasher.hexdigest()
+            span = " ".join(words[start:end]) if digest in identities else ""
+            if digest in identities and (retained or span in exact):
+                candidates.setdefault(start, []).append((end, span, digest))
+                found.add(digest)
+    prior_end = 0
+    for start, end in sorted(
+        (start, end) for start, items in candidates.items() for end, _, _ in items
+    ):
+        if start < prior_end:
+            raise AppError(
+                code="soft_copy_claim_provenance_ambiguous",
+                message="Overlapping soft-copy claim bindings",
+                retryable=False,
+            )
+        prior_end = max(prior_end, end)
+    paths: dict[int, list[list[str]]] = {0: [[]]}
+    for start in range(len(words)):
+        for end, span, _ in candidates.get(start, []):
+            for parts in paths.get(start, []):
+                paths.setdefault(end, []).append(parts + [span])
+                paths[end] = paths[end][:2]
+    solutions = paths.get(len(words), [])
+    if not solutions and not any("#" in span for span in exact):
+        tokens = normalized.split()
+        while tokens and re.fullmatch(r"#[A-Za-z0-9_]+", tokens[-1]):
+            tokens.pop()
+        trimmed = " ".join(tokens)
+        if trimmed != normalized:
+            return resolve_soft_copy_public_text_partition(
+                text=trimmed,
+                claim_bindings=claim_bindings,
+                retained_claims=retained_claims,
+                require_all_retained=require_all_retained,
+            )
+    required = {soft_copy_sentence_hash(span) for span in exact}
+    if require_all_retained:
+        required.update(claim.text_hash for claim in retained)
+    if len(solutions) > 1:
+        raise AppError(
+            code="soft_copy_claim_provenance_ambiguous",
+            message="Multiple exact soft-copy claim partitions",
+            retryable=False,
+        )
+    if not solutions or not required.issubset(found):
+        raise AppError(
+            code="soft_copy_claim_provenance_coverage_invalid",
+            message=(
+                "Exact soft-copy claims must uniquely cover every material "
+                "sentence or claim"
+            ),
+            retryable=False,
+        )
+    selected = solutions[0]
+    if sum(len(items) for items in candidates.values()) != len(selected):
+        raise AppError(
+            code="soft_copy_claim_provenance_ambiguous",
+            message="Overlapping soft-copy claim bindings",
+            retryable=False,
+        )
+    return selected
 
 
 def _is_prose_fragment(fragment: str) -> bool:

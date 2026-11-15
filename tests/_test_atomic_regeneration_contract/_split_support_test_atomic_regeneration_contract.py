@@ -209,6 +209,15 @@ def _model_repair_path_case(case_id: str) -> dict[str, object]:
             "summary", "soft_copy:summary:tldr-claim", "Original TLDR claim."
         ),
         _soft_copy_claim(
+            "summary",
+            "soft_copy:summary:executive-sibling",
+            "Unchanged summary sibling.",
+        ),
+        _soft_copy_claim(
+            "summary", "soft_copy:summary:tldr-sibling", "Unchanged TLDR sibling."
+        ),
+        _soft_copy_claim("summary", "soft_copy:summary:compact", "Compact summary."),
+        _soft_copy_claim(
             "expert_comment",
             "soft_copy:expert_comment:claim-1",
             "Original expert claim.",

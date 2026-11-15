@@ -96,20 +96,36 @@ def test_model_repair_contract_is_string_atomic_for_every_model_family(
     patched = _apply_repair_decision_patch(
         current_artifacts=artifacts, decision=decision
     )
-    found, applied = _read_repair_path(patched, expected)
-    after_found, after_sibling = _read_repair_path(patched, sibling)
-    assert found and applied == replacement
-    assert after_found and after_sibling == before_sibling
+    if "[claim_index=" in expected:
+        # A scalar patch is an intermediate candidate: its provenance still
+        # describes the original text until the real finalization stage runs.
+        old_found, old_claim = _read_repair_path(artifacts, expected)
+        before_found, before_parent = _read_repair_path(artifacts, parent)
+        after_found, after_parent = _read_repair_path(patched, parent)
+        assert old_found and before_found and after_found
+        assert before_parent.count(old_claim) == 1
+        assert after_parent == before_parent.replace(old_claim, replacement, 1)
+        assert before_sibling in after_parent
+        with pytest.raises(AppError) as error:
+            _read_repair_path(patched, expected)
+        assert error.value.code == "soft_copy_claim_provenance_coverage_invalid"
+    else:
+        found, applied = _read_repair_path(patched, expected)
+        after_found, after_sibling = _read_repair_path(patched, sibling)
+        assert found and applied == replacement
+        assert after_found and after_sibling == before_sibling
     assert decision.changed_paths == [expected]
     assert decision.minimal_patch[0].value == replacement
-    assert (
-        _scope_validation_report(
-            before=artifacts,
-            after=patched,
-            plan=SimpleNamespace(targets=[target]),
-        ).status
-        == "pass"
+    scope = _scope_validation_report(
+        before=artifacts,
+        after=patched,
+        plan=SimpleNamespace(targets=[target]),
     )
+    if "[claim_index=" in expected:
+        assert scope.status != "pass"
+        assert any(issue.affected_section == parent for issue in scope.issues)
+    else:
+        assert scope.status == "pass"
 
     for rejected_value in ({"claim": "over-broad"}, ["over-broad"]):
         invalid_payload = _decision_payload(

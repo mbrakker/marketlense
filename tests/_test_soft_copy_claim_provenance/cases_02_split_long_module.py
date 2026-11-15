@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -117,7 +118,7 @@ def test_sentence_splitter_keeps_capitalized_sentence_after_terminal_initialism(
     ]
 
 
-def test_fragment_binding_rebuilds_only_a_canonical_material_sentence() -> None:
+def test_fragment_binding_cannot_invent_the_rest_of_a_claim() -> None:
     from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
     from src.generators.soft_copy_claim_provenance import (
         build_soft_copy_claim_provenance,
@@ -125,31 +126,27 @@ def test_fragment_binding_rebuilds_only_a_canonical_material_sentence() -> None:
 
     text = "U.S. market adoption reached 42%. Leaders should monitor the shift."
     sentences = soft_copy_material_sentences(text)
-    claims = build_soft_copy_claim_provenance(
-        artifact_family="linkedin_post",
-        text=text,
-        declared_claims=[
-            {
-                "claim": "market adoption reached 42%",
-                "classification": "factual",
-                "evidence_ids": ["finding-1"],
-            },
-            {
-                "claim": sentences[1],
-                "classification": "recommendation",
-                "evidence_ids": [],
-            },
-        ],
-        evidence_span_index={"finding-1": []},
-        producing_prompt_identity={"execution_identity": "same"},
-        generation_attempt=1,
-        regeneration_attempt=0,
-    )
-
-    assert [claim.text_hash for claim in claims] == [
-        sha256(sentence.encode("utf-8")).hexdigest() for sentence in sentences
-    ]
-    assert claims[0].text_hash != sha256(b"market adoption reached 42%").hexdigest()
+    with pytest.raises(AppError, match="exactly match public text"):
+        build_soft_copy_claim_provenance(
+            artifact_family="linkedin_post",
+            text=text,
+            declared_claims=[
+                {
+                    "claim": "market adoption reached 42%",
+                    "classification": "factual",
+                    "evidence_ids": ["finding-1"],
+                },
+                {
+                    "claim": sentences[1],
+                    "classification": "recommendation",
+                    "evidence_ids": [],
+                },
+            ],
+            evidence_span_index={"finding-1": []},
+            producing_prompt_identity={"execution_identity": "same"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
 
 
 def test_candidate_validation_rejects_fragment_absent_from_sentence_grid() -> None:
@@ -204,7 +201,7 @@ def test_candidate_validation_rejects_fragment_absent_from_sentence_grid() -> No
     assert any(issue.rule_id == "soft_copy_claim_provenance" for issue in result.issues)
 
 
-def test_align_bindings_resolves_punctuation_and_case_variance() -> None:
+def test_align_bindings_requires_exact_model_declarations() -> None:
     """Mechanically equivalent quotes bind without a model repair attempt."""
 
     from src.contracts.soft_copy_claim_provenance import (
@@ -232,18 +229,14 @@ def test_align_bindings_resolves_punctuation_and_case_variance() -> None:
             },
         ],
     )
-    assert [binding["claim"] for binding in aligned] == [
-        "Marketers plan to raise budgets by 12% in 2026.",
-        "Leaders remain cautious about attribution spend.",
-    ]
-    assert soft_copy_claim_bindings_cover_public_text(
+    assert not soft_copy_claim_bindings_cover_public_text(
         artifact_family="linkedin_post",
         public_output=post,
         claim_bindings=aligned,
     )
 
 
-def test_align_bindings_resolves_quoted_clause_within_unique_sentence() -> None:
+def test_align_bindings_does_not_expand_a_quoted_clause() -> None:
     from src.contracts.soft_copy_claim_provenance import (
         align_soft_copy_claim_bindings_to_sentences,
         soft_copy_uncovered_sentences,
@@ -265,7 +258,7 @@ def test_align_bindings_resolves_quoted_clause_within_unique_sentence() -> None:
         ],
     )
     assert [binding["claim"] for binding in aligned] == [
-        post,
+        "Retail media networks now capture",
     ]
     assert (
         soft_copy_uncovered_sentences(
@@ -273,11 +266,11 @@ def test_align_bindings_resolves_quoted_clause_within_unique_sentence() -> None:
             public_output=post,
             claim_bindings=aligned,
         )
-        == []
+        != []
     )
 
 
-def test_align_bindings_resolves_sentence_quoted_with_extra_words() -> None:
+def test_align_bindings_does_not_rewrite_extra_words() -> None:
     from src.contracts.soft_copy_claim_provenance import (
         align_soft_copy_claim_bindings_to_sentences,
     )
@@ -297,7 +290,7 @@ def test_align_bindings_resolves_sentence_quoted_with_extra_words() -> None:
             }
         ],
     )
-    assert [binding["claim"] for binding in aligned] == [post]
+    assert aligned[0]["claim"] != post
     assert aligned[0]["evidence_ids"] == ["f2"]
 
 
@@ -309,7 +302,10 @@ def test_align_bindings_leaves_ambiguous_clause_unmatched() -> None:
         soft_copy_uncovered_sentences,
     )
 
-    post = "First generic growth signal appeared early. Second generic growth signal appeared late."
+    post = (
+        "First generic growth signal appeared early. "
+        "Second generic growth signal appeared late."
+    )
     aligned = align_soft_copy_claim_bindings_to_sentences(
         artifact_family="linkedin_post",
         public_output=post,
@@ -331,7 +327,7 @@ def test_align_bindings_leaves_ambiguous_clause_unmatched() -> None:
     )
 
 
-def test_align_bindings_drops_noise_once_coverage_is_complete() -> None:
+def test_align_bindings_does_not_drop_unmatched_declarations() -> None:
     from src.contracts.soft_copy_claim_provenance import (
         align_soft_copy_claim_bindings_to_sentences,
         soft_copy_claim_bindings_cover_public_text,
@@ -353,35 +349,34 @@ def test_align_bindings_drops_noise_once_coverage_is_complete() -> None:
         public_output=post,
         claim_bindings=[exact_binding, stray_binding],
     )
-    assert aligned == [exact_binding]
-    assert soft_copy_claim_bindings_cover_public_text(
+    assert aligned == [exact_binding, stray_binding]
+    assert not soft_copy_claim_bindings_cover_public_text(
         artifact_family="linkedin_post",
         public_output=post,
         claim_bindings=aligned,
     )
 
 
-def test_align_bindings_dedupes_sentences_keeping_first_declaration() -> None:
+def test_align_bindings_rejects_conflicting_declarations() -> None:
     from src.contracts.soft_copy_claim_provenance import (
         align_soft_copy_claim_bindings_to_sentences,
     )
 
     post = "Repeated sentence here."
-    aligned = align_soft_copy_claim_bindings_to_sentences(
-        artifact_family="linkedin_post",
-        public_output=post,
-        claim_bindings=[
-            {
-                "claim": "Repeated sentence here.",
-                "classification": "factual",
-                "evidence_ids": ["f1"],
-            },
-            {
-                "claim": "Repeated sentence here.",
-                "classification": "interpretive",
-                "evidence_ids": ["f2"],
-            },
-        ],
-    )
-    assert len(aligned) == 1
-    assert aligned[0]["evidence_ids"] == ["f1"]
+    with pytest.raises(AppError, match="Conflicting soft-copy claim bindings"):
+        align_soft_copy_claim_bindings_to_sentences(
+            artifact_family="linkedin_post",
+            public_output=post,
+            claim_bindings=[
+                {
+                    "claim": "Repeated sentence here.",
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                },
+                {
+                    "claim": "Repeated sentence here.",
+                    "classification": "interpretive",
+                    "evidence_ids": ["f2"],
+                },
+            ],
+        )

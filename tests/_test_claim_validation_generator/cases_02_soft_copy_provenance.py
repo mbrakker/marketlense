@@ -104,6 +104,54 @@ def test_retained_claim_validation_uses_canonical_abbreviation_sentence_grid(
     assert package.results[0].status == "supported"
 
 
+def test_retained_claim_validation_keeps_declared_abbreviation_claim_intact() -> None:
+    claim = "For 2018E, U.S. Pay TV revenue was estimated at $98.1 billion."
+    artifacts = {
+        "expert_comment": claim,
+        "soft_copy_claim_provenance": {
+            "schema_version": "1.0",
+            "claims": [
+                _soft_copy_claim(
+                    artifact_family="expert_comment",
+                    text=claim,
+                    classification="factual",
+                    evidence_ids=["f1"],
+                )
+            ],
+        },
+    }
+    package = validate_retained_claims(
+        artifacts,
+        {"findings": {"findings": [{"id": "f1", "text": claim, "evidence": claim}]}},
+        semantic_batch_validator=_semantic_batch_supported,
+    )
+
+    assert len(package.results) == 1
+    assert package.results[0].status == "supported"
+
+
+def test_incomplete_provenance_does_not_fabricate_abbreviation_fragments() -> None:
+    claim = "U.S. Pay TV declined."
+    artifacts = {
+        "expert_comment": f"{claim} Revenue rose.",
+        "soft_copy_claim_provenance": {
+            "schema_version": "1.0",
+            "claims": [
+                _soft_copy_claim(
+                    artifact_family="expert_comment",
+                    text=claim,
+                    classification="factual",
+                    evidence_ids=["f1"],
+                )
+            ],
+        },
+    }
+    package = validate_retained_claims(artifacts, _evidence())
+    assert package.readiness_status == "not_publishable"
+    assert len(package.results) == 1
+    assert package.results[0].reasons == ["soft_copy_provenance_sentence_missing"]
+
+
 def test_retained_claim_validation_fails_closed_for_unknown_soft_copy_evidence() -> (
     None
 ):
@@ -462,7 +510,8 @@ def test_retained_claim_validation_rejects_unbound_soft_copy_sentence() -> None:
 
     assert package.readiness_status == "not_publishable"
     assert package.unsupported_factual_count == 1
-    assert package.results[1].reasons == ["soft_copy_provenance_sentence_missing"]
+    assert len(package.results) == 1
+    assert package.results[0].reasons == ["soft_copy_provenance_sentence_missing"]
 
 
 def test_retained_claim_validation_rejects_soft_copy_provenance_hash_mismatch() -> None:

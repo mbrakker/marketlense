@@ -27,8 +27,8 @@ from src.contracts.public_editorial_quality import (
     PublicEditorialQualityReport,
 )
 from src.contracts.soft_copy_claim_provenance import (
+    resolve_soft_copy_public_text_partition,
     soft_copy_claim_provenance_from_payload,
-    soft_copy_material_sentences,
     soft_copy_sentence_hash,
 )
 from src.contracts.validation import ValidationIssue, ValidationReport
@@ -2037,10 +2037,23 @@ def _retained_soft_copy_sentence_items(
             return [item]
         return []
     by_hash: dict[str, list[Any]] = {}
+    family_claims = []
     for claim in claims:
         if claim.artifact_family == artifact:
+            family_claims.append(claim)
             by_hash.setdefault(claim.text_hash, []).append(claim)
-    sentences = soft_copy_material_sentences(text)
+    try:
+        sentences = resolve_soft_copy_public_text_partition(
+            text=text, retained_claims=family_claims
+        )
+    except AppError:
+        if provenance_present:
+            item = _item(artifact, field, text, [], artifact)
+            item["provenance_error"] = (
+                "soft_copy_claim_provenance_sentence_identity_ambiguous"
+            )
+            return [item]
+        return []
     matched = [
         by_hash.get(soft_copy_sentence_hash(sentence), []) for sentence in sentences
     ]

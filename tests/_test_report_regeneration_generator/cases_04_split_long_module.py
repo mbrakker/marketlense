@@ -460,7 +460,7 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
     )
 
 
-def test_claim_repair_rejects_multisentence_model_output_and_preserves_sibling(
+def test_claim_repair_preserves_model_declared_group_and_sibling(
     tmp_path,
 ) -> None:
     current_artifacts = _current_artifacts()
@@ -529,17 +529,16 @@ def test_claim_repair_rejects_multisentence_model_output_and_preserves_sibling(
     )
 
     assert response.updated_artifacts["expert_comment"] == (
-        f"{supported} {unsupported}"
+        f"{supported} A supported replacement. An extra claim."
     )
     retained = [
         claim
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
         if claim["artifact_family"] == "expert_comment"
     ]
-    assert [claim["claim_id"] for claim in retained] == [
-        claims[0].claim_id,
-        claims[1].claim_id,
-    ]
+    assert len(retained) == 2
+    assert retained[0]["claim_id"] == claims[0].claim_id
+    assert retained[1]["repaired_from_claim_id"] == claims[1].claim_id
 
 
 def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(

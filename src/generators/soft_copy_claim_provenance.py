@@ -14,6 +14,7 @@ from src.contracts.claim_validation import normalize_claim_classification
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     align_soft_copy_claim_bindings_to_text,
+    resolve_soft_copy_public_text_partition,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
@@ -63,7 +64,22 @@ def build_soft_copy_claim_provenance(
             context={"artifact_family": family},
         )
 
-    sentences = soft_copy_material_sentences(public_text)
+    for binding in declared_claims:
+        if not isinstance(binding, dict):
+            continue
+        if normalize_claim_classification(
+            binding.get("classification")
+        ) == "factual_claim" and not _unique_strings(binding.get("evidence_ids")):
+            raise AppError(
+                code="soft_copy_claim_provenance_binding_invalid",
+                message="Factual soft-copy claim requires declared evidence IDs",
+                retryable=False,
+                context={"artifact_family": family},
+            )
+
+    sentences = resolve_soft_copy_public_text_partition(
+        text=public_text, claim_bindings=declared_claims
+    )
     resolved_bindings = align_soft_copy_claim_bindings_to_text(
         artifact_family=family,
         text=public_text,
@@ -176,11 +192,15 @@ def retained_soft_copy_claims_cover_text(
     *, text: str, claims: list[SoftCopyClaimProvenance]
 ) -> bool:
     """Confirm retained claims exactly cover public sentences with no stale records."""
-    sentence_hashes = {
-        _sha256(sentence) for sentence in _material_sentences(_normalized_text(text))
-    }
-    claim_hashes = {claim.text_hash for claim in claims}
-    return sentence_hashes == claim_hashes and len(claims) == len(claim_hashes)
+    if not claims:
+        return not _normalized_text(text)
+    try:
+        resolve_soft_copy_public_text_partition(
+            text=text, retained_claims=claims, require_all_retained=True
+        )
+    except AppError:
+        return False
+    return True
 
 
 def assert_retained_soft_copy_claims_match_public_copy(

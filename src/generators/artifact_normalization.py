@@ -11,6 +11,7 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.report_models import REQUIRED_REPORT_PAYLOAD_INSIGHTS
 from src.contracts.soft_copy_claim_provenance import (
     align_soft_copy_claim_bindings_to_sentences,
+    resolve_soft_copy_public_text_partition,
     soft_copy_material_sentences,
     soft_copy_public_text,
 )
@@ -1564,6 +1565,16 @@ def carry_soft_copy_binding_semantics_to_final_sentences(
 
     original_text = soft_copy_public_text(artifact_family, original_public_text)
     final_text = soft_copy_public_text(artifact_family, final_public_text)
+    if artifact_family == "summary" and original_claim_bindings:
+        try:
+            resolve_soft_copy_public_text_partition(
+                text=original_text, claim_bindings=original_claim_bindings
+            )
+        except AppError as exc:
+            if exc.code != "soft_copy_claim_provenance_coverage_invalid":
+                raise
+            # Keep the original declarations for the provenance coverage gate.
+            return []
     original_sentences = soft_copy_material_sentences(original_text)
     final_sentences = soft_copy_material_sentences(final_text)
     if not original_sentences or len(original_sentences) != len(final_sentences):

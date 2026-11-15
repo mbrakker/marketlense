@@ -31,6 +31,7 @@ from src.contracts.protected_facts import (
 )
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
+    resolve_soft_copy_public_text_partition,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_sentence_hash,
@@ -3565,13 +3566,24 @@ def _public_factual_items(
         evidence_by_id: dict[str, str],
     ) -> None:
         public_text = sanitize_citation_tokens(s(text))
-        sentences = soft_copy_material_sentences(public_text)
         claims_by_hash: dict[str, list[Any]] = {}
+        family_claims = []
         for claim in soft_copy_claims:
             if claim.artifact_family == family:
+                family_claims.append(claim)
                 claims_by_hash.setdefault(claim.text_hash, []).append(claim)
+        partition_failed = False
+        try:
+            sentences = resolve_soft_copy_public_text_partition(
+                text=public_text, retained_claims=family_claims
+            )
+        except AppError:
+            partition_failed = True
+            sentences = soft_copy_material_sentences(public_text)
         matched = [
-            claims_by_hash.get(
+            []
+            if partition_failed
+            else claims_by_hash.get(
                 soft_copy_sentence_hash(sentence),
                 [],
             )
@@ -3611,7 +3623,7 @@ def _public_factual_items(
             return
         if not sentences:
             return
-        if strict_atomic_provenance:
+        if strict_atomic_provenance or "soft_copy_claim_provenance" in artifacts:
             provenance_error_text = sanitize_citation_tokens(s(text))
             if provenance_error_text:
                 items.append(

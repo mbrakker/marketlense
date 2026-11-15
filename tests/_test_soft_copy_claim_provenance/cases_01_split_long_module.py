@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -87,8 +88,8 @@ def test_material_soft_copy_sentence_without_declared_binding_is_rejected() -> N
         )
 
 
-def test_builder_resolves_varied_quotes_to_identical_retained_records() -> None:
-    """Mechanical quote variance must not change the retained provenance bytes."""
+def test_builder_rejects_unmatched_model_quotes() -> None:
+    """An incomplete quotation must not be expanded into a semantic claim."""
 
     from src.generators.soft_copy_claim_provenance import (
         build_soft_copy_claim_provenance,
@@ -124,33 +125,28 @@ def test_builder_resolves_varied_quotes_to_identical_retained_records() -> None:
         generation_attempt=1,
         regeneration_attempt=0,
     )
-    varied_claims = build_soft_copy_claim_provenance(
-        artifact_family="expert_comment",
-        text=text,
-        declared_claims=[
-            {
-                "claim": "revenue grew by 12%",
-                "classification": "factual",
-                "evidence_ids": ["finding-7"],
-            },
-            {
-                "claim": "suggests leaders should protect retention investment",
-                "classification": "interpretive",
-                "evidence_ids": ["finding-7", "quote-3"],
-            },
-        ],
-        evidence_span_index=span_index,
-        producing_prompt_identity=identity,
-        generation_attempt=1,
-        regeneration_attempt=0,
-    )
-    assert [
-        (claim.claim_id, claim.text_hash, claim.evidence_ids, claim.source_spans)
-        for claim in exact_claims
-    ] == [
-        (claim.claim_id, claim.text_hash, claim.evidence_ids, claim.source_spans)
-        for claim in varied_claims
-    ]
+    assert len(exact_claims) == 2
+    with pytest.raises(AppError, match="exactly match public text"):
+        build_soft_copy_claim_provenance(
+            artifact_family="expert_comment",
+            text=text,
+            declared_claims=[
+                {
+                    "claim": "revenue grew by 12%",
+                    "classification": "factual",
+                    "evidence_ids": ["finding-7"],
+                },
+                {
+                    "claim": "suggests leaders should protect retention investment",
+                    "classification": "interpretive",
+                    "evidence_ids": ["finding-7", "quote-3"],
+                },
+            ],
+            evidence_span_index=span_index,
+            producing_prompt_identity=identity,
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
 
 
 def test_builder_reports_uncovered_sentences_with_actionable_context() -> None:
@@ -174,9 +170,7 @@ def test_builder_reports_uncovered_sentences_with_actionable_context() -> None:
             generation_attempt=1,
             regeneration_attempt=0,
         )
-    assert exc_info.value.code == "soft_copy_claim_provenance_bindings_incomplete"
-    assert exc_info.value.context["missing_claim_count"] == 2
-    assert "linkedin_post" in exc_info.value.message
+    assert exc_info.value.code == "soft_copy_claim_provenance_coverage_invalid"
 
 
 def test_builder_still_rejects_factual_claim_without_evidence() -> None:
@@ -443,9 +437,7 @@ def test_repaired_summary_does_not_choose_between_direct_claim_evidence_rows() -
     assert captured.value.code == "soft_copy_claim_provenance_coverage_invalid"
 
 
-def test_artifact_assembly_canonicalizes_soft_copy_aliases_before_strict_validation() -> (
-    None
-):
+def test_assembly_canonicalizes_soft_copy_aliases_before_validation() -> None:
     payload = _assemble_soft_copy(
         expert_comment="Revenue grew by 12%.",
         evidence_packs={
@@ -685,7 +677,7 @@ def test_hashtag_only_closing_line_is_not_a_material_sentence() -> None:
     )
 
 
-def test_align_bindings_splits_paragraph_claims_onto_sentence_grid() -> None:
+def test_align_bindings_preserves_model_declared_claim_group() -> None:
     from src.contracts.soft_copy_claim_provenance import (
         align_soft_copy_claim_bindings_to_sentences,
         soft_copy_claim_bindings_cover_public_text,
@@ -709,13 +701,12 @@ def test_align_bindings_splits_paragraph_claims_onto_sentence_grid() -> None:
         ],
     )
     assert [binding["claim"] for binding in aligned] == [
-        "First supported point.",
-        "Second supported point.",
+        "First supported point. Second supported point.",
         "Third supported point.",
     ]
-    assert all(binding["evidence_ids"] == ["f1"] for binding in aligned[:2])
-    assert aligned[2]["evidence_ids"] == ["f2"]
-    assert aligned[2]["classification"] == "interpretive"
+    assert aligned[0]["evidence_ids"] == ["f1"]
+    assert aligned[1]["evidence_ids"] == ["f2"]
+    assert aligned[1]["classification"] == "interpretive"
     assert soft_copy_claim_bindings_cover_public_text(
         artifact_family="linkedin_post",
         public_output=post,
