@@ -905,7 +905,6 @@ def test_soft_copy_reuse_preserves_exact_declared_boundaries(tmp_path) -> None:
             },
         }
     )
-
     artifacts = generate_artifacts(
         report_id="initialism-year-reuse",
         report_name="Initialism Year Reuse",
@@ -919,17 +918,15 @@ def test_soft_copy_reuse_preserves_exact_declared_boundaries(tmp_path) -> None:
         analysis_store=FakeAnalysisStore(),
         prompt_family_reuse_reader=reuse_reader,
     )
-
     assert artifacts["expert_comment"] == public_output
     assert "expert_comment" not in [request[2] for request in client.requests]
-    assert [
-        claim["text_hash"]
-        for claim in artifacts["soft_copy_claim_provenance"]["claims"]
-        if claim["artifact_family"] == "expert_comment"
-    ] == [
-        sha256(binding["claim"].encode("utf-8")).hexdigest()
-        for binding in old_materialization["claim_provenance"]
+    claims = artifacts["soft_copy_claim_provenance"]["claims"]
+    retained_hashes = [
+        c["text_hash"] for c in claims if c["artifact_family"] == "expert_comment"
     ]
+    bindings = old_materialization["claim_provenance"]
+    expected_hashes = [sha256(b["claim"].encode()).hexdigest() for b in bindings]
+    assert retained_hashes == expected_hashes
 
 
 def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:

@@ -698,18 +698,19 @@ def test_insight_metric_conflict_is_corrected_from_retained_candidate(
 
 def test_strategy_ladder_skips_rejected_and_stays_distinct() -> None:
     artifacts = _current_artifacts()
-    next(
+    retained_claim = next(
         claim
         for claim in artifacts["soft_copy_claim_provenance"]["claims"]
         if claim["artifact_family"] == "expert_comment"
-    )["evidence_ids"] = ["f1"]
+    )
+    retained_claim["evidence_ids"] = ["f1"]
     issue = ValidationIssue(
         schema_version="1.1",
         rule_id="grounding",
         message="[factual_claim|unsupported_factual_claim] Unsupported expert claim.",
         severity="error",
         affected_section="expert_comment",
-        entity_id="soft_copy:expert_comment:abc",
+        entity_id=retained_claim["claim_id"],
         evidence_ids=["f1"],
     )
 

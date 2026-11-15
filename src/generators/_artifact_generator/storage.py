@@ -763,12 +763,26 @@ def _soft_copy_claim_provenance_payload(
         text = soft_copy_public_text(family, public_output)
         declared = bindings.get(family)
         if family in repair_texts:
+            retained = [claim for claim in claims if claim.artifact_family == family]
+            if regeneration_attempt <= 0 and retained_soft_copy_claims_cover_text(
+                text=text, claims=retained
+            ):
+                rolled_back = {
+                    " ".join(str(value).split()) for value in repair_texts[family]
+                }
+                declared = [
+                    binding
+                    for binding in declared or []
+                    if not isinstance(binding, dict)
+                    or " ".join(str(binding.get("claim") or "").split())
+                    not in rolled_back
+                    or " ".join(str(binding.get("claim") or "").split())
+                    in " ".join(text.split())
+                ]
             final_sentences = resolve_soft_copy_public_text_partition(
                 text=text,
                 claim_bindings=declared,
-                retained_claims=[
-                    claim for claim in claims if claim.artifact_family == family
-                ],
+                retained_claims=retained,
             )
             final_sentence_by_normalized = {
                 " ".join(sentence.split()): sentence for sentence in final_sentences

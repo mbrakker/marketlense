@@ -388,8 +388,12 @@ def _set_interpretive_summary_provenance(artifacts: dict) -> None:
     seen_hashes: set[str] = set()
     summary = artifacts.get("summary")
     if isinstance(summary, dict):
-        summary_text = soft_copy_public_text("summary", summary)
-        for text in soft_copy_material_sentences(summary_text):
+        summary_texts = [
+            text
+            for field in ("tldr", "card_tldr_compact", "executive_summary")
+            for text in soft_copy_material_sentences(summary.get(field, ""))
+        ]
+        for text in summary_texts:
             text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
             if text_hash in seen_hashes:
                 continue

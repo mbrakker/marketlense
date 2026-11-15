@@ -509,6 +509,12 @@ def test_summary_repair_keeps_same_claim_grounding_context_only():
             ],
         }
     }
+    _set_interpretive_summary_provenance(artifacts)
+    next(
+        row
+        for row in artifacts["soft_copy_claim_provenance"]["claims"]
+        if row["text_hash"] == hashlib.sha256(claim.encode()).hexdigest()
+    )["claim_id"] = claim_id
     issues = [
         ValidationIssue(
             message="The linked source does not establish this claim.",

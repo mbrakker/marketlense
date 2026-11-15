@@ -931,30 +931,20 @@ def test_summary_claim_map_repair_rejects_model_patches_to_public_copy_siblings(
 def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path):
     source = "Share fell from 43% in Q1 2025 to 41% in Q2 2025."
     current_artifacts = _current_artifacts()
-    current_artifacts["summary"].update(
-        {
-            "tldr": "Share fell from 43% in 2025 to 41% in 2025.",
-        }
-    )
+    current_artifacts["summary"]["tldr"] = "Share fell from 43% in 2025 to 41% in 2025."
     current_claim = current_artifacts["summary"]["tldr"]
-    current_hash = hashlib.sha256(current_claim.encode("utf-8")).hexdigest()
-    current_artifacts["soft_copy_claim_provenance"]["claims"].append(
-        {
-            "schema_version": "1.0",
-            "artifact_family": "summary",
-            "claim_id": f"soft_copy:summary:{current_hash[:16]}",
-            "text_hash": current_hash,
-            "classification": "factual",
-            "evidence_ids": ["f1"],
-            "source_spans": [],
-            "producing_prompt_identity": {},
-            "generation_attempt": 1,
-            "regeneration_attempt": 0,
-        }
+    current_hash = hashlib.sha256(current_claim.encode()).hexdigest()
+    retained_claim = dict(current_artifacts["soft_copy_claim_provenance"]["claims"][0])
+    retained_claim.update(
+        artifact_family="summary",
+        text_hash=current_hash,
+        claim_id=f"soft_copy:summary:{current_hash[:16]}",
+        classification="factual",
+        evidence_ids=["f1"],
     )
+    current_artifacts["soft_copy_claim_provenance"]["claims"].append(retained_claim)
     evidence_packs = _evidence_packs()
     evidence_packs["findings"]["findings"][0]["evidence"] = source
-
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
             report_id="activate-2026",
@@ -997,7 +987,6 @@ def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path
         openai_client=_TemporalSummaryOpenAIClient(),
         prompt_client=_FakePromptClient(),
     )
-
     assert response.regenerated_sections == ["summary"]
     assert response.repair_decisions[0].minimal_patch[0].value == source
     assert response.updated_artifacts["summary"]["tldr"] == source
