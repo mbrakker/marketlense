@@ -13562,3 +13562,21 @@ transactional assembly. The regression checks both final evidence IDs and
 repair lineage. This is local evidence only: the Activate live run above did
 not exercise this particular sequence, and first-pass/first-repair acceptance
 for Activate and Capgemini has not been established on the changed SHA.
+
+At `ec1551c8`, hosted CI passed, including both mutation partitions and
+release evidence. A fresh isolated Activate run at
+`C:\ml-acceptance-ec1551c8\activate\ias-first-attempt-9x3reebf` ended
+`validation_failed` before any automatic repair. Independent editorial
+review found report-wide weak analytical depth and repetition in the primary
+insights, and returned no localized repair target. Inspection of the five
+retained insights confirms that several implications and actions chiefly
+repeat factual comparisons or advise preserving qualifiers. The planner
+therefore abstained under its existing fail-closed scope contract; this is
+not evidence that the consecutive-target fix failed or was exercised.
+The run recorded 481 provider calls, nine file-search calls, 1,959,549 input
+and 355,008 output tokens, estimated $0.394352, and 3,750.672 seconds
+end-to-end. The retained-claim counters reported zero unsupported or
+unresolved claims; independent full-PDF factual acceptance was not completed
+because the report failed editorial readiness. No WordPress write occurred.
+Capgemini was not rerun. Both-report first-pass/first-repair acceptance
+remains **PARTIAL**.
