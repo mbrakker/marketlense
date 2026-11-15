@@ -13484,3 +13484,29 @@ fact is no longer excluded; independent grounding and candidate validation
 remain mandatory. This does not establish that repair succeeds, resolve the
 later null-field error, or prove factual and editorial quality. Activate and
 Capgemini have not both passed on the resulting SHA; status remains **PARTIAL**.
+
+At `6a8d70a4`, the full local suite passed (8,872 passed, two skipped)
+and hosted CI passed. The fresh isolated Activate rerun at
+`C:\ml-acceptance-6a8d70a4\activate\ias-first-attempt-hsfecuuh` did not
+meet first-pass or first-repair acceptance. Initial grounding rejected two
+LinkedIn claims for missing 2016 population or travel-and-ticket scope.
+Candidate 1 had no quarantined evidence and no provenance-scope violations,
+but independent validation and editorial review rejected it: its LinkedIn
+copy duplicated a GMV claim and lacked an unambiguous retained binding, and
+grounding rejected an expert interpretation. In context the latter names two
+top-25% cohorts; physical PDF pages 15 and 17 show 61% versus 34% and 64%
+versus 47%, respectively. The verdict's extension to other-user cohorts is
+not an independently confirmed factual error. Grounding batches do not include
+the complete public field as an explicit context field, but the retained audit
+does not prove exactly what adjacent text the model saw; the cause remains
+unconfirmed. Candidate 2 also rolled back and the workflow ended with
+`insight_safe_removal_no_replacement`. No later attempt can satisfy first-repair
+acceptance.
+
+This run used 559 provider calls, eight file-search calls, 2,703,804 input and
+481,764 output tokens, estimated $0.515816 and 4,327.578 seconds end-to-end.
+The reported three-second report duration is partial. No WordPress write
+occurred. The corrected source-authority behavior is supported by targeted
+tests and the previous exact-finding replay; different live findings prevent
+attribution of the new outcome solely to that fix. Capgemini was not rerun
+because Activate still failed. Overall acceptance remains **PARTIAL**.
