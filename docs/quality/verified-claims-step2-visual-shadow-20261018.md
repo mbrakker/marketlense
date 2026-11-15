@@ -13551,3 +13551,14 @@ estimated $0.534017 and 4,180.125 seconds end-to-end; no WordPress write
 occurred. Capgemini was not rerun because Activate remained unsuccessful.
 The separate-target provenance defect and first-pass/first-repair acceptance
 remain open; status is **PARTIAL**.
+
+The consecutive-target failure was reproduced in a focused provider-boundary
+test: after one LinkedIn claim was replaced, a separate target for an untouched
+claim failed with `repair_scope_partition_invalid` because the current text
+was paired with the original provenance grid. Regeneration now derives a
+working provenance view between targets using the existing canonical builder;
+the original baseline and accumulated repair deltas remain the inputs to final
+transactional assembly. The regression checks both final evidence IDs and
+repair lineage. This is local evidence only: the Activate live run above did
+not exercise this particular sequence, and first-pass/first-repair acceptance
+for Activate and Capgemini has not been established on the changed SHA.

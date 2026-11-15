@@ -32,6 +32,7 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.validation import ValidationRequest
 from src.generators._artifact_generator.storage import (
+    _soft_copy_claim_provenance_payload,
     finalize_regeneration_candidate_artifacts,
 )
 from src.generators.artifact_generator import (
@@ -134,6 +135,7 @@ class _RegenerationState:
     soft_copy_prompt_identities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     soft_copy_generation_attempts: Dict[str, int] = field(default_factory=dict)
     existing_soft_copy_claim_provenance: Dict[str, Any] = field(default_factory=dict)
+    working_soft_copy_claim_provenance: Dict[str, Any] | None = None
     replaced_soft_copy_families: List[str] = field(default_factory=list)
     replaced_soft_copy_claim_ids: Dict[str, List[str]] = field(default_factory=dict)
     soft_copy_repair_texts: Dict[str, List[str]] = field(default_factory=dict)
@@ -324,6 +326,25 @@ def regenerate_artifacts(
     )
 
     for target in request.plan.targets:
+        if state.soft_copy_repair_texts or state.replaced_soft_copy_families:
+            state.working_soft_copy_claim_provenance = (
+                _soft_copy_claim_provenance_payload(
+                    summary=state.summary,
+                    expert_comment=state.expert_comment,
+                    linkedin_post=state.linkedin_post,
+                    doc_map=runtime.safe_doc_map,
+                    evidence_packs=runtime.safe_evidence,
+                    bindings=state.soft_copy_claim_bindings,
+                    prompt_identities=state.soft_copy_prompt_identities,
+                    generation_attempts=state.soft_copy_generation_attempts,
+                    existing_provenance=state.existing_soft_copy_claim_provenance,
+                    replaced_families=state.replaced_soft_copy_families,
+                    replaced_claim_ids=state.replaced_soft_copy_claim_ids,
+                    repair_texts=state.soft_copy_repair_texts,
+                    repair_lineage=state.soft_copy_repair_lineage,
+                    regeneration_attempt=request.attempt_index,
+                )
+            )
         target_ctx = child_context(
             ctx, task_id=f"{ctx.task_id}:{target.target_section}"
         )
@@ -3262,7 +3283,9 @@ def _current_repair_artifacts(state: _RegenerationState) -> Dict[str, Any]:
         "expert_comment": state.expert_comment,
         "linkedin_post": state.linkedin_post,
     }
-    provenance = getattr(state, "existing_soft_copy_claim_provenance", None)
+    provenance = getattr(state, "working_soft_copy_claim_provenance", None)
+    if provenance is None:
+        provenance = getattr(state, "existing_soft_copy_claim_provenance", None)
     if provenance is not None:
         artifacts["soft_copy_claim_provenance"] = deepcopy(provenance)
     return artifacts
@@ -4429,7 +4452,9 @@ def _soft_copy_claim_repairs(
         return None
     try:
         claims = soft_copy_claim_provenance_from_payload(
-            execution.state.existing_soft_copy_claim_provenance
+            execution.state.working_soft_copy_claim_provenance
+            if execution.state.working_soft_copy_claim_provenance is not None
+            else execution.state.existing_soft_copy_claim_provenance
         )
     except AppError:
         return None

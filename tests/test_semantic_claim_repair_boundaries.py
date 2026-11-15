@@ -274,6 +274,108 @@ def test_later_linkedin_claim_repair_receives_earlier_replacement(tmp_path):
     )
 
 
+def test_separate_linkedin_targets_keep_current_claim_provenance(tmp_path):
+    request, _, sibling = _case(tmp_path)
+    first_target = replace(
+        request.plan.targets[0],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+    )
+    claims = soft_copy_claim_provenance_from_payload(
+        request.current_artifacts["soft_copy_claim_provenance"]
+    )
+    second_claim = next(
+        claim
+        for claim in claims
+        if claim.artifact_family == "linkedin_post"
+        and claim.claim_id != first_target.issues[0].entity_id
+    )
+    second_issue = replace(first_target.issues[0], entity_id=second_claim.claim_id)
+    request.plan.targets[:] = [
+        first_target,
+        replace(
+            first_target,
+            issues=[second_issue],
+            allowed_paths=["linkedin_post[claim_index=1]"],
+        ),
+    ]
+
+    class LocalProposal:
+        def openai_chat_json(self, req, ctx):
+            variables = json.loads(req.user_prompt.split("|", 1)[1])
+            scope = json.loads(variables["claim_repair_scope_json"])
+            replacement = (
+                "The distinct implication remains."
+                if scope["failed_claim"] == sibling
+                else "Revenue was $98.1 billion. More context follows."
+            )
+            payload = {
+                "claim_repair_proposal": {
+                    "schema_version": "1.0",
+                    "action": "replace",
+                    "replacement_text": replacement,
+                    "evidence_ids_used": ["f1"],
+                }
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="local",
+            )
+
+    result = regenerate_artifacts(
+        request, openai_client=LocalProposal(), prompt_client=_FakePromptClient()
+    )
+    assert result.updated_artifacts["linkedin_post"] == (
+        "Revenue was $98.1 billion. More context follows.  \n"
+        "The distinct implication remains."
+    )
+    claims = soft_copy_claim_provenance_from_payload(
+        result.updated_artifacts["soft_copy_claim_provenance"]
+    )
+    repaired = [c for c in claims if c.artifact_family == "linkedin_post"]
+    assert len(repaired) == 2
+    assert {c.repaired_from_claim_id for c in repaired} == {
+        first_target.issues[0].entity_id,
+        second_claim.claim_id,
+    }
+    assert all(c.evidence_ids == ("f1",) for c in repaired)
+
+
+def test_later_target_cannot_redirect_an_already_replaced_claim(tmp_path):
+    request, _, _ = _case(tmp_path)
+    target = replace(
+        request.plan.targets[0],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+    )
+    request.plan.targets[:] = [target, target]
+
+    class LocalProposal:
+        def openai_chat_json(self, req, ctx):
+            payload = {
+                "claim_repair_proposal": {
+                    "schema_version": "1.0",
+                    "action": "replace",
+                    "replacement_text": "Revenue was $98.1 billion.",
+                    "evidence_ids_used": ["f1"],
+                }
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="local",
+            )
+
+    with pytest.raises(AppError) as exc:
+        regenerate_artifacts(
+            request, openai_client=LocalProposal(), prompt_client=_FakePromptClient()
+        )
+    assert exc.value.code == "regeneration_repair_decision_invalid"
+
+
 def test_linkedin_model_can_declare_a_merged_replacement(tmp_path):
     request, _, sibling = _case(tmp_path)
     request.plan.targets[0] = replace(
