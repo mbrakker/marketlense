@@ -527,7 +527,12 @@ def _normalize_regeneration_issue(
         "contradicted",
         "not_established",
     }
-    source_failure = issue.violation_type in SOURCE_AUTHORITY_VIOLATIONS
+    # Missing material support may describe the public claim, not a broken
+    # source binding. The canonical identity checks below decide whether the
+    # retained evidence itself remains available to a wording repair.
+    source_failure = issue.violation_type in (
+        SOURCE_AUTHORITY_VIOLATIONS - {"missing_material_evidence"}
+    )
     if (
         excluded_evidence_ids
         and issue.rule_id == "grounding"

@@ -13457,3 +13457,30 @@ source-bound temporal repair remains covered. These are component results,
 not proof that either report meets first-pass or first-repair acceptance. The
 two real-report results above remain **PARTIAL** until rerun and independently
 reviewed on the final implementation SHA.
+
+At `57873481`, hosted CI passed and a fresh isolated Activate run reached
+selection and verified-facts analysis but failed readiness. The first
+validation identified a missing 2017 qualifier and an unsupported
+recommendation in LinkedIn copy; independent editorial review also found
+missing qualifiers and weak or duplicative analysis. First repair candidate 1
+was rejected and rolled back. Its provenance check found the retained
+video-attention fact quarantined, which also prevented authorization of six
+otherwise scoped provenance-row changes. A later attempt terminated with
+`schema_type_mismatch`: `insights_final[0].evidence_ids` was null. The exact
+origin of that null is not established by the retained candidate-1 artifact.
+
+The run recorded 502 provider calls, eight file-search calls, 2,269,601 input
+and 401,999 output tokens, estimated $0.444861 and 3,985.453 seconds of
+end-to-end runner time, with no WordPress publication. The reported
+one-second report duration is partial and must not be used as processing
+time. Artifacts: `C:\ml-acceptance-57873481\activate\ias-first-attempt-kha8iqwo`.
+
+A subsequent targeted correction preserves an exact, independently
+validated canonical fact for repair when a grounding verdict says the public
+claim is not established because material support is missing. Source
+retrieval failures, invalid identities and unmatched bindings remain
+quarantined. Replaying the saved Activate finding confirms that its canonical
+fact is no longer excluded; independent grounding and candidate validation
+remain mandatory. This does not establish that repair succeeds, resolve the
+later null-field error, or prove factual and editorial quality. Activate and
+Capgemini have not both passed on the resulting SHA; status remains **PARTIAL**.

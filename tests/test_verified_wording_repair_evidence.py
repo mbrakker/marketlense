@@ -1,8 +1,13 @@
 from copy import deepcopy
 
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_to_payload,
+)
 from src.contracts.validation import ValidationIssue
+from src.generators.soft_copy_claim_provenance import build_soft_copy_claim_provenance
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
+    _normalize_regeneration_issue,
 )
 
 
@@ -97,3 +102,86 @@ def test_unmatched_binding_stays_quarantined() -> None:
         issues=[issue], artifacts=_artifacts(), broad_retry_available=True
     )
     assert plan.targets[0].quarantined_evidence_ids == ["verified-fact:unknown"]
+
+
+def test_missing_claim_qualifier_does_not_quarantine_valid_verified_fact() -> None:
+    issue = ValidationIssue(
+        rule_id="grounding",
+        severity="error",
+        affected_section="insights:i1.text",
+        entity_id="insight:i1:text",
+        violation_type="missing_material_evidence",
+        entailment_outcome="not_established",
+        evidence_ids=["verified-fact:f1"],
+        message="The claim omits the fact's timeframe.",
+    )
+    result = _normalize_regeneration_issue(issue, _artifacts())
+    assert result.excluded_evidence_ids == []
+
+
+def test_missing_qualifier_still_quarantines_invalid_source_identity() -> None:
+    artifacts = _artifacts()
+    artifacts["verified_facts"][0]["source_pdf_sha256"] = "b" * 64
+    issue = ValidationIssue(
+        rule_id="grounding",
+        severity="error",
+        affected_section="insights:i1.text",
+        entity_id="insight:i1:text",
+        violation_type="missing_material_evidence",
+        entailment_outcome="not_established",
+        evidence_ids=["verified-fact:f1"],
+        message="The claim omits the fact's timeframe.",
+    )
+    result = _normalize_regeneration_issue(issue, artifacts)
+    assert result.excluded_evidence_ids == ["verified-fact:f1"]
+
+
+def test_source_retrieval_failure_still_quarantines_verified_fact() -> None:
+    issue = ValidationIssue(
+        rule_id="grounding",
+        severity="error",
+        affected_section="insights:i1.text",
+        entity_id="insight:i1:text",
+        violation_type="evidence_retrieval_failure",
+        entailment_outcome="not_established",
+        evidence_ids=["verified-fact:f1"],
+        message="The source could not be retrieved.",
+    )
+    result = _normalize_regeneration_issue(issue, _artifacts())
+    assert result.excluded_evidence_ids == ["verified-fact:f1"]
+
+
+def test_soft_copy_missing_qualifier_keeps_its_canonical_binding() -> None:
+    artifacts = _artifacts()
+    text = "The measured share was 61%."
+    artifacts["linkedin_post"] = text
+    claims = build_soft_copy_claim_provenance(
+        artifact_family="linkedin_post",
+        text=text,
+        declared_claims=[
+            {
+                "claim": text,
+                "classification": "factual",
+                "evidence_ids": ["verified-fact:f1"],
+            }
+        ],
+        evidence_span_index={},
+        producing_prompt_identity={},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        claims
+    )
+    issue = ValidationIssue(
+        rule_id="grounding",
+        severity="error",
+        affected_section="linkedin_post",
+        entity_id=claims[0].claim_id,
+        violation_type="missing_material_evidence",
+        entailment_outcome="not_established",
+        evidence_ids=["verified-fact:f1"],
+        message="The claim omits its timeframe.",
+    )
+    result = _normalize_regeneration_issue(issue, artifacts)
+    assert result.excluded_evidence_ids == []
