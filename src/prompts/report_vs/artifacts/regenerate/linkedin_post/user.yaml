@@ -28,7 +28,9 @@ text: |
     - In `claim` mode, return exactly one complete replacement sentence for
       `linkedin_post`. The generator preserves and
       deterministically reconstructs all sibling claims; never rewrite or
-      repeat them. Do not apply the full-post word, paragraph, proof-point, or
+      repeat them. `claim_repair_scope.public_context` shows the current post
+      only to identify sibling wording; it is not evidence.
+      Do not apply the full-post word, paragraph, proof-point, or
       hashtag rules in claim mode.
     - In `family` mode, return a complete LinkedIn post and apply every
       full-post requirement below.

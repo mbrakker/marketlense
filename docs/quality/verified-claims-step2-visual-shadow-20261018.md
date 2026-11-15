@@ -13510,3 +13510,17 @@ occurred. The corrected source-authority behavior is supported by targeted
 tests and the previous exact-finding replay; different live findings prevent
 attribution of the new outcome solely to that fix. Capgemini was not rerun
 because Activate still failed. Overall acceptance remains **PARTIAL**.
+
+The retained first repair independently rewrote two related LinkedIn claims
+and repeated the same GMV proposition. Claim-scoped LinkedIn repair now gives
+the model the current public post as non-authoritative sibling context,
+including earlier proposals in the same grouped repair. The model continues to
+choose the replacement; deterministic code preserves the declared scope and
+independent evidence validation. Focused provider-boundary regressions cover
+both original siblings and an earlier grouped replacement. This improves the
+available context, not proof that a real model avoids duplication or that
+first repair succeeds. A separate test reproduction showed that consecutive
+separate targets for the same soft-copy family can reach a stale provenance
+grid after the first replacement. That case remains unresolved; an attempted
+local fix was withdrawn after it reached another stale-grid boundary. No
+additional live acceptance run has validated this prompt/context change.

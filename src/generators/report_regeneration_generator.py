@@ -7423,6 +7423,15 @@ def _handle_linkedin_post_regeneration(
                         {
                             "mode": "claim",
                             "failed_claim": repair.text,
+                            "public_context": _reconstruct_soft_copy_claims(
+                                execution.state.linkedin_post,
+                                [
+                                    item
+                                    for item in claim_repairs
+                                    if item.claim.claim_id in replacements
+                                ],
+                                replacements,
+                            ),
                             "preserve_sibling_claims": True,
                         }
                     ),

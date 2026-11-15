@@ -162,6 +162,118 @@ def test_scoped_model_proposal_repairs_declared_claim(tmp_path):
     )
 
 
+def test_linkedin_claim_repair_can_see_unchanged_sibling_context(tmp_path):
+    request, _, sibling = _case(tmp_path)
+    request.plan.targets[0] = replace(
+        request.plan.targets[0],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+    )
+
+    class ContextSensitiveProposal:
+        def openai_chat_json(self, req, ctx):
+            variables = json.loads(req.user_prompt.split("|", 1)[1])
+            scope = json.loads(variables["claim_repair_scope_json"])
+            replacement = (
+                "U.S. revenue was estimated at $98.1 billion."
+                if sibling in scope.get("public_context", "")
+                else "A separate sentence remains unchanged."
+            )
+            payload = {
+                "claim_repair_proposal": {
+                    "schema_version": "1.0",
+                    "action": "replace",
+                    "replacement_text": replacement,
+                    "evidence_ids_used": ["f1"],
+                }
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="local",
+            )
+
+    result = regenerate_artifacts(
+        request,
+        openai_client=ContextSensitiveProposal(),
+        prompt_client=_FakePromptClient(),
+    )
+    assert result.updated_artifacts["linkedin_post"] == (
+        "U.S. revenue was estimated at $98.1 billion.  \n" + sibling
+    )
+
+
+def test_later_linkedin_claim_repair_receives_earlier_replacement(tmp_path):
+    request, _, sibling = _case(tmp_path)
+    first_target = replace(
+        request.plan.targets[0],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+    )
+    claims = soft_copy_claim_provenance_from_payload(
+        request.current_artifacts["soft_copy_claim_provenance"]
+    )
+    second_claim = next(
+        claim
+        for claim in claims
+        if claim.artifact_family == "linkedin_post"
+        and claim.text_hash
+        != next(
+            c.text_hash
+            for c in claims
+            if c.claim_id == first_target.issues[0].entity_id
+        )
+    )
+    second_issue = replace(first_target.issues[0], entity_id=second_claim.claim_id)
+    request.plan.targets[:] = [
+        replace(
+            first_target,
+            issues=[*first_target.issues, second_issue],
+            allowed_paths=[
+                "linkedin_post[claim_index=0]",
+                "linkedin_post[claim_index=1]",
+            ],
+        )
+    ]
+
+    class ContextSensitiveProposal:
+        def openai_chat_json(self, req, ctx):
+            variables = json.loads(req.user_prompt.split("|", 1)[1])
+            scope = json.loads(variables["claim_repair_scope_json"])
+            if scope["failed_claim"] == sibling:
+                replacement = (
+                    "The distinct implication remains."
+                    if "Revenue was $98.1 billion." in scope.get("public_context", "")
+                    else "Revenue was $98.1 billion."
+                )
+            else:
+                replacement = "Revenue was $98.1 billion."
+            payload = {
+                "claim_repair_proposal": {
+                    "schema_version": "1.0",
+                    "action": "replace",
+                    "replacement_text": replacement,
+                    "evidence_ids_used": ["f1"],
+                }
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="local",
+            )
+
+    result = regenerate_artifacts(
+        request,
+        openai_client=ContextSensitiveProposal(),
+        prompt_client=_FakePromptClient(),
+    )
+    assert result.updated_artifacts["linkedin_post"] == (
+        "Revenue was $98.1 billion.  \nThe distinct implication remains."
+    )
+
+
 def test_linkedin_model_can_declare_a_merged_replacement(tmp_path):
     request, _, sibling = _case(tmp_path)
     request.plan.targets[0] = replace(
