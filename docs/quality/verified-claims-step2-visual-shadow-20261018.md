@@ -13622,6 +13622,11 @@ contract retained them as scoped issues; that candidate still failed review and
 was rolled back. This demonstrates a real model response using the contract,
 not a successful repair or first-pass improvement. Later candidates also
 failed, including scope violations; their attempted changes were not promoted.
+Candidate 2 deleted two targeted claim-map rows during a rebind attempt; four
+later rows were unchanged but shifted positions. The positional diff reported
+54 claim-map paths, not 54 independently altered facts. Retained artifacts do
+not establish which stage deleted the rows or that deletion was authorized for
+this rebind, so the scope rejection remains in force.
 The run recorded 547 provider calls, ten file-search calls, 3,783,651 input
 and 574,954 output tokens, estimated $0.682958, and 4,421.828 seconds
 end-to-end. No WordPress write occurred. Capgemini was not rerun because
