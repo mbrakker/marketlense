@@ -13786,3 +13786,37 @@ to this implementation. A subsequent prompt clarification explicitly separates
 current self-authored advice from claims of prior advice or source attribution;
 its effect has not been validated by this run. Capgemini was not run because
 Activate failed the prerequisite. **Verdict: PARTIAL / NO-GO.**
+
+At `540f97f7`, a bounded live grounding replay of the retained rejected
+MarketLense recommendation used the exact sentence, its eight original
+canonical fact bindings and surrounding public copy. The single-item model
+verdict was `entailed`, recognizing the recommendation as current self-authored
+advice; one GPT-6 Luna call used 16,486 input and 797 output tokens and cost
+$0.002047. The original full batch was not retained, so this is not an
+identical-input A/B comparison or evidence that the prompt change alone caused
+the difference. PDF physical pages 17, 52 and 64 were visually reviewed for
+the preceding run: the reported chart figures match, while the audio repair's
+general claim about proxy reliability exceeds the single 2017 cohort shown,
+and the unchanged U.S. video-revenue implication is largely descriptive.
+
+A fresh isolated Activate rerun at `540f97f7` terminated before final verified
+facts, at
+`C:\ml-acceptance-540f97f7\activate\ias-first-attempt-828h24eh`.
+Report analysis dead-lettered with `artifact_structured_output_invalid`, inner
+`editorial_plan_invalid`, rule
+`verified_editorial_plan.limitation_evidence_binding`, after bounded structured
+output recovery. The architecture summary's `verified_facts_artifact_unreadable`
+is a consequence of that earlier failure. The runner recorded 465 provider
+calls, 1,024,466 input, 242,156 output and 1,404 cached input tokens, seven
+file-search calls, $0.240891 and 3,475.532 s; no HTML or WordPress write was
+produced. The raw invalid plan and exact rejected IDs were not retained.
+
+Inspection found a real contract mismatch: the verified planning prompt
+permitted limitation IDs from all canonical facts, whereas the existing
+validator accepts only facts with nonempty retained qualifiers. The follow-up
+supplies that validator-owned exact eligible vocabulary to both initial and
+replan prompts, with an empty list when none are eligible. The validator and
+semantic choice remain unchanged. This addresses a demonstrated mismatch but
+cannot establish that the missing raw response contained an ID from that
+particular mismatch, nor prove live recovery. **E18 remains Active; Step 2
+remains PARTIAL / NO-GO**, with no same-SHA Activate or Capgemini acceptance.

@@ -135,6 +135,18 @@ def _classify_verified_semantic_recovery(
     return "fail_closed"
 
 
+def _verified_limitation_evidence_ids(
+    verified_facts: Sequence[Dict[str, Any]],
+) -> list[str]:
+    return [
+        f"verified-fact:{_s(fact.get('fact_id')).strip()}"
+        for fact in verified_facts
+        if isinstance(fact, dict)
+        and _s(fact.get("fact_id")).strip()
+        and any(_s(value).strip() for value in fact.get("qualifiers") or [])
+    ]
+
+
 def _verified_editorial_obligation_context(
     editorial_plan: Dict[str, Any],
     candidate_insights: Sequence[Dict[str, Any]],
@@ -1854,13 +1866,9 @@ def generate_artifacts(
                 candidate_evidence_by_id[candidate_id] = {
                     value for value in evidence_ids if value
                 }
-            limitation_ids = {
-                f"verified-fact:{_s(fact.get('fact_id')).strip()}"
-                for fact in visual_authority_verified_facts
-                if isinstance(fact, dict)
-                and _s(fact.get("fact_id")).strip()
-                and any(_s(value).strip() for value in fact.get("qualifiers") or [])
-            }
+            limitation_ids = set(
+                _verified_limitation_evidence_ids(visual_authority_verified_facts)
+            )
             normalized_verified_plan = validate_verified_editorial_plan(
                 payload.get("editorial_plan"),
                 canonical_evidence_ids=plan_evidence_ids,
@@ -3150,6 +3158,9 @@ def generate_artifacts(
             for fact in visual_authority_verified_facts
             if _s(fact.get("fact_id")).strip()
         ]
+        verified_limitation_evidence_ids_json = _dump_json(
+            _verified_limitation_evidence_ids(visual_authority_verified_facts)
+        )
         # The post-admission plan uses the same family and schema, but its
         # phase marker, verified-fact snapshot, and canonical ID vocabulary are
         # part of the prompt inputs. This prevents a discovery-stage family
@@ -3170,6 +3181,9 @@ def generate_artifacts(
                         verified_fact_evidence_ids
                     ),
                     "verified_facts_json": _dump_json(visual_authority_verified_facts),
+                    "verified_limitation_evidence_ids_json": (
+                        verified_limitation_evidence_ids_json
+                    ),
                     "discovery_editorial_plan_json": _dump_json(
                         discovery_editorial_plan
                     ),
@@ -3368,13 +3382,9 @@ def generate_artifacts(
                 for candidate in visual_authority_admitted_candidates
                 if isinstance(candidate, dict) and _s(candidate.get("id")).strip()
             }
-            limitation_ids = {
-                f"verified-fact:{_s(fact.get('fact_id')).strip()}"
-                for fact in visual_authority_verified_facts
-                if isinstance(fact, dict)
-                and _s(fact.get("fact_id")).strip()
-                and any(_s(value).strip() for value in fact.get("qualifiers") or [])
-            }
+            limitation_ids = set(
+                _verified_limitation_evidence_ids(visual_authority_verified_facts)
+            )
             normalized_revised_plan = validate_verified_editorial_plan_revision(
                 original_verified_editorial_plan,
                 revised_plan,
@@ -3900,6 +3910,9 @@ def generate_artifacts(
                         verified_fact_evidence_ids
                     ),
                     "verified_facts_json": _dump_json(visual_authority_verified_facts),
+                    "verified_limitation_evidence_ids_json": (
+                        verified_limitation_evidence_ids_json
+                    ),
                     "discovery_editorial_plan_json": _dump_json(
                         discovery_editorial_plan
                     ),
@@ -4450,6 +4463,9 @@ def generate_artifacts(
                                 ),
                                 "verified_facts_json": _dump_json(
                                     visual_authority_verified_facts
+                                ),
+                                "verified_limitation_evidence_ids_json": (
+                                    verified_limitation_evidence_ids_json
                                 ),
                                 "discovery_editorial_plan_json": _dump_json(
                                     discovery_editorial_plan

@@ -11,6 +11,7 @@ from src.generators._artifact_generator.generation import (
     _merge_scoped_insight_repair,
     _validate_scoped_insight_patch,
     _verified_editorial_obligation_context,
+    _verified_limitation_evidence_ids,
     generate_artifacts,
 )
 from src.generators.artifact_normalization import (
@@ -35,6 +36,16 @@ from tests.test_verified_claims_visual_authority_snapshot_integrity import (
     _generation_responses,
     _theme_coverage_response,
 )
+
+
+def test_verified_limitation_vocabulary_excludes_unqualified_facts() -> None:
+    facts = [
+        {"fact_id": "qualified", "qualifiers": ["Survey scope is limited."]},
+        {"fact_id": "ordinary", "qualifiers": []},
+        {"fact_id": "blank", "qualifiers": ["  "]},
+    ]
+    assert _verified_limitation_evidence_ids(facts) == ["verified-fact:qualified"]
+    assert _verified_limitation_evidence_ids(facts[1:]) == []
 
 
 def _candidate(candidate_id: str, fact_id: str, *, score: float = 0.9) -> dict:
@@ -190,6 +201,21 @@ def test_verified_first_pass_prompt_receives_executable_obligations(tmp_path) ->
     assert obligations["themes"]
     assert all(theme["coverage_obligation"] for theme in obligations["themes"])
     assert all(theme["feasible_candidate_ids"] for theme in obligations["themes"])
+    plan_variables = next(
+        call["variables"]
+        for call in prompt_client.render_calls
+        if call["path"] == "report_vs/artifacts/editorial_plan/user"
+        and call["variables"].get("editorial_plan_phase") == "verified_facts"
+    )
+    facts = json.loads(plan_variables["verified_facts_json"])
+    expected_limitation_ids = [
+        f"verified-fact:{fact['fact_id']}"
+        for fact in facts
+        if any(str(value).strip() for value in fact.get("qualifiers") or [])
+    ]
+    assert json.loads(plan_variables["verified_limitation_evidence_ids_json"]) == (
+        expected_limitation_ids
+    )
 
 
 def test_verified_first_pass_prompt_requires_complete_factual_propositions() -> None:
