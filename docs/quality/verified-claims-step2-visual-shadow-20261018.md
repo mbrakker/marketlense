@@ -13673,5 +13673,49 @@ their respective handler steps, retained both untouched VR/AR rows throughout,
 and reported exactly the two original row paths. Its deterministic candidate
 integrity and scope checks passed with zero issues; no semantic review or
 candidate promotion was performed in this replay.
-No new provider run was conducted for this slice; the two-report
-first-pass/first-repair gate remains **PARTIAL**.
+At that point no new provider run had been conducted; the two-report
+first-pass/first-repair gate remained **PARTIAL**.
+
+At `7b869e3f`, the full local Python 3.12 suite passed (8,898 passed, two
+skipped, 48 deselected, 24 subtests), and hosted CI including both mutation
+partitions and release evidence passed. A fresh isolated Activate run at
+`C:\ml-acceptance-7b869e3f\activate\ias-first-attempt-pa60k2cb` finished
+`validation_failed`; the render job dead-lettered and no WordPress write or
+final HTML occurred. Initial validation reported two grounding errors and a
+quote-family warning; independent editorial review found seven insight
+implications generic and reported a collective analytical-depth failure.
+Inspection of the initial implication text confirms several are restatements.
+The retained-claim validator reported one unsupported and zero unresolved
+factual claims; those counters are validator outcomes, not an independent count
+of factual errors.
+
+The first automatic candidate was independently rejected and rolled back after
+539.212 seconds: it resolved the initial two grounding errors but a previously
+unblocked segment recommendation received a grounding error, and the video
+insight's revised implication remained generic. Candidates two and three were
+also rolled back, after 291.605 and 271.335 seconds respectively. Their later
+outcomes cannot satisfy first-repair acceptance. The first candidate's newly
+rejected recommendation, evidence IDs, and linked verified fact were unchanged
+from the initial artifact; the initial provider request is not retained, so a
+change in full grounding context versus model inconsistency is not resolved.
+The initial expert-comment verdict requested evidence that MarketLense itself
+made a recommendation, although the public wording clearly attributes it to
+MarketLense and the grounding policy allows self-authored advice. No verdict
+was overridden.
+
+Visual inspection of physical PDF pages 5 and 6 confirms the total-market and
+segment forecasts exist on separate pages, while the two disputed recommendations
+each link only their respective canonical fact. Source existence alone does not
+authorize adding an evidence binding; semantic selection remains model-owned.
+The usage ledger contains 591 completed events, 3,211,883 input and 640,445
+output tokens, 324,207 cached input tokens, seven recorded tool calls, and
+matched estimated cost $0.629750. The exact runner-entry-to-terminal wall time
+was not retained: the local invocation discarded the runner's returned summary.
+Queue timestamps span 5,011 seconds from the first recorded job to the terminal
+render-job update, which is not a directly comparable end-to-end duration.
+The previous `9eeceba4` run recorded 547 calls, $0.682958, and 4,421.828 seconds
+by its runner; different outputs and timing methods preclude attributing an
+improvement. Capgemini was not rerun because Activate failed the first-repair
+target. **Verdict: PARTIAL / not ready**; both-report same-SHA acceptance,
+independent complete HTML review, and the unresolved first-pass/repair failures
+remain open.
