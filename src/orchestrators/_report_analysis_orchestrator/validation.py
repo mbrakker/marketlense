@@ -1964,7 +1964,12 @@ def _merge_public_editorial_quality(
     return ValidationReport(
         schema_version=validation.schema_version,
         status="fail" if base_status == "fail" or editorial_failed else "pass",
-        issues=existing_issues + list(editorial_validation.issues),
+        issues=existing_issues
+        + [
+            issue
+            for issue in editorial_validation.issues
+            if issue not in existing_issues
+        ],
         severity=(
             "error"
             if (

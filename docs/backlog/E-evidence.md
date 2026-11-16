@@ -1099,6 +1099,13 @@ handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the
 [Step 2 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md#activate-grounding-context-and-editorial-handoff-follow-up).
 
+The retained Activate attempt also exposed duplicate final diagnostics: after
+rollback, the same reused editorial review was appended to itself. Exact
+duplicate issues are now retained once without clearing the failure or merging
+distinct findings. This corrects reporting only; the first repair still failed
+independent editorial review, and the original request was not retained well
+enough to establish why its reviewer omitted two later-nominated creator fields.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This

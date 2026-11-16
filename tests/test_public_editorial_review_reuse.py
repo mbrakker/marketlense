@@ -817,6 +817,51 @@ def test_after_review_cannot_replace_rejected_noop_editorial_failure() -> None:
     )
 
 
+def test_reused_failed_review_does_not_duplicate_final_diagnostics() -> None:
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="The insight repeats its finding.",
+        severity="error",
+        affected_section="insights_bundle",
+        rule_id="public_editorial_quality.semantic_distinctness",
+    )
+    failed = ValidationReport(
+        schema_version="1.1", status="fail", severity="error", issues=[issue]
+    )
+
+    merged = _merge_public_editorial_quality(failed, failed, replace_existing=False)
+
+    assert merged.status == "fail"
+    assert merged.severity == "error"
+    assert merged.issues == [issue]
+
+
+def test_unpromoted_after_review_keeps_distinct_editorial_failures() -> None:
+    first = ValidationIssue(
+        message="First insight repeats its finding.",
+        severity="error",
+        affected_section="insights_bundle",
+        rule_id="public_editorial_quality.semantic_distinctness",
+    )
+    second = ValidationIssue(
+        message="Second insight repeats its finding.",
+        severity="error",
+        affected_section="insights_bundle",
+        rule_id="public_editorial_quality.semantic_distinctness",
+    )
+    initial = ValidationReport(
+        schema_version="1.1", status="fail", severity="error", issues=[first]
+    )
+    after = ValidationReport(
+        schema_version="1.1", status="fail", severity="error", issues=[second]
+    )
+
+    merged = _merge_public_editorial_quality(initial, after, replace_existing=False)
+
+    assert merged.status == "fail"
+    assert merged.issues == [first, second]
+
+
 def test_public_editorial_review_identity_includes_source_fact_and_review_policy() -> (
     None
 ):
