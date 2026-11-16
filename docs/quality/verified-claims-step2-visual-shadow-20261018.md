@@ -13857,3 +13857,33 @@ grounding and collective analytical-depth issues. Candidate two took 215.883 s
 and also failed review. The initial artifact had ten verified facts and ten
 insights, but no independent complete HTML review is possible without an HTML
 artifact. Capgemini was not run because Activate failed its prerequisite.
+
+Hosted CI for `a76df932` passed all jobs, including both mutation partitions
+and release evidence. A fresh isolated Activate run at
+`C:\ml-acceptance-a76df932\activate\ias-first-attempt-5vtjmsuw` passed the
+prior verified-planning boundary and produced ten verified facts and seven
+initial insights, but initial editorial review failed on repeated implications
+and a generic recommendation. Its compact-summary field was empty, so the
+exact `top-25%` sanitizer case was not exercised by this fresh generation.
+The first candidate was rolled back after 390.553 s. Independent review
+identified five additional weak insight fields, all unchanged by that repair
+and not nominated in the initial review. This is evidence of inconsistent or
+incomplete initial semantic review, not evidence that the repair introduced
+those particular words. The existing review already receives the full public
+inventory and instructs the model to assess every item and nominate localizable
+weaknesses; the retained data does not establish why it missed these fields.
+A provider-free reconstruction of the initial 58-item review projection found
+all five exact item IDs present once with bound evidence. The original rendered
+provider request was not retained, so this does not prove the original model
+received identical bytes or establish a deterministic handoff defect.
+No deterministic semantic override or additional model stage was added.
+
+The run ended `validation_failed` with no HTML or WordPress write. It recorded
+516 provider calls, 2,348,167 input, 420,814 output and 47,307 cached input
+tokens, eight file-search calls, $0.460965, 4,417.062 s, ten structured-output
+repair calls and three automatic repair attempts. One candidate audit was
+retained; that candidate failed and rolled back. The costs and timing differ
+from prior runs but generated content and recovery paths also differ, so no
+causal performance or quality improvement is claimed. Capgemini was not run
+because Activate did not meet the first-pass/first-repair prerequisite.
+**E18 remains Active; Step 2 remains PARTIAL / NO-GO.**
