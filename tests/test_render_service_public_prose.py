@@ -724,6 +724,14 @@ def test_render_sanitizer_preserves_day_number_metric_terms() -> None:
     assert _sanitize_public_prose(text) == text
 
 
+def test_render_sanitizer_preserves_ranked_cohorts_and_removes_citations() -> None:
+    text = (
+        "2017 U.S. video: top-25% users with 4.5+ hours of daily attention "
+        "accounted for 61% of total video time (finding_12)."
+    )
+    assert _sanitize_public_prose(text) == text.replace(" (finding_12)", "")
+
+
 def test_linkedin_sanitizer_preserves_paragraphs() -> None:
     assert _sanitize_linkedin_post(
         "*Activate Technology & Media Outlook: 2026 Edition* (finding_12)\n\n"

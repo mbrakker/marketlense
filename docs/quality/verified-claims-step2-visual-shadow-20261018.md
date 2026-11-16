@@ -13827,3 +13827,33 @@ to 1,025 lines; release evidence therefore correctly failed its prerequisite.
 The regressions were moved to a separate focused module, preserving both their
 coverage and the unchanged ownership threshold. The focused ownership and
 planning tests passed; the corrected commit requires its own hosted run.
+
+Hosted CI for `41318090` passed, including both mutation partitions and
+release evidence. A fresh isolated Activate run at that commit passed the
+previously failing verified-planning boundary and produced initial artifacts,
+but initial validation failed. The first automatic candidate passed preliminary
+grounding and then failed independent editorial review and was rolled back;
+the report therefore did not meet the first-repair acceptance target.
+
+The initial compact-summary provenance error and two review errors were traced
+to a concrete earlier transformation: the shared public-prose sanitizer removed
+`top-25` from the retained phrase `top-25% users`, mistaking it for an internal
+reference. This changed both the public review text and the exact sentence hash.
+The sanitizer now preserves ranked `top-<number>` wording while retaining the
+existing citation-removal behavior. A provider-free replay of the actual
+retained artifacts recovered the original compact-summary claim identity and
+its verified evidence ID; both claim-map and claim-ledger review projections
+again contain the complete cohort. The original full review request was not
+retained, so this demonstrates the production projection, not the exact bytes
+of the historical request. Other factual and editorial review failures remain;
+this correction does not establish first-repair success or publication readiness.
+The `41318090` run ended `validation_failed` after 4,289.766 s and generated no
+HTML. Its runner recorded 538 provider calls, 2,678,751 input, 534,427 output
+and 170,424 cached input tokens, seven file-search calls, $0.537255, 14
+structured-output repair calls and three automatic repair attempts; two
+candidate audits were retained and both were rolled back. Candidate one took
+419.684 s and still had the compact-summary provenance failure alongside
+grounding and collective analytical-depth issues. Candidate two took 215.883 s
+and also failed review. The initial artifact had ten verified facts and ten
+insights, but no independent complete HTML review is possible without an HTML
+artifact. Capgemini was not run because Activate failed its prerequisite.
