@@ -40,3 +40,13 @@ def test_verified_full_prompt_keeps_facts_candidate_local() -> None:
         semantic_theme_targeted_insights_json='[{"id":"candidate-1"}]',
     ).lower()
     assert "do not emit a metric object" in scoped_prompt
+
+
+def test_full_prompt_requests_specific_decision_relevance_without_invented_premises() -> (
+    None
+):
+    prompt = _render_final_insight_user_prompt(
+        semantic_theme_repair_scope_json="",
+    ).lower()
+    assert "decision relevance of the specific finding" in prompt
+    assert "instead of inventing a premise" in prompt

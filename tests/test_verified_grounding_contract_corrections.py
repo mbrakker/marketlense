@@ -441,6 +441,7 @@ def test_retained_editorial_aliases_reach_verified_grounding_without_fake_eviden
     item = next(item for item in items if item["item_id"] == claim.claim_id)
     assert item["declared_classification"] == "analyst_interpretation"
     assert item["evidence_ids"] == []
+    assert item["public_copy_context"] == text
 
 
 def test_editorial_classification_survives_quality_to_regeneration_handover():

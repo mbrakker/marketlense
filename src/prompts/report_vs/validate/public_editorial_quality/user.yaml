@@ -23,9 +23,10 @@ text: |
   repair_target. A report-level repair must identify the affected item and use
   that item's allowed target, while a report-level evidence_ids value must stay
   inside report_scope. A factual_claim must retain appropriate item evidence.
-  For collective editorial failures, return repair_items=[] or nominate exact
-  eligible insight interpretation/recommendation leaves with item_id, reason,
-  bound evidence_ids, and allowed_repair_target. With nominations, leave the
+  For collective editorial failures localizable to eligible insight leaves,
+  nominate those exact interpretation/recommendation leaves with item_id, reason,
+  bound evidence_ids, and allowed_repair_target. If not safely localizable,
+  return repair_items=[] and explain why in the report reason. With nominations, leave the
   single-target fields empty. Follow the system's scope and safety constraints.
   A purely interpretive or prescriptive item may pass without a direct item
   evidence ID only when the reason makes clear that it is a specific,

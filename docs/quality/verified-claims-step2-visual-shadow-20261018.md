@@ -13719,3 +13719,35 @@ improvement. Capgemini was not rerun because Activate failed the first-repair
 target. **Verdict: PARTIAL / not ready**; both-report same-SHA acceptance,
 independent complete HTML review, and the unresolved first-pass/repair failures
 remain open.
+
+### Activate grounding context and editorial handoff follow-up
+
+At baseline `7f4abc2e`, retained initial and first-candidate artifacts show the
+same segment recommendation, evidence IDs and canonical fact but different
+grounding outcomes. The original complete provider requests were not retained,
+so the exact prompts and surrounding inputs cannot be reconstructed and model
+variance cannot be distinguished from a context difference. Both total and
+segment forecasts exist on the cited PDF pages; that does not authorize adding
+an unbound fact or overriding either verdict. The initial editorial review
+identified seven weak implication leaves; the first repair changed all seven,
+but the independent reviewer still found the video implication generic. Thus
+loss of repair nominations is not established for that candidate. Final-writing
+fact projections omit some provenance also available in retained candidate
+spans; whether that asymmetry caused weak analysis remains unproven.
+
+The verified grounding inventory now includes the relevant public insight or
+soft-copy context with each atomic public item, surviving batching and split
+recovery. This context is explicitly non-authoritative: only each item's bound
+canonical facts and retained evidence can support factual premises. Existing
+semantic result identity and fail-closed checks are unchanged. The existing
+writing prompt asks for finding-specific decision relevance without invented
+premises, and the existing independent reviewer is instructed to nominate
+eligible leaves when it can localize collective weakness, or explain abstention.
+These are handoff and instruction changes, not proof of improved LLM outcomes.
+The unrelated modified WordPress distribution was not touched.
+
+The focused regression reproduced the missing context before the change and
+passed afterward; broader checks and fresh real-report acceptance must be
+reported separately. E18 remains **Active/PARTIAL**, and Step 2 remains
+**PARTIAL/NO-GO** until the requested same-implementation Activate and
+Capgemini first-pass/first-repair outcomes are independently verified.

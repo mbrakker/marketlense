@@ -231,6 +231,13 @@ Navigation-only sections for compatibility with existing backlog-source checks. 
 
 [Full E18 specification](docs/backlog/E-evidence.md#e18-stabilize-llm-report-analysis-and-first-pass-validation).
 
+**Current follow-up:** Verified grounding now carries non-authoritative local
+public-copy context, and the existing writing/review prompts request specific
+analysis and localizable repair nominations. The retained Activate disagreement
+cannot be fully reconstructed because the original provider requests were not
+retained. E18 remains Active pending fresh Activate and Capgemini first-pass or
+first-repair evidence; see the [Step 2 evidence](docs/quality/verified-claims-step2-visual-shadow-20261018.md#activate-grounding-context-and-editorial-handoff-follow-up).
+
 **Evidence update — 2026-10-13:** Activate's frozen physical PDF page 53 now has
 separate geometry-derived cohort/metric evidence and provenance-bound visual
 transcription of the two panel labels. The correct YouTube/Facebook relationships

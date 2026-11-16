@@ -1094,6 +1094,11 @@ Commit and push the smallest verified slice.
 
 ## E18. Stabilize LLM report analysis and first-pass validation
 
+The current Activate follow-up corrects a verified grounding batch context
+handoff and refines existing editorial instructions; it does not establish live
+first-pass or first-repair success. The retained baseline and limits are in the
+[Step 2 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md#activate-grounding-context-and-editorial-handoff-follow-up).
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This

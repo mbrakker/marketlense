@@ -3478,6 +3478,7 @@ def _public_factual_items(
         evidence_ids: Sequence[str] = (),
         evidence_text: object = "",
         declared_classification: str = "",
+        public_copy_context: object = None,
     ) -> None:
         claim = sanitize_citation_tokens(s(text))
         if claim:
@@ -3529,6 +3530,8 @@ def _public_factual_items(
                 "evidence_ids": [value for value in evidence_ids if value],
                 "retained_evidence": s(evidence_text),
             }
+            if verified_facts and public_copy_context:
+                item["public_copy_context"] = public_copy_context
             normalized_classification = normalize_claim_classification(
                 declared_classification
             )
@@ -3619,6 +3622,7 @@ def _public_factual_items(
                         if evidence_id in evidence_by_id
                     ),
                     claim.classification,
+                    public_text,
                 )
             return
         if not sentences:
@@ -3771,6 +3775,11 @@ def _public_factual_items(
                     fallback=s(insight.get("evidence")),
                 ),
                 declared_classification,
+                {
+                    field: sanitize_citation_tokens(s(insight.get(field)))
+                    for field in ("text", "so_what", "now_what")
+                    if s(insight.get(field))
+                },
             )
     for index, figure in enumerate(artifacts.get("key_figures", []), start=1):
         if not isinstance(figure, dict):

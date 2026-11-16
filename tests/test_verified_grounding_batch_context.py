@@ -13,6 +13,7 @@ from src.generators.claim_validation_generator import (
 from src.generators.validation.grounding import (
     _grounding_batch_prompt_variables,
     _grounding_batches,
+    _split_grounding_batch,
     grounding_payload,
 )
 from src.utils.errors import AppError
@@ -27,6 +28,55 @@ from tests.test_verified_facts_validation_authority import (
     _report,
     _verified_artifacts,
 )
+
+
+def test_verified_batch_keeps_insight_copy_context_without_changing_authority():
+    fact = _fact()
+    insight = _insight(metric=fact["metric"])
+    insight.update(
+        so_what="This finding changes the planning context.",
+        now_what="Use the estimate only for the relevant buyer population.",
+    )
+    artifacts = _verified_artifacts(insight=insight, fact=fact)
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="verified-authority",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=_packs_for_facts([fact]),
+        source_id=SOURCE_IDENTITY,
+        validation_mode="verified_facts",
+    )
+    payload = grounding_payload(request, artifacts, retained_claim_inputs=[])
+    batches = _grounding_batches(payload, [], verified_mode=True)
+    split = _split_grounding_batch(batches[0])
+    items = [item for batch, _ in split for item in batch["public_factual_items"]]
+    recommendation = next(
+        item for item in items if item["item_id"].endswith(":now_what")
+    )
+    assert recommendation["public_copy_context"] == {
+        "text": insight["text"],
+        "so_what": insight["so_what"],
+        "now_what": insight["now_what"],
+    }
+    assert recommendation["evidence_ids"] == ["verified-fact:fact-1"]
+    assert all(
+        batch["canonical_verified_facts"] == {"fact-1": fact}
+        for batch, _ in split
+        if recommendation in batch["public_factual_items"]
+    )
+    variables = _grounding_batch_prompt_variables(
+        split,
+        evidence_texts=[],
+        authority_policy="verified_facts",
+        verified_mode=True,
+    )
+    rendered_items = [
+        item
+        for variable_set in variables
+        for item in json.loads(variable_set["report_json"])["public_factual_items"]
+    ]
+    assert recommendation in rendered_items
 
 
 def test_verified_grounding_batches_preserve_referenced_multi_fact_qualifiers():

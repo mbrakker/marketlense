@@ -24,6 +24,10 @@ text: |
   item's attached retained evidence and its complete canonical verified fact.
   `declared_classification` is a hint: distinguish self-authored advice from
   source instructions and reject unsupported factual premises.
+  In verified mode, `public_copy_context` is surrounding editorial copy solely
+  for interpreting the item's voice, qualifications, and references. It is not
+  factual evidence, does not add bindings, and is not itself a verdict target.
+  Check every material factual premise only against the item's bound facts.
 
   Return exactly one `checks` entry for every listed public item and retained
   claim, with the exact stable `item_id`. Do not return an `unsupported` array,
