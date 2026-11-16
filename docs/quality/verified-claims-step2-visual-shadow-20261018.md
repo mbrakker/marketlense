@@ -13606,3 +13606,34 @@ replay of the retained `ec1551c8` review through the current validator
 confirmed its failed report and zero nominations remain an abstention. A fresh
 Activate run and, after it succeeds, Capgemini on the same implementation SHA
 remain necessary for acceptance.
+
+At `9eeceba4`, hosted CI passed, including both mutation partitions and
+release evidence. A fresh isolated Activate run at
+`C:\ml-acceptance-9eeceba4\activate\ias-first-attempt-zi73hzsb` ended
+`validation_failed`; all three automatic repair candidates rolled back. The
+initial validation reported three retained claims unsupported: two model
+verdicts said their canonical facts were absent from the grounding batch, and
+one said a summary claim omitted its material global scope. The initial
+editorial review also failed closed after incomplete item coverage and a
+report-repair target mismatch in its bounded recovery. These are validator
+findings, not independently adjudicated factual errors. In candidate-1 review,
+the model returned seven exact collective-editorial nominations and the new
+contract retained them as scoped issues; that candidate still failed review and
+was rolled back. This demonstrates a real model response using the contract,
+not a successful repair or first-pass improvement. Later candidates also
+failed, including scope violations; their attempted changes were not promoted.
+The run recorded 547 provider calls, ten file-search calls, 3,783,651 input
+and 574,954 output tokens, estimated $0.682958, and 4,421.828 seconds
+end-to-end. No WordPress write occurred. Capgemini was not rerun because
+Activate did not meet first-pass/first-repair acceptance; status is **PARTIAL**.
+
+A subsequent offline reconstruction used the saved initial artifacts, the
+qualified source identity, and the production grounding payload and batch
+builders with a substitute report object. It placed both `summary_claim:3`
+and `summary_claim:4` alongside their exact canonical fact objects in the same
+batch, including physical-page provenance. A bare, unqualified source identity
+failed the existing identity check. This reconstruction does not establish the
+exact original provider request, whose rendered input was not retained; the
+model's missing-fact explanation is therefore not independently confirmed.
+It also does not resolve the separate finding that summary wording omitted a
+material global scope. No verdict was overridden.
