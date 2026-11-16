@@ -13820,3 +13820,10 @@ semantic choice remain unchanged. This addresses a demonstrated mismatch but
 cannot establish that the missing raw response contained an ID from that
 particular mismatch, nor prove live recovery. **E18 remains Active; Step 2
 remains PARTIAL / NO-GO**, with no same-SHA Activate or Capgemini acceptance.
+
+Hosted CI for `339b94d0` passed both mutation partitions but failed the test
+ownership gate because the new regressions increased an existing test module
+to 1,025 lines; release evidence therefore correctly failed its prerequisite.
+The regressions were moved to a separate focused module, preserving both their
+coverage and the unchanged ownership threshold. The focused ownership and
+planning tests passed; the corrected commit requires its own hosted run.
