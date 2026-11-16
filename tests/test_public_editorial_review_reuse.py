@@ -671,6 +671,46 @@ def test_public_editorial_review_reuses_terminal_failure_without_reopening_it(
     assert client.calls == calls_after_first
 
 
+def test_failed_public_review_retains_attempt_specific_coverage_diagnostics(tmp_path):
+    runtime = _runtime(tmp_path)
+    artifacts = _artifacts()
+    items = public_editorial_semantic_review_items(artifacts)
+
+    class MissingItemClient(_SemanticPassClient):
+        def openai_chat_json(self, request, ctx):
+            response = super().openai_chat_json(request, ctx)
+            response.parsed_json["verdicts"].pop()
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(response.parsed_json),
+                parsed_json=response.parsed_json,
+                model=request.model,
+            )
+
+    client = MissingItemClient(items)
+    dependencies = _deps(
+        analysis_store_pack=lambda request, _ctx: AnalysisPackPathResponse(
+            schema_version="1.0", output_path=request.pack_name
+        )
+    )
+    review, _ = _run_quality_review(
+        runtime=runtime,
+        dependencies=dependencies,
+        artifacts=deepcopy(artifacts),
+        client=client,
+        pack_name="public_editorial_quality_before",
+    )
+
+    assert review is not None and review.status == "fail"
+    issue = next(
+        item
+        for item in review.issues
+        if item.rule_id == "public_editorial_quality.semantic_review_unresolved"
+    )
+    assert f"missing_item_ids={items[-1]['public_item_id']}" in issue.message
+    assert "primary:" in issue.message
+
+
 def test_public_editorial_review_reuse_is_invalidated_by_content_changes(
     tmp_path,
 ) -> None:

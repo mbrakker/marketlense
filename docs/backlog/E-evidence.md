@@ -1094,6 +1094,11 @@ Commit and push the smallest verified slice.
 
 ## E18. Stabilize LLM report analysis and first-pass validation
 
+The latest bounded transactional-removal reproduction and its remaining live
+acceptance limitations are recorded in the existing [verified-claims quality
+evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This
+mechanical correction does not establish first-pass stability; E18 remains active.
+
 **Canonical status:** Active; proposed 2026-10-11 from repository inspection and historical retained cohorts, **not** a verified current-HEAD stability regression or implementation. **Priority:** P1 (factual quality / autonomous first-pass reliability). **Mapped technical slices:** E18.1–E18.4 below, four sequentially verified stages under this single canonical owner; no new historical proposal-index IDs.
 
 - **Observed baseline, not causation:** The existing insights-candidate prompt asks for 6–8 items while editorial plans allow 2–7 themes; candidates include LLM-authored relevance/novelty/metric scores, and final-insight and downstream prose stages still perform semantic editorial work. The current `effective_sampling_controls()` suppresses temperature/seed for configured GPT-6 reasoning calls; changing global temperature alone cannot stabilize those calls. Retained E11 three-report evidence establishes structured-output first-pass success only, not semantic/editorial repeatability. The historical October 2–3 A21 frozen 20-report run reached 16/20 readiness, with 8/20 bounded repairs; the later four-report rerun used a different producer SHA. Neither result proves that LLM output variability caused a failure, nor does it establish current-HEAD repeatability.

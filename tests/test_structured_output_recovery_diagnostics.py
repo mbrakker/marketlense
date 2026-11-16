@@ -257,6 +257,47 @@ def test_public_review_diagnostics_retain_scalar_and_coverage_context() -> None:
     ]
 
 
+def test_recovery_diagnostics_keep_coverage_context_with_its_attempt() -> None:
+    def validate_payload(candidate: dict) -> None:
+        if candidate["stage"] == "primary":
+            raise AppError(
+                code="coverage_mismatch",
+                message="Missing review item",
+                context={
+                    "missing_item_ids": ["summary:claim-1"],
+                    "expected_item_count": 3,
+                },
+            )
+        raise AppError(
+            code="target_mismatch",
+            message="Invalid repair target",
+            context={"item_id": "insight:claim-2"},
+        )
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        del original_response, schema_errors
+        return _response({"stage": mode})
+
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            _request(),
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=validate_payload,
+            is_substantive=lambda payload: bool(payload),
+            model_pricing={},
+        )
+
+    primary, repair, regeneration = exc_info.value.context["attempt_diagnostics"]
+    assert primary["missing_item_ids"] == ["summary:claim-1"]
+    assert primary["expected_item_count"] == 3
+    assert "item_id" not in primary
+    assert repair["item_id"] == "insight:claim-2"
+    assert regeneration["item_id"] == "insight:claim-2"
+    assert "missing_item_ids" not in regeneration
+
+
 def test_verified_plan_recovery_receives_actionable_contract_diagnostic() -> None:
     seen_schema_errors: list[str] = []
 

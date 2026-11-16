@@ -984,6 +984,16 @@ def _attempt_diagnostic(
         "disposition": evaluation.disposition or "invalid",
     }
     diagnostic.update(_provider_response_context(response))
+    # Keep coverage diagnostics associated with the response that produced
+    # them; the terminal context also merges phases for backward compatibility.
+    for key in ("item_id", "expected_item_count", "actual_item_count"):
+        value = _bounded_context_scalar(evaluation.bounded_context.get(key))
+        if value is not None:
+            diagnostic[key] = value
+    for key in ("missing_item_ids", "unexpected_item_ids", "duplicate_item_ids"):
+        tokens = _bounded_context_tokens(evaluation.bounded_context.get(key))
+        if tokens:
+            diagnostic[key] = tokens
     structure = _bounded_structure_value(
         evaluation.bounded_context.get("artifact_response_structure")
         if isinstance(evaluation.bounded_context, dict)

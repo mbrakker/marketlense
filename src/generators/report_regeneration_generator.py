@@ -5009,7 +5009,44 @@ def _summary_claim_map_targets(
     target_issues = (
         _summary_repair_issues(execution.target) if issues is None else issues
     )
-    return _summary_claim_map_targets_for_claims(claims, target_issues)
+    baseline_summary = execution.runtime.request.current_artifacts.get("summary")
+    baseline_claims = (
+        baseline_summary.get("claim_evidence_map")
+        if isinstance(baseline_summary, dict)
+        else None
+    )
+    baseline_targets = _summary_claim_map_targets_for_claims(
+        baseline_claims, target_issues
+    )
+    if (
+        baseline_targets is None
+        or not isinstance(baseline_claims, list)
+        or not isinstance(claims, list)
+    ):
+        return None
+    resolved = []
+    for _index, baseline_claim, claim_issues in baseline_targets:
+        stable_id = _s(baseline_claim.get("id") or baseline_claim.get("claim_id"))
+        if stable_id:
+            matches = [
+                index
+                for index, claim in enumerate(claims)
+                if isinstance(claim, dict)
+                and _s(claim.get("id") or claim.get("claim_id")) == stable_id
+            ]
+        else:
+            # Position-only identities belong to the original list. Match the
+            # exact original row after earlier removals, never its shifted index.
+            if baseline_claims.count(baseline_claim) != 1:
+                return None
+            matches = [
+                index for index, claim in enumerate(claims) if claim == baseline_claim
+            ]
+        if len(matches) != 1:
+            return None
+        index = matches[0]
+        resolved.append((index, claims[index], claim_issues))
+    return sorted(resolved, key=lambda item: item[0])
 
 
 def _summary_claim_map_targets_for_claims(

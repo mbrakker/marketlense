@@ -13642,3 +13642,36 @@ exact original provider request, whose rendered input was not retained; the
 model's missing-fact explanation is therefore not independently confirmed.
 It also does not resolve the separate finding that summary wording omitted a
 material global scope. No verdict was overridden.
+
+The subsequent root-cause review compared the retained `56fe3d2e` and
+`9eeceba4` editorial failures. Both encountered review coverage and report-target
+contract failures, but the former recorded 56 expected versus 57 verdicts and
+the latter 91 versus 88; those counts do not identify whether any particular
+item was missing, duplicated, or unknown. Their original model responses were
+not retained. The terminal `invalid_json` code in the latter audit is a generic
+recovery code: its three recorded provider responses parsed successfully. It
+must not be interpreted as evidence of malformed JSON.
+
+Recovery now retains bounded coverage identifiers and counts per attempt, and
+the existing failed public-review artifact exposes those phase-specific
+diagnostics without storing model responses. Existing completeness and
+publication gates remain unchanged. This is a diagnostic correction, not a
+demonstrated fix for the underlying model responses or a live quality gain.
+The candidate-2 plan was not retained, so its precise authorization cannot be
+reconstructed conclusively. A provider-free production-path reconstruction
+with separate safe-removal targets reproduced the same final row identities:
+the first removal shifted the idless list, causing the second target to resolve
+against the wrong current position; atomic assembly then reapplied the planned
+baseline positions. The candidate was rolled back. Target resolution now binds
+to an exact original row or stable ID and fails closed on ambiguity. The scope
+diff also recognizes multiple uniquely aligned exact removals at their original
+positions while rejecting ambiguous or unauthorized changes. These mechanical
+corrections do not establish that the historical plan authorized its removals,
+or that the resulting candidate would pass independent semantic validation.
+The same reconstructed workflow after the fix removed the two intended rows at
+their respective handler steps, retained both untouched VR/AR rows throughout,
+and reported exactly the two original row paths. Its deterministic candidate
+integrity and scope checks passed with zero issues; no semantic review or
+candidate promotion was performed in this replay.
+No new provider run was conducted for this slice; the two-report
+first-pass/first-repair gate remains **PARTIAL**.

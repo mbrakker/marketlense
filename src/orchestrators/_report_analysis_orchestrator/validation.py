@@ -316,6 +316,21 @@ def _public_editorial_review_failure_explanation(exc: AppError) -> str:
                 for value in (mode, error_class, parse_status, provider_status)
                 if value
             )
+            details: list[str] = []
+            for key in ("item_id", "expected_item_count", "actual_item_count"):
+                value = diagnostic.get(key)
+                if value not in (None, "", []):
+                    details.append(f"{key}={value}")
+            for key in (
+                "missing_item_ids",
+                "unexpected_item_ids",
+                "duplicate_item_ids",
+            ):
+                value = diagnostic.get(key)
+                if isinstance(value, list) and value:
+                    details.append(f"{key}={','.join(str(item) for item in value[:3])}")
+            if details:
+                label += f" ({', '.join(details)})"
             if label:
                 attempts.append(label)
         if attempts:

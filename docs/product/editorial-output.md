@@ -161,6 +161,9 @@ for an abstained family.
 For Summary safe removal, candidate lineage accepts a missing material claim
 only when the active plan names that exact `claim_evidence_map` item with
 `REMOVE_CLAIM`. An unplanned deletion or a reintroduced item remains blocking.
+When several idless map rows are removed, their original positions remain the
+scope identities; exact ordered alignment must be unique, or the candidate
+remains blocked.
 
 Prompt-family materialization retains a private soft-copy envelope alongside
 the family’s unchanged public value: declared claim bindings, the producing

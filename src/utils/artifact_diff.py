@@ -77,10 +77,10 @@ def artifact_diff_paths(
                 for identity in set(before_ids) ^ set(after_ids)
             )
             return changed
-        if len(before) == len(after) + 1:
-            removed_index = _unique_removed_list_item_index(before, after)
-            if removed_index is not None:
-                return {f"{path}[{removed_index}]"}
+        if len(before) > len(after):
+            removed_indices = _unique_removed_list_item_indices(before, after)
+            if removed_indices is not None:
+                return {f"{path}[{index}]" for index in removed_indices}
         changed = set()
         for index in range(max(len(before), len(after))):
             child = f"{path}[{index}]"
@@ -121,28 +121,33 @@ def _stable_list_ids(values: list[Any]) -> list[str] | None:
     return identities if len(set(identities)) == len(identities) else None
 
 
-def _unique_removed_list_item_index(before: list[Any], after: list[Any]) -> int | None:
-    """Return the removed row only when ordered list alignment is unique."""
+def _unique_removed_list_item_indices(
+    before: list[Any], after: list[Any]
+) -> list[int] | None:
+    """Resolve exact removals only when the ordered alignment is unique."""
 
-    prefix_matches = [True] * len(before)
-    for index in range(min(len(after), len(before))):
-        prefix_matches[index + 1] = (
-            prefix_matches[index] and before[index] == after[index]
-        )
-
-    suffix_matches = [False] * len(before)
-    suffix_matches[-1] = True
-    for index in range(len(before) - 2, -1, -1):
-        suffix_matches[index] = (
-            suffix_matches[index + 1] and before[index + 1] == after[index]
-        )
-
-    removed_indices = [
-        index
-        for index in range(len(before))
-        if prefix_matches[index] and suffix_matches[index]
-    ]
-    return removed_indices[0] if len(removed_indices) == 1 else None
+    earliest: list[int] = []
+    next_index = 0
+    for item in after:
+        while next_index < len(before) and before[next_index] != item:
+            next_index += 1
+        if next_index == len(before):
+            return None
+        earliest.append(next_index)
+        next_index += 1
+    latest: list[int] = []
+    next_index = len(before) - 1
+    for item in reversed(after):
+        while next_index >= 0 and before[next_index] != item:
+            next_index -= 1
+        if next_index < 0:
+            return None
+        latest.append(next_index)
+        next_index -= 1
+    if earliest != list(reversed(latest)):
+        return None
+    retained = set(earliest)
+    return [index for index in range(len(before)) if index not in retained]
 
 
 def _soft_copy_changed_claim_paths(
