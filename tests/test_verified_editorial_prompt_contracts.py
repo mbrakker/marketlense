@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 
+from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
+from src.services.prompt_service import load_prompt_set, render_prompt
 from tests.test_verified_editorial_first_pass_and_scoped_repair import (
+    _ctx,
     _render_final_insight_user_prompt,
 )
 
@@ -50,3 +53,25 @@ def test_full_prompt_requests_specific_decision_relevance_without_invented_premi
     ).lower()
     assert "decision relevance of the specific finding" in prompt
     assert "instead of inventing a premise" in prompt
+
+
+def test_grounding_distinguishes_self_authored_advice_from_source_attribution() -> None:
+    ctx = _ctx()
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/validate/grounding",
+            force_reload=True,
+        ),
+        ctx,
+    )
+    prompt = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.system,
+            variables={"authority_policy": "verified facts"},
+        ),
+        ctx,
+    ).text
+    assert "do not require the source to document MarketLense issuing it" in prompt
+    assert "hidden empirical premises" in prompt

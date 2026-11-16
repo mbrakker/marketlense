@@ -13751,3 +13751,38 @@ passed afterward; broader checks and fresh real-report acceptance must be
 reported separately. E18 remains **Active/PARTIAL**, and Step 2 remains
 **PARTIAL/NO-GO** until the requested same-implementation Activate and
 Capgemini first-pass/first-repair outcomes are independently verified.
+
+At implementation `280d56a5`, fresh isolated Activate run
+`C:\ml-acceptance-280d56a5\activate\ias-first-attempt-tl6a4dz0` ended
+`validation_failed` with no HTML or WordPress write. Ingestion and selection
+succeeded on their first queue attempts. Initial validation rejected a
+present-tense MarketLense recommendation because the source did not establish
+that MarketLense made it, despite the existing prompt permitting self-authored
+advice. The independent editorial reviewer also identified a categorical
+not-a-forecast assertion and weak implication leaves; these are distinct from
+the attribution error and must not be waived.
+
+First candidate validation failed and promotion rolled back after 525.588 s.
+It introduced an audio implication that the reviewer found generalized beyond
+one study and a non-self-contained LinkedIn sentence. It also received a new
+generic-filler rejection for the U.S. video-revenue implication, although that
+leaf was identical before and after repair and had not been rejected initially.
+That is a newly reported failure, not a change introduced by the candidate.
+The retained prompt construction places sibling insights in the existing
+grounding package, so missing sibling data is not established as its cause;
+rendered provider requests were not retained. Candidates two and three also
+failed and rolled back after 245.918 s and 212.595 s. A later candidate cannot
+satisfy first-repair acceptance in any case.
+
+The runner recorded 554 provider calls, 3,830,553 input, 564,272 output and
+271,259 cached input tokens, nine file-search calls, $0.663292 estimated cost,
+4,683.297 s runner-to-terminal time, 13 structured-output repair calls and
+three automatic repair candidates; there were no queue retries or operator
+interventions. Relative to the earlier retained baseline, provider calls fell
+from 591 to 554 and recorded cost rose from $0.629750 to $0.663292; that
+baseline's exact runner duration was not retained, so timing is not directly
+comparable. Different generated content prevents attribution of these changes
+to this implementation. A subsequent prompt clarification explicitly separates
+current self-authored advice from claims of prior advice or source attribution;
+its effect has not been validated by this run. Capgemini was not run because
+Activate failed the prerequisite. **Verdict: PARTIAL / NO-GO.**

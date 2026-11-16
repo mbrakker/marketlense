@@ -408,6 +408,10 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
         "reason": "summary_no_short_direct_claim",
     }
     current["insights_final"][0]["so_what"] = "The original implication is unsupported."
+    current["insights_final"][1]["so_what"] = (
+        "A different finding changes another decision."
+    )
+    sibling = deepcopy(current["insights_final"][1])
     current["insights_candidates"].append(
         {
             **deepcopy(current["insights_final"][0]),
@@ -440,6 +444,7 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
     )
     assert plan.targets[0].allowed_paths == ["insights_final[item=insight-1].so_what"]
     openai_client = _MobileSoWhatOpenAIClient()
+    prompt_client = _FakePromptClient()
 
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
@@ -456,7 +461,7 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
             categories=["Category"],
         ),
         openai_client=openai_client,
-        prompt_client=_FakePromptClient(),
+        prompt_client=prompt_client,
     )
 
     repaired = response.updated_artifacts["insights_final"][0]
@@ -494,6 +499,12 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
     assert "insights_final[item=insight-1].so_what" in localized_prompt
     assert "Unsupported number in the implication." in localized_prompt
     assert "Evidence text" in localized_prompt
+    variables = prompt_client.render_calls[-1]["variables"]
+    assert (
+        "A different finding changes another decision."
+        in variables["grounding_package_json"]
+    )
+    assert response.updated_artifacts["insights_final"][1] == sibling
     assert "every editorial theme" not in localized_prompt
     assert "fill the final roster" not in localized_prompt
     assert "compact card" not in localized_prompt

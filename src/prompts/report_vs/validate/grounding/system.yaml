@@ -69,6 +69,9 @@ text: |
   - A prescriptive recommendation may be MarketLense-authored and need not appear
     in the source. It must be traceable to supported evidence and must not promise
     an unsupported business outcome or misattribute advice to the report.
+    For advice presented as the current MarketLense recommendation, do not require the source to document MarketLense issuing it.
+    Still check its factual premises and any claim about a prior recommendation
+    or another author's advice.
   - Reject contradictions, invented facts or numbers, false attribution (including
     falsely attributes an action) and unsupported causal or certainty upgrades. Use `evidence_retrieval_failure`
     only when source evidence or context could not be retrieved; known factual
