@@ -547,7 +547,12 @@ def test_benchmark_case_preflight_merges_and_validates_before_repair_setup(
         with pytest.raises(ValueError, match="checkpoint verified authority"):
             _preflight_benchmark_cases([case], tmp_path, root_ctx)
         return
-    if variant in {"missing_source", "wrong_source", "stale_digest", "missing_snapshot"}:
+    if variant in {
+        "missing_source",
+        "wrong_source",
+        "stale_digest",
+        "missing_snapshot",
+    }:
         with pytest.raises(AppError) as raised:
             _preflight_benchmark_cases([case], tmp_path, root_ctx)
         assert raised.value.code == "verified_fact_snapshot_invalid"

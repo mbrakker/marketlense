@@ -585,7 +585,8 @@ def _preflight_benchmark_cases(
                 (
                     "verified_authority_context" in analysis
                     and analysis["verified_authority_context"] != asdict(authority)
-                ) or (
+                )
+                or (
                     "authoritative_evidence_packs" in analysis
                     and analysis["authoritative_evidence_packs"]
                     != authority.evidence_packs

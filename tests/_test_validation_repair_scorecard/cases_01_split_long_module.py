@@ -512,7 +512,9 @@ def test_repair_scorecard_keys_repeated_strategy_by_failure_and_evidence(
     ],
 )
 def test_repair_scorecard_pairs_a_frozen_baseline_denominator(
-    tmp_path: Path, allowed_path: str, valid: bool,
+    tmp_path: Path,
+    allowed_path: str,
+    valid: bool,
 ) -> None:
     reports_db = str(tmp_path / "reports.sqlite")
     usage_db = str(tmp_path / "usage.sqlite")
