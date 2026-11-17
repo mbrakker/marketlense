@@ -1124,6 +1124,21 @@ bounded stable-item paths in scorecard manifests. Provider-free preflight on the
 retained Activate checkpoint matched all 10 canonical facts and both packs;
 this does not establish a successful live repair or editorial acceptance.
 
+A 2026-11-17 retained-stage replay at `e09190de` used those canonical packs and
+the original failed validation, with one repair attempt and isolated output.
+The model saw the three checked unchanged sibling recommendations in each of
+the four repair calls; no compaction was applied to those requests. Candidate
+editorial review passed and candidate validation reported pass with warnings,
+but promotion failed closed with `retained_claim_candidate_package_not_ready`:
+one evidence-bound MarketLense recommendation was `not_established` by
+grounding, recorded as informational in the validation report, and unresolved
+in the retained-claim package. The candidate was rolled back; no publication
+or end-to-end acceptance occurred. The replay recorded 28 calls, 859,941 input
+tokens, 92,219 output tokens, 61,491 cached input tokens, $0.126572 and 569.7
+seconds. A preceding isolated harness attempt made one additional provider call
+but failed accounting because its publisher attribution was missing; its
+tokens and cost were not retained and are not included in those totals.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This
