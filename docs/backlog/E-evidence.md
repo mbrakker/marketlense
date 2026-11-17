@@ -1253,6 +1253,34 @@ semantic judgments. The previously described context/cache gap remains open;
 neither new validator nor extra retry was added. First-pass and first-repair
 acceptance remain unmet, and the post-fix two-report acceptance remains open.
 
+In a fresh isolated Capgemini run on `f5bab376`, the existing visual identity
+resolver read the original cover and selected “What matters to today’s consumer
+2026: How AI is transforming value perception”; the suspect interleaved
+extraction was not promoted as explicit source title. This establishes the
+title-stage result, not overall report acceptance. Initial validation found one
+unresolved recommendation and editorial weaknesses. Candidate 1 rolled back
+after grounding flagged an item-level denominator in the unchanged summary
+and TLDR; the same text was present before repair, and the original rendered
+baseline batch was not retained. Candidate 2 rolled back with the same
+grounding failures and a limitation omission; candidate 3 rolled back on
+editorial depth and redundancy. The run terminated `validation_failed` with
+no final HTML or WordPress write: 181 provider calls, 2,511,833 input and
+388,928 output tokens, $0.444131 and 2,424.125 seconds. Both first-repair and
+end-to-end acceptance remain unmet. No conclusion about the factual support
+of the denominator is inferred from the fact that the earlier pass missed it.
+
+The companion fresh Activate run on `f5bab376` terminated before final
+editorial artifacts with `artifact_structured_output_invalid` in
+`theme_coverage`; the retained inner error class was
+`artifact_final_insight_coverage_invalid` after structured recovery attempt 2.
+The exact rejected response and specific coverage-contract condition were not
+retained, so a more specific cause is not established. It made 461 provider
+calls with 1,563,558 input and 298,102 output tokens, cost an estimated
+$0.322663 and ran for 3,422.078 seconds. No final HTML or WordPress write was
+produced, and no first automatic editorial repair was reached. Both fresh
+same-producer runs therefore failed acceptance. The implementation remains
+PARTIAL despite the passing hosted tests and confirmed visual title resolution.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This
