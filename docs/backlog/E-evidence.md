@@ -1185,6 +1185,17 @@ pass the unchanged source-binding and repair-target checks. Focused synthetic
 regressions reproduced both handoff gaps; they do not prove these gaps caused
 the live model's responses or establish successful live editorial acceptance.
 
+An isolated review-stage replay of the same retained candidate at `bcce0e86`
+reconstructed the same 10-fact authority. The independent editorial review
+returned no issues after one structured-output repair, using two provider calls,
+243,845 input tokens (120,281 cached), 19,206 output tokens, estimated
+$0.023163, and 132.13 seconds. The initial raw review response and its precise
+validation failure were not retained, so this does not prove the prior `f03`
+mismatch recurred or that either handoff correction caused recovery. This was
+not a new transactional repair, PDF-page inspection, HTML generation or
+publication-readiness run; the earlier candidate rollback remains unchanged.
+E18 remains Active/PARTIAL.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This
