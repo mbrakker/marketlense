@@ -1146,9 +1146,33 @@ reaches the existing scoped repair planner as an error; an explicitly
 non-fatal editorial interpretation remains informational. A targeted test
 reproduced the prior mismatch and verifies expert-comment repair routing;
 grounding, retained-claim and regeneration regression suites passed 498 tests.
-This is a provider-free boundary result, not a successful Activate repair or
-end-to-end acceptance. The retained failed candidate has not been rerun after
-the correction; E18 remains Active/PARTIAL and publication remains blocked.
+That provider-free boundary result did not establish a successful Activate
+repair or end-to-end acceptance; E18 remained Active/PARTIAL and publication
+remained blocked.
+
+The 2026-11-17 isolated retained Activate replay at `103f7dad` reconstructed
+the checkpoint's 10-fact authority and ran fresh baseline validation followed
+by one repair attempt. Baseline review failed with eight editorial errors;
+the repaired candidate's factual validation passed with 0 unsupported and 0
+unresolved retained claims, but independent editorial review failed closed and
+the candidate was rolled back. Its terminal diagnostic was
+`public_editorial_quality_review_invalid_json`: the primary and regeneration
+responses cited an obligation alternative (`verified-fact:f03`) not bound to
+their named supporting items; the intermediate model-repair response failed a
+different report-target contract. The plan lists `f03` and
+`high-attention-video-users-share` as alternatives, while the retained insight
+binds the latter. The existing reviewer prompt already requires citing only
+facts bound to named insights. The prior disputed recommendation was judged
+entailed in this run, so it did not exercise the earlier unresolved-verdict
+path live. This stage-only replay used no PDF page inputs, did not generate
+or publish final HTML, and cannot establish end-to-end or editorial acceptance.
+It recorded 45 provider events, 1,391,838 input tokens (154,860 cached) and
+160,589 output tokens, estimated $0.205545, and 738.97 seconds (including
+baseline validation).
+A separate stopped attempt used the report slug as report ID and incurred five
+grounding events, 85,443 input and 19,258 output tokens, estimated $0.017592;
+its results are excluded. No raw model response was retained to establish why
+the model repeated the unbound citation. E18 remains Active/PARTIAL.
 
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
