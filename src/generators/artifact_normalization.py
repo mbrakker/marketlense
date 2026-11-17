@@ -407,6 +407,21 @@ def remap_editorial_plan_to_verified_facts(
             if evidence_id not in targets:
                 targets.append(evidence_id)
 
+    def map_fact_requirement(evidence_id: str) -> str:
+        targets = aliases.get(evidence_id.casefold()) or aliases.get(
+            _fallback_evidence_key(evidence_id), set()
+        )
+        if len(targets) != 1:
+            raise AppError(
+                code="verified_fact_editorial_coverage_insufficient",
+                message=(
+                    "Editorial fact requirement has no unambiguous verified binding"
+                ),
+                retryable=False,
+                context={"evidence_id": evidence_id},
+            )
+        return next(iter(targets))
+
     themes: list[dict[str, Any]] = []
     unmapped_themes: list[str] = []
     for theme in plan["themes"]:
@@ -428,7 +443,16 @@ def remap_editorial_plan_to_verified_facts(
         if not mapped:
             unmapped_themes.append(theme["theme"])
             continue
-        themes.append({**theme, "evidence_ids": mapped})
+        remapped_theme = {**theme, "evidence_ids": mapped}
+        if "required_evidence_ids" in theme:
+            remapped_theme["required_evidence_ids"] = [
+                map_fact_requirement(item) for item in theme["required_evidence_ids"]
+            ]
+            remapped_theme["alternative_evidence_groups"] = [
+                [map_fact_requirement(item) for item in group]
+                for group in theme["alternative_evidence_groups"]
+            ]
+        themes.append(remapped_theme)
 
     central_priority = min(theme["priority"] for theme in plan["themes"])
     lost_central_themes = [
@@ -506,10 +530,11 @@ def remap_editorial_plan_to_verified_facts(
         "themes": themes,
     }
     if "material_limitation_evidence_ids" in plan:
-        remapped_plan["material_limitation_evidence_ids"] = list(
-            plan["material_limitation_evidence_ids"]
-        )
-    return remapped_plan
+        remapped_plan["material_limitation_evidence_ids"] = [
+            map_fact_requirement(item)
+            for item in plan["material_limitation_evidence_ids"]
+        ]
+    return normalize_artifact_editorial_plan(remapped_plan)
 
 
 def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:

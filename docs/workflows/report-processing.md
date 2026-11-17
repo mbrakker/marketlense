@@ -103,6 +103,12 @@ PDF, extraction limits, and extractor generation; a legacy OCR-text entry
 misses after this identity transition. If the rendered artifact has no verified
 checksum, extraction runs without OCR-text cache reuse. Cache events record the
 hashed key and hit or miss reason without source text.
+OCR chunk responses must contain exactly one entry for every chunk page;
+explicitly blank pages are valid, but missing, duplicate or malformed entries
+fail rather than being assigned or synthesized. OCR cache identities include
+the page-roster validation version. When native text was truncated by its
+character budget, evidence extraction expands the source text before building
+page spans, within the configured evidence-extraction safety limit.
 Text cache schema `2.0` requires one valid page record for each extracted page,
 with ordered page numbers inside the source range and an exact global character
 count. A `1.0` text cache remains compatible only when it includes complete,
@@ -657,8 +663,15 @@ retained PDF-derived source text. It records hashes, source provenance,
 deterministic quantity/quote/protected-fact checks, semantic execution identity
 when needed, and a supported/unsupported/unresolved disposition. Unsupported or
 unresolved factual entries are removed from the editorial input and are never
-used as downstream fallback material. When the candidate-insights model exhausts
-its bounded JSON repair sequence, artifact generation instead derives a bounded
+used as downstream fallback material. A non-empty findings pack without retained
+source spans or source text fails with `findings_source_evidence_unavailable`
+before pack persistence; non-empty quote candidates likewise fail with
+`quote_candidates_source_evidence_unavailable`. Empty packs may still abstain. Fractional
+physical pages are not coerced to integers, and multiple distinct evidence
+fragments require structured-output recovery rather than silent truncation.
+When the
+candidate-insights model exhausts its bounded JSON repair sequence, artifact
+generation instead derives a bounded
 replacement pool from the remaining fidelity-approved findings and quotes; every
 replacement keeps one approved evidence ID and source excerpt. Other artifact
 families still fail explicitly. If the approved pool cannot supply an artifact
@@ -722,7 +735,9 @@ insights, quotes, final insights, cover semantics, expert comment, and LinkedIn
 post. The editorial plan is generated once from DocMap and grounded evidence;
 it retains one report thesis plus ordered themes, each with linked evidence
 IDs. Summary, final insights, expert commentary, and the LinkedIn post consume
-that same plan. LinkedIn uses it to select one source-supported angle: for a
+that same plan. Remapping a plan to verified facts preserves required facts,
+alternative groups and limitation bindings only through unambiguous identities.
+LinkedIn uses it to select one source-supported angle: for a
 broad report it explicitly presents a representative lens rather than a
 whole-report recap, while a narrow report may express its full thesis. Final
 insights and the metric spine provide supporting proof, with report context used

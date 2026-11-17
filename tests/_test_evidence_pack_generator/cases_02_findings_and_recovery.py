@@ -50,6 +50,24 @@ def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains
         ),
         prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
+        source_spans=[
+            {
+                "id": "source:2",
+                "page": 2,
+                "text": (
+                    "The report describes a shared cross-channel view. Unified "
+                    "measurement connects retail media and store outcomes."
+                ),
+            },
+            {
+                "id": "source:8",
+                "page": 8,
+                "text": (
+                    "The outlook links buyer budgets to attribution. "
+                    "Investment follows attributable outcomes."
+                ),
+            },
+        ],
     )
 
     assert prompt_client.findings_variables is not None
@@ -58,7 +76,7 @@ def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains
         "measurement-methods",
         "investment-outlook",
     ]
-    assert prompt_client.findings_variables["findings_target_source_pages_json"] == "[]"
+    assert prompt_client.findings_variables["findings_target_source_pages_json"]
     assert packs["findings"]["findings"] == [
         {
             "id": "finding-1",
@@ -140,7 +158,19 @@ def test_generate_evidence_packs_passes_source_temporal_relationships_to_finding
 
 
 def test_findings_context_retains_counterbalancing_major_docmap_sections(tmp_path):
-    prompt_client = RecordingPromptClient()
+    class PrimaryPromptClient(FakePromptClient):
+        def __init__(self):
+            self.findings_variables = None
+
+        def render_prompt(self, request, ctx):
+            if (
+                self.findings_variables is None
+                and "doc_map_sections_json" in request.variables
+            ):
+                self.findings_variables = dict(request.variables)
+            return super().render_prompt(request, ctx)
+
+    prompt_client = PrimaryPromptClient()
     packs = generate_evidence_packs(
         report_id="counterbalanced-doc-map",
         report_name="Counterbalanced DocMap",
@@ -174,6 +204,24 @@ def test_findings_context_retains_counterbalancing_major_docmap_sections(tmp_pat
         ),
         prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
+        source_spans=[
+            {
+                "id": "source:4",
+                "page": 4,
+                "text": (
+                    "AI can improve operational efficiency. "
+                    "35% expect efficiency gains from AI."
+                ),
+            },
+            {
+                "id": "source:12",
+                "page": 12,
+                "text": (
+                    "AI-generated media needs trust safeguards. "
+                    "Trust concerns require governance controls."
+                ),
+            },
+        ],
     )
 
     assert prompt_client.findings_variables is not None

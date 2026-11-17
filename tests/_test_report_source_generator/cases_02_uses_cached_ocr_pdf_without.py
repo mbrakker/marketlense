@@ -1,9 +1,69 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators.pdf_text_ocr_generator import recover_pdf_text_with_ocr
 from src.utils.model_resolver import resolve_settings_execution_policy
 
 from ._shared import *  # noqa: F401,F403
+
+
+@pytest.mark.parametrize("legacy_version", [None, "1"], ids=["unversioned", "v1"])
+def test_ocr_aggregate_cache_rejects_legacy_roster(
+    ingest_settings, run_context, tmp_path, legacy_version
+):
+    runtime = _runtime(
+        replace(ingest_settings, pdf_text_ocr_cache_enabled=True), run_context, tmp_path
+    )
+    prompts = prompt_service.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace="pdf_text/ocr_fallback"),
+        run_context,
+    )
+    key = sha256_json(
+        {
+            "schema_version": "1.0",
+            **(
+                {"ocr_roster_validation_version": legacy_version}
+                if legacy_version
+                else {}
+            ),
+            "md5": runtime.md5,
+            "model": runtime.settings.pdf_text_ocr_model,
+            "reasoning_effort": resolve_settings_execution_policy(
+                runtime.settings.pdf_text_ocr_prompt_namespace, runtime.settings
+            ).policy.reasoning_effort,
+            "prompt_system_sha256": prompts.system.sha256,
+            "prompt_user_sha256": prompts.user.sha256,
+            "chunk_page_count": runtime.settings.pdf_text_ocr_chunk_page_count,
+        }
+    )
+    root = tmp_path / "cache" / "pdf_cache" / runtime.md5
+    root.mkdir(parents=True, exist_ok=True)
+    (root / f"ocr_response_{key}.json").write_text(
+        json.dumps(
+            {
+                "key": key,
+                "ocr_response": {"pages": [{"page_number": 1, "text": "legacy"}]},
+            }
+        ),
+        encoding="utf-8",
+    )
+    legacy_pdf = str(root / f"ocr_text_{key}.pdf")
+    deps = _deps(
+        file_stat=lambda req, ctx: SimpleNamespace(exists=req.path == legacy_pdf),
+        openai_ocr_pdf=lambda req, ctx: SimpleNamespace(
+            pages=[
+                SimpleNamespace(page_number=1, text="incomplete", schema_version="1.0")
+            ],
+            model=req.model,
+            request_id="fake",
+            raw_text="{}",
+        ),
+    )
+    with pytest.raises(AppError) as exc:
+        recover_pdf_text_with_ocr(
+            runtime, page_count=2, dependencies=deps, llm_client=_ocr_client(deps)
+        )
+    assert exc.value.code == "pdf_text_ocr_failed"
 
 
 def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
@@ -25,6 +85,7 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
     cache_key = sha256_json(
         {
             "schema_version": "1.0",
+            "ocr_roster_validation_version": "2",
             "md5": runtime.md5,
             "model": runtime.settings.pdf_text_ocr_model,
             "reasoning_effort": resolve_settings_execution_policy(
@@ -411,6 +472,19 @@ def test_prepare_report_source_runs_single_openai_ocr_model(
             page_count=1,
             metadata={},
         ),
+        split_pdf_for_ocr=lambda req, ctx: PdfOcrSplitResponse(
+            schema_version="1.0",
+            chunks=[
+                PdfOcrChunk(
+                    chunk_index=1,
+                    source_pdf_path=req.source_pdf_path,
+                    chunk_pdf_path=req.source_pdf_path,
+                    start_page_number=1,
+                    end_page_number=1,
+                    page_count=1,
+                )
+            ],
+        ),
         sample_pdf_text=lambda req, ctx: (
             PdfTextSampleResponse(
                 schema_version="1.0",
@@ -760,6 +834,7 @@ def test_prepare_report_source_surfaces_pdf_text_ocr_failed(
 
 
 __all__ = [
+    "test_ocr_aggregate_cache_rejects_legacy_roster",
     "test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr",
     "test_ocr_text_cache_tracks_derived_pdf_and_reuses_matching_artifact",
     "test_prepare_report_source_runs_single_openai_ocr_model",

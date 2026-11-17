@@ -33,6 +33,13 @@ def test_generate_evidence_packs_normalizes_legacy_findings_shape(tmp_path):
         openai_client=fake_openai,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
+        source_spans=[
+            {
+                "id": "source:3",
+                "page": 3,
+                "text": "Finding summary. Supported by evidence",
+            }
+        ],
     )
     finding = packs["findings"]["findings"][0]
     assert packs["findings"]["not_found_reason"] == ""
@@ -79,7 +86,7 @@ def test_generate_evidence_packs_persists_untrusted_findings_exclusion(tmp_path)
         # The prior family format may contain pre-filter findings. Treat it as
         # incompatible and require the regular generation path to run.
         if request.family_id == "report_vs/evidence_packs/findings":
-            assert request.processing_version == "report_generation_checkpoint_v3"
+            assert request.processing_version == "report_generation_checkpoint_v4"
             return PromptFamilyReuseResponse(
                 schema_version="1.0",
                 reusable=False,
@@ -149,7 +156,7 @@ def test_generate_evidence_packs_persists_untrusted_findings_exclusion(tmp_path)
     ] == ["finding-supported"]
     assert any(
         request.family_id == "report_vs/evidence_packs/findings"
-        and request.processing_version == "report_generation_checkpoint_v3"
+        and request.processing_version == "report_generation_checkpoint_v4"
         for request in reuse_requests
     )
 
@@ -195,6 +202,7 @@ def test_legacy_unfiltered_prompt_family_cannot_restore_findings(tmp_path):
         openai_client=client,
         prompt_client=FakePromptClient(),
         analysis_store=analysis_store,
+        source_spans=[{"id": "source:64", "page": 64, "text": unsupported_text}],
         prompt_family_materializer=lambda request, _ctx: first_materializations.append(
             request
         ),
@@ -291,7 +299,7 @@ def test_legacy_unfiltered_prompt_family_cannot_restore_findings(tmp_path):
         for request in filtered_materializations
         if request.family_id == "report_vs/evidence_packs/findings"
     )
-    assert filtered_request.processing_version == "report_generation_checkpoint_v3"
+    assert filtered_request.processing_version == "report_generation_checkpoint_v4"
     assert filtered_request.output_payload["findings"] == []
     findings_materializations_before_reuse = sum(
         request.family_id == "report_vs/evidence_packs/findings"
@@ -342,7 +350,7 @@ def test_legacy_unfiltered_prompt_family_cannot_restore_findings(tmp_path):
     filtered_reuse = read_reusable_prompt_family(
         to_reuse_request(
             filtered_request,
-            processing_version="report_generation_checkpoint_v3",
+            processing_version="report_generation_checkpoint_v4",
         ),
         source_ctx,
     )
@@ -405,6 +413,9 @@ def test_generate_evidence_packs_normalizes_quote_candidates_shape(tmp_path):
         openai_client=fake_openai,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
+        source_spans=[
+            {"id": "source:5", "page": 5, "text": "The industry is shifting."}
+        ],
     )
     quote = packs["quote_candidates"]["quote_candidates"][0]
     assert packs["quote_candidates"]["not_found_reason"] == ""
@@ -420,7 +431,14 @@ def test_generate_evidence_packs_uses_registry_subset(tmp_path):
                 **substantive_doc_map(),
             },
             "findings": {
-                "findings": [{"id": "f1", "text": "Finding", "evidence": "Evidence"}]
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Finding",
+                        "evidence": "Evidence",
+                        "pages": [1],
+                    }
+                ]
             },
         }
     )
@@ -433,6 +451,7 @@ def test_generate_evidence_packs_uses_registry_subset(tmp_path):
         openai_client=fake_openai,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
+        source_spans=[{"id": "source:1", "page": 1, "text": "Finding. Evidence"}],
     )
-    assert list(packs.keys()) == ["doc_map", "findings"]
+    assert list(packs.keys()) == ["doc_map", "findings", "evidence_fidelity"]
     assert packs["findings"]["findings"][0]["id"] == "f1"

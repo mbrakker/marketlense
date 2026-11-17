@@ -9,6 +9,7 @@ from pathlib import Path
 from src.contracts.files import FileStatRequest
 from src.contracts.openai import OpenAIPdfOcrRequest, OpenAIPdfOcrResponse
 from src.contracts.pdf_ocr import (
+    OCR_ROSTER_VALIDATION_VERSION,
     PdfOcrAggregateResponse,
     PdfOcrChunk,
     PdfOcrFallbackResponse,
@@ -93,6 +94,7 @@ def recover_pdf_text_with_ocr(
         cache_key = sha256_json(
             {
                 "schema_version": "1.0",
+                "ocr_roster_validation_version": OCR_ROSTER_VALIDATION_VERSION,
                 "md5": runtime.md5,
                 "model": runtime.settings.pdf_text_ocr_model,
                 "reasoning_effort": reasoning_effort,
@@ -510,12 +512,12 @@ def _map_chunk_pages(
             if numbering_mode == "relative"
             else source_page_number
         )
-        page = pages_by_number.get(lookup_page_number)
+        page = pages_by_number[lookup_page_number]
         mapped_pages.append(
             PdfOcrPageText(
-                schema_version=page.schema_version if page else "1.0",
+                schema_version=page.schema_version,
                 page_number=source_page_number,
-                text=page.text if page else "",
+                text=page.text,
             )
         )
     return mapped_pages
@@ -523,11 +525,16 @@ def _map_chunk_pages(
 
 def _detect_chunk_numbering(chunk: PdfOcrChunk, raw_pages: list[PdfOcrPageText]) -> str:
     page_numbers = [page.page_number for page in raw_pages]
-    if all(1 <= page_number <= chunk.page_count for page_number in page_numbers):
+    if len(page_numbers) != chunk.page_count or len(set(page_numbers)) != len(
+        page_numbers
+    ):
+        return "invalid"
+    if chunk.end_page_number - chunk.start_page_number + 1 != chunk.page_count:
+        return "invalid"
+    if set(page_numbers) == set(range(1, chunk.page_count + 1)):
         return "relative"
-    if all(
-        chunk.start_page_number <= page_number <= chunk.end_page_number
-        for page_number in page_numbers
+    if set(page_numbers) == set(
+        range(chunk.start_page_number, chunk.end_page_number + 1)
     ):
         return "absolute"
     return "invalid"

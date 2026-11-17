@@ -1,6 +1,7 @@
 # ruff: noqa: F403,F405,I001
 from __future__ import annotations
 
+from src.contracts.pdf_ocr import OCR_ROSTER_VALIDATION_VERSION
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
 from src.services._llm_service.openai_client import *
@@ -20,20 +21,20 @@ def _coerce_pdf_ocr_pages(payload: dict | None) -> list[PdfOcrPageText]:
     pages: list[PdfOcrPageText] = []
     seen_numbers: set[int] = set()
     for item in raw_pages:
-        if not isinstance(item, dict):
-            continue
+        if not isinstance(item, dict) or not isinstance(item.get("text"), str):
+            return []
         try:
             page_number = int(str(item.get("page_number") or "").strip())
         except (TypeError, ValueError):
-            continue
+            return []
         if page_number < 1 or page_number in seen_numbers:
-            continue
+            return []
         seen_numbers.add(page_number)
         pages.append(
             PdfOcrPageText(
                 schema_version="1.0",
                 page_number=page_number,
-                text=str(item.get("text") or ""),
+                text=item["text"],
             )
         )
     pages.sort(key=lambda page: page.page_number)
@@ -74,6 +75,7 @@ def openai_ocr_pdf(
         params={
             "model": request.model,
             "response_format": "pdf_ocr_pages",
+            "ocr_roster_validation_version": OCR_ROSTER_VALIDATION_VERSION,
         },
         context={
             "pdf": {
@@ -229,7 +231,7 @@ def openai_ocr_pdf(
         )
         raise AppError(
             code="openai_ocr_invalid_response",
-            message="OpenAI OCR returned no structured pages",
+            message="OpenAI OCR returned invalid or missing structured pages",
             retryable=False,
             context={
                 "model": resolved_model,

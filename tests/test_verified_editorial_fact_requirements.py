@@ -4,6 +4,7 @@ import pytest
 
 from src.generators.artifact_normalization import (
     final_insight_editorial_coverage,
+    remap_editorial_plan_to_verified_facts,
     validate_verified_editorial_plan,
     validate_verified_editorial_plan_revision,
 )
@@ -67,6 +68,49 @@ def test_selection_requires_mandatory_fact_and_one_declared_alternative():
     )
     assert "One" in missing["omitted_essential_themes"]
     assert "One" not in covered["omitted_essential_themes"]
+
+
+def test_verified_remap_preserves_fact_requirements_and_coverage():
+    plan = _plan()
+    plan["material_limitation_evidence_ids"] = ["f4"]
+    facts = [{"fact_id": f"f{number}"} for number in range(1, 5)]
+    remapped = remap_editorial_plan_to_verified_facts(plan, facts)
+    assert remapped["themes"][0]["required_evidence_ids"] == ["verified-fact:f1"]
+    assert remapped["themes"][0]["alternative_evidence_groups"] == [
+        ["verified-fact:f2", "verified-fact:f3"]
+    ]
+    assert remapped["material_limitation_evidence_ids"] == ["verified-fact:f4"]
+    selected = [
+        {"id": "c1", "evidence_id": "verified-fact:f1"},
+        {"id": "c2", "evidence_id": "verified-fact:f2"},
+    ]
+    coverage = final_insight_editorial_coverage(
+        final_insights=selected, candidate_insights=selected, editorial_plan=remapped
+    )
+    assert "One" not in coverage["omitted_essential_themes"]
+
+
+def test_verified_remap_rejects_ambiguous_required_binding():
+    plan = _plan()
+    facts = [
+        {"fact_id": "f1", "provenance": {"discovery_evidence_ids": ["f1"]}},
+        {"fact_id": "other", "provenance": {"discovery_evidence_ids": ["f1"]}},
+        *[{"fact_id": f"f{number}"} for number in range(2, 5)],
+    ]
+    with pytest.raises(AppError):
+        remap_editorial_plan_to_verified_facts(plan, facts)
+
+
+def test_verified_remap_rejects_mixed_canonical_and_legacy_requirements():
+    plan = _plan()
+    for theme in plan["themes"]:
+        theme["evidence_ids"] = [
+            f"verified-fact:{item}" for item in theme["evidence_ids"]
+        ]
+    with pytest.raises(AppError):
+        remap_editorial_plan_to_verified_facts(
+            plan, [{"fact_id": f"f{number}"} for number in range(1, 5)]
+        )
 
 
 def test_verified_plan_preserves_required_and_alternative_fact_decisions():

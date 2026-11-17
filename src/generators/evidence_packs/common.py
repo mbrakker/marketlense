@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from src.utils.errors import AppError
 from src.utils.slugify import slugify
 
 
@@ -98,6 +99,8 @@ def coerce_pages(value: object) -> list[int]:
         if isinstance(item, bool):
             continue
         if isinstance(item, (int, float)):
+            if isinstance(item, float) and not item.is_integer():
+                continue
             page_num = int(item)
             if page_num > 0 and page_num not in seen:
                 seen.add(page_num)
@@ -157,10 +160,11 @@ def extract_evidence_text(value: object) -> str:
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, list):
+        fragments: list[str] = []
         for item in value:
             if isinstance(item, str) and item.strip():
-                return item.strip()
-            if isinstance(item, dict):
+                candidate = item.strip()
+            elif isinstance(item, dict):
                 candidate = first_non_empty_text(
                     item.get("snippet"),
                     item.get("text"),
@@ -168,9 +172,19 @@ def extract_evidence_text(value: object) -> str:
                     item.get("evidence"),
                     item.get("description"),
                 )
-                if candidate:
-                    return candidate
-        return ""
+            else:
+                continue
+            if candidate and candidate not in fragments:
+                fragments.append(candidate)
+        if len(fragments) > 1:
+            raise AppError(
+                code="findings_evidence_fragments_unsupported",
+                message=(
+                    "Multiple evidence fragments require a single source-backed excerpt"
+                ),
+                retryable=False,
+            )
+        return fragments[0] if fragments else ""
     if isinstance(value, dict):
         return first_non_empty_text(
             value.get("snippet"),

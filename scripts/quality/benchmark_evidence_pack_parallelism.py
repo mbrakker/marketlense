@@ -116,6 +116,13 @@ class _DeterministicPromptClient:
 
     def render_prompt(self, request, ctx):
         del ctx
+        if "metrics_json" in request.variables:
+            return SimpleNamespace(
+                text=(
+                    f"metrics {request.variables['metrics_json']}\n"
+                    f"quotes {request.variables['quotes_json']}"
+                )
+            )
         return SimpleNamespace(text=request.template.text)
 
 
@@ -144,6 +151,30 @@ class _BoundedDeterministicModelClient:
 
     def openai_respond_with_vector_store(self, request, ctx):
         del ctx
+        return self._respond(_payload_for(str(request.artifact_family)), request.model)
+
+    def openai_chat_json(self, request, ctx):
+        del ctx
+        sections = {}
+        for line in str(request.user_prompt).splitlines():
+            name, separator, value = line.partition(" ")
+            if separator and name in {"metrics", "quotes"}:
+                sections[name] = json.loads(value)
+        payload = {
+            name: [
+                {
+                    "id": item["id"],
+                    "supported": True,
+                    "confidence": 1.0,
+                    "reason": "The fixture evidence supports this finding.",
+                }
+                for item in sections.get(name, [])
+            ]
+            for name in ("metrics", "quotes")
+        }
+        return self._respond(payload, request.model)
+
+    def _respond(self, payload: dict, model: str):
         with self._slots:
             with self._lock:
                 self.calls += 1
@@ -153,7 +184,6 @@ class _BoundedDeterministicModelClient:
                 )
             try:
                 time.sleep(self._latency_seconds)
-                payload = _payload_for(str(request.artifact_family))
                 return OpenAIResponseResult(
                     schema_version="1.0",
                     text=json.dumps(payload, ensure_ascii=True, sort_keys=True),
@@ -161,7 +191,7 @@ class _BoundedDeterministicModelClient:
                     input_tokens=1,
                     output_tokens=1,
                     tool_calls=0,
-                    model=request.model,
+                    model=model,
                 )
             finally:
                 with self._lock:
@@ -324,6 +354,16 @@ def _run_evidence_pack_sample(
             vector_store_id=f"vs-{index:02d}",
             settings=settings,
             ctx=new_run_context(task_id=f"evidence-pack-matrix:{report_id}"),
+            source_spans=[
+                {
+                    "id": "source:2",
+                    "page": 2,
+                    "text": (
+                        "Measurement is fragmented. "
+                        "Research lead: Measurement needs a common view."
+                    ),
+                }
+            ],
             openai_client=model_client,
             prompt_client=prompt_client,
             analysis_store=analysis_store,
@@ -340,7 +380,7 @@ def _run_evidence_pack_sample(
     ).hexdigest()
     quality_passed = (
         all(_packs_are_complete(packs) for packs in packs_by_report)
-        and model_client.calls == report_count * len(_PACK_REGISTRY)
+        and model_client.calls == report_count * (len(_PACK_REGISTRY) + 2)
         and model_client.maximum_observed_in_flight <= profile.max_in_flight
     )
     return elapsed_ms, digest, quality_passed, model_client.maximum_observed_in_flight
@@ -389,7 +429,8 @@ def _payload_for(pack_name: str) -> dict:
                 {
                     "id": "finding-1",
                     "text": "Measurement is fragmented.",
-                    "evidence": "Page 2",
+                    "evidence": "Measurement is fragmented.",
+                    "pages": [2],
                 }
             ]
         },
@@ -416,11 +457,17 @@ def _payload_for(pack_name: str) -> dict:
 
 
 def _packs_are_complete(packs: dict[str, dict]) -> bool:
-    if tuple(packs) != _PACK_REGISTRY:
+    if tuple(name for name in packs if name != "evidence_fidelity") != _PACK_REGISTRY:
         return False
-    return all(
-        packs[pack_name].get("family_status", {}).get("status") == "generated"
-        for pack_name in _PACK_REGISTRY
+    fidelity = packs.get("evidence_fidelity") or {}
+    return (
+        fidelity.get("readiness_status") == "awaiting_review"
+        and fidelity.get("unsupported_factual_count") == 0
+        and fidelity.get("unresolved_factual_count") == 0
+        and all(
+            packs[pack_name].get("family_status", {}).get("status") == "generated"
+            for pack_name in _PACK_REGISTRY
+        )
     )
 
 

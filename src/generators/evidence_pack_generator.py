@@ -883,7 +883,9 @@ def _prompt_namespace_for_strategy(strategy: EvidencePackStrategy) -> str:
 
 
 def _prompt_family_processing_version(pack_name: str) -> str:
-    if pack_name in {"findings", "quote_candidates"}:
+    if pack_name == "findings":
+        return "report_generation_checkpoint_v4"
+    if pack_name == "quote_candidates":
         return "report_generation_checkpoint_v3"
     return "report_generation_checkpoint_v2"
 
@@ -1329,6 +1331,30 @@ def generate_evidence_packs(
             )
     for strategy in parallel_strategies:
         results[strategy.pack_name] = parallel_results[strategy.pack_name]
+    findings_pack = results.get("findings")
+    if (
+        not validated_source_spans
+        and isinstance(findings_pack, dict)
+        and findings_pack.get("findings")
+    ):
+        raise AppError(
+            code="findings_source_evidence_unavailable",
+            message="Cannot validate findings without retained source evidence",
+            retryable=False,
+            context={"report_id": report_id, "pack": "findings"},
+        )
+    quote_pack = results.get("quote_candidates")
+    if (
+        not validated_source_spans
+        and isinstance(quote_pack, dict)
+        and quote_pack.get("quote_candidates")
+    ):
+        raise AppError(
+            code="quote_candidates_source_evidence_unavailable",
+            message="Cannot validate quote candidates without retained source evidence",
+            retryable=False,
+            context={"report_id": report_id, "pack": "quote_candidates"},
+        )
     if validated_source_spans:
         initial_fidelity = validate_evidence_fidelity(
             results, source_spans=validated_source_spans

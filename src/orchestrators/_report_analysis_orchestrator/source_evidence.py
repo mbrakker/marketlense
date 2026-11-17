@@ -62,6 +62,10 @@ def build_findings_source_spans(
     missing_pages = any(
         page_number not in pages_by_number for page_number in range(1, page_count + 1)
     )
+    source_text_chars = round(
+        source.text_response.text_density * source.text_response.pages_extracted
+    )
+    truncated_text = source_text_chars > source.text_response.char_count
     has_detached_chart_rows = any(
         detached_percent_label_tokens(text) for text in pages_by_number.values()
     )
@@ -74,7 +78,12 @@ def build_findings_source_spans(
         )
         for page_number, text in pages_by_number.items()
     )
-    if missing_pages or has_detached_chart_rows or has_unresolved_chart_layout:
+    if (
+        missing_pages
+        or truncated_text
+        or has_detached_chart_rows
+        or has_unresolved_chart_layout
+    ):
         runtime = source.runtime
         path = source.analysis_pdf_path or runtime.local_pdf_path
         settings = runtime.settings
@@ -83,7 +92,7 @@ def build_findings_source_spans(
         context_windows = max(1, (page_count + context_pages - 1) // context_pages)
         max_chars = min(
             _MAX_FINDINGS_SOURCE_CHARS,
-            max(context_chars, context_chars * context_windows),
+            max(context_chars, context_chars * context_windows, source_text_chars),
         )
         pdf_context = source.pdf_context_for_tasks
         if getattr(pdf_context, "path", None) != path:

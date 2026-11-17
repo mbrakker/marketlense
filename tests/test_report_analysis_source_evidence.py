@@ -16,17 +16,17 @@ from src.contracts.pdf_text import (
     PdfTextPage,
 )
 from src.contracts.run_context import RunContext
-from src.orchestrators._report_analysis_orchestrator.source_evidence import (
-    build_findings_source_spans,
-)
-from src.services.pdf_service import build_pdf_context, extract_pdf_text
-from src.utils.pdf_text_layout import two_panel_chart_image_bbox
+from src.generators.claim_validation_generator import validate_evidence_fidelity
 from src.generators.pdf_chart_panel_identity_generator import (
     transcribe_chart_panel_identity,
 )
 from src.generators.report_generation_dependencies import ReportSourceDependencies
-from src.generators.claim_validation_generator import validate_evidence_fidelity
+from src.orchestrators._report_analysis_orchestrator.source_evidence import (
+    build_findings_source_spans,
+)
+from src.services.pdf_service import build_pdf_context, extract_pdf_text
 from src.utils.errors import AppError
+from src.utils.pdf_text_layout import two_panel_chart_image_bbox
 
 
 def test_findings_source_spans_expand_beyond_prompt_page_limit_without_changing_it():

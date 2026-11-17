@@ -939,14 +939,25 @@ def test_openai_shared_adapts_responses_and_ocr_payload_boundaries() -> None:
         "seed",
         "temperature",
     }
+    assert (
+        openai_responses._coerce_pdf_ocr_pages(
+            {
+                "pages": [
+                    {"page_number": "2", "text": "second"},
+                    {"page_number": "1", "text": "first"},
+                    {"page_number": "1", "text": "duplicate"},
+                    {"page_number": "bad", "text": "invalid"},
+                    {"page_number": 0, "text": "invalid"},
+                ]
+            }
+        )
+        == []
+    )
     assert openai_responses._coerce_pdf_ocr_pages(
         {
             "pages": [
                 {"page_number": "2", "text": "second"},
                 {"page_number": "1", "text": "first"},
-                {"page_number": "1", "text": "duplicate"},
-                {"page_number": "bad", "text": "invalid"},
-                {"page_number": 0, "text": "invalid"},
             ]
         }
     ) == [

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List
 
+OCR_ROSTER_VALIDATION_VERSION = "2"
+
 
 @dataclass(frozen=True)
 class PdfOcrPageText:
@@ -25,7 +27,10 @@ class PdfOcrAggregateResponse:
     )
     raw_text: str = field(
         metadata={
-            "doc": "Serialized raw OCR chunk responses collected across the full source PDF."
+            "doc": (
+                "Serialized raw OCR chunk responses collected across the "
+                "full source PDF."
+            )
         }
     )
     models: List[str] = field(
