@@ -1657,6 +1657,13 @@ def run_grounding_check(
             retained_claim_inputs,
             semantic_results,
         )
+        blocking_retained_claim_ids = {
+            result.candidate.claim_id
+            for result in updated_claim_package.results
+            if result.candidate.factual
+            and result.semantic_validator_used
+            and result.status in {"unresolved", "unsupported"}
+        }
         if retained_claim_validation_sink is not None:
             retained_claim_validation_sink(updated_claim_package)
         logger.info(
@@ -1800,7 +1807,11 @@ def run_grounding_check(
                             f"{violation_type}]"
                             f" {reason}.{dimension_text}: {text[:200]}"
                         ),
-                        severity=grounding_issue_severity(
+                        severity="error"
+                        if verified_mode
+                        and retained_entity_ids.get(item_id)
+                        in blocking_retained_claim_ids
+                        else grounding_issue_severity(
                             section_policy_value=section_policy(section),
                             classification=classification or "factual_claim",
                             violation_type=violation_type,
@@ -1890,6 +1901,11 @@ def run_grounding_check(
                     violation_type=violation_type,
                     text=text,
                 )
+                if (
+                    verified_mode
+                    and retained_entity_ids.get(item_id) in blocking_retained_claim_ids
+                ):
+                    severity = "error"
                 if severity == "pass":
                     continue
                 if text:

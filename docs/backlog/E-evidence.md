@@ -1139,6 +1139,17 @@ seconds. A preceding isolated harness attempt made one additional provider call
 but failed accounting because its publisher attribution was missing; its
 tokens and cost were not retained and are not included in those totals.
 
+The next correction aligns verified-mode grounding issue severity with the
+existing retained-claim disposition for identity-bound factual candidates.
+An LLM verdict that leaves a retained claim unresolved or unsupported now
+reaches the existing scoped repair planner as an error; an explicitly
+non-fatal editorial interpretation remains informational. A targeted test
+reproduced the prior mismatch and verifies expert-comment repair routing;
+grounding, retained-claim and regeneration regression suites passed 498 tests.
+This is a provider-free boundary result, not a successful Activate repair or
+end-to-end acceptance. The retained failed candidate has not been rerun after
+the correction; E18 remains Active/PARTIAL and publication remains blocked.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This
