@@ -1106,6 +1106,20 @@ distinct findings. This corrects reporting only; the first repair still failed
 independent editorial review, and the original request was not retained well
 enough to establish why its reviewer omitted two later-nominated creator fields.
 
+On 2026-11-17, a bounded production-path review of the retained Activate
+artifacts rebuilt and checked the checkpoint's canonical source identity,
+verified-fact digest and evidence packs. Both creator-view item IDs were in
+the reconstructed request; no compaction was applied to that call. The review
+nominated both creator leaves as well as the other shallow interpretations:
+one call, 120,195 input and 11,726 output tokens, $0.017666 and 83.52 seconds.
+The original rendered request was not retained, so this is a current stage
+replay, not proof of the original omission's cause. An earlier exploratory
+review used discovery rather than canonical limitation packs (three calls,
+361,171 input and 25,885 output tokens, $0.049060, 192.52 seconds) and is not
+an exact comparison. Neither call repaired or published the report. The frozen
+repair benchmark currently omits verified authority when invoking validation
+and regeneration, so it is not a faithful verified-mode repair replay.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This
