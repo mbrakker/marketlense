@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
+
 from src.contracts.claim_validation import (
     ClaimCandidate,
     ClaimSemanticInput,
@@ -18,6 +20,10 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_sentence_hash,
 )
 from src.contracts.validation import ValidationRequest
+from src.generators.claim_validation_generator import (
+    retained_claim_semantic_inputs,
+    validate_retained_claims,
+)
 from src.generators.public_editorial_quality_generator import (
     _retained_soft_copy_sentence_items,
 )
@@ -25,6 +31,9 @@ from src.generators.validation.grounding import (
     _retained_claim_semantic_results,
     grounding_payload,
     run_grounding_check,
+)
+from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
+    _build_regeneration_plan,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _public_editorial_review_issue,
@@ -36,6 +45,81 @@ from tests._test_validation_generator._shared import (
     _report,
     _settings,
 )
+from tests.test_verified_grounding_contract_corrections import (
+    _verified_editorial_request,
+)
+
+
+@pytest.mark.parametrize(
+    ("violation", "expected_severity"),
+    [("not_established", "error"), ("non_fatal_interpretation", "info")],
+)
+def test_retained_recommendation_disposition_reaches_grounding_repair(
+    tmp_path, violation, expected_severity
+):
+    text = "For planning, use each measure only for its decision."
+    request, source_identity = _verified_editorial_request(text, "recommendation")
+    package = validate_retained_claims(
+        request.artifacts,
+        request.evidence_packs,
+        source_identity=source_identity,
+        verified_facts_only=True,
+    )
+    inputs = retained_claim_semantic_inputs(
+        package, request.evidence_packs, source_identity=source_identity
+    )
+    inventory = grounding_payload(
+        request, request.artifacts, retained_claim_inputs=inputs
+    )
+    item = next(
+        item
+        for item in inventory["retained_claims_to_ground"]
+        if item["section"] == "expert_comment"
+    )
+    response = {
+        "checks": [
+            {
+                "item_id": item["item_id"],
+                "classification": "prescriptive_recommendation",
+                "entailment_outcome": "not_established",
+                "violation_type": violation,
+                "reason": "The source reports the measures but not this decision rule.",
+            }
+        ]
+    }
+    packages = []
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(grounding_payload=response),
+        ctx=_ctx(),
+        source_id=source_identity,
+        retained_claim_validation_sink=packages.append,
+    )
+    result = next(
+        result
+        for result in packages[-1].results
+        if result.candidate.claim_id == "soft_copy:expert_comment:integration"
+    )
+    issue = next(
+        issue for issue in issues if issue.entity_id == result.candidate.claim_id
+    )
+    assert result.status == (
+        "unresolved" if violation == "not_established" else "not_applicable"
+    )
+    assert issue.severity == expected_severity
+    if expected_severity == "error":
+        plan = _build_regeneration_plan(
+            issues=[issue],
+            artifacts=request.artifacts,
+            broad_retry_available=False,
+            verified_mode=True,
+        )
+        assert any(target.target_section == "expert_comment" for target in plan.targets)
 
 
 def _compatible_protected_facts() -> dict[str, dict[str, str]]:
