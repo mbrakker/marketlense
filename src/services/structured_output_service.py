@@ -386,6 +386,11 @@ def execute_structured_output(
         schema_errors=(
             _join_errors(exact_errors, repaired_evaluation.error_detail)
             if reuse_primary
+            or (
+                request.artifact_family == "public_editorial_quality"
+                and initial.error_class
+                == "public_editorial_quality_obligation_review_support_mismatch"
+            )
             else repaired_evaluation.error_detail
         ),
         attempt=2,
@@ -873,6 +878,8 @@ _ACTIONABLE_CONTEXT_LIST_KEYS = (
     "missing_references",
     "missing_reference_ids",
     "missing_evidence_ids",
+    "bound_evidence_ids",
+    "supporting_insight_ids",
     "missing_claim_ids",
     "missing_or_ambiguous_public_item_ids",
     "item_ids",

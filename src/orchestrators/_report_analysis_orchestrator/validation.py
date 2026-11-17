@@ -759,6 +759,10 @@ def _validate_original_essential_obligation_assessments(
                 context={
                     "theme": theme,
                     "unbound_evidence_ids": unbound_evidence_ids,
+                    "bound_evidence_ids": sorted(
+                        supported_evidence_ids & obligation_evidence_ids
+                    ),
+                    "supporting_insight_ids": supporting_ids,
                     "missing_evidence_ids": missing_evidence_ids,
                 },
             )

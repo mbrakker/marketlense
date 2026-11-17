@@ -1174,6 +1174,17 @@ grounding events, 85,443 input and 19,258 output tokens, estimated $0.017592;
 its results are excluded. No raw model response was retained to establish why
 the model repeated the unbound citation. E18 remains Active/PARTIAL.
 
+Follow-up diagnosis found two recovery-handoff gaps in that failure sequence:
+the validator reported the unbound alternative but omitted the evidence IDs
+actually bound to the named supporting insights, and regeneration discarded the
+original binding error after the model-repair response failed on a different
+report-target contract. Recovery now receives those bounded identifiers and,
+for this editorial-review mismatch, both the original and latest errors. The
+reviewer still makes the semantic decision and every recovered response must
+pass the unchanged source-binding and repair-target checks. Focused synthetic
+regressions reproduced both handoff gaps; they do not prove these gaps caused
+the live model's responses or establish successful live editorial acceptance.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This
