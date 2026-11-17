@@ -33,6 +33,13 @@ class TestTimePeriodUtils(unittest.TestCase):
     def test_unrecognized_value_is_omitted(self) -> None:
         self.assertIsNone(normalize_time_period(" FY25 "))
 
+    def test_mixed_precision_range_does_not_drop_month(self) -> None:
+        self.assertIsNone(normalize_time_period("October 2025 to 2026"))
+        self.assertIsNone(normalize_time_period("2024 to October 2025"))
+        self.assertEqual(
+            "2021–2025", normalize_time_period("forecast from 2021 to 2025")
+        )
+
     def test_long_malformed_model_value_is_omitted_with_multiple_years(
         self,
     ) -> None:

@@ -120,6 +120,8 @@ def source_backed_title(resolution: object) -> str:
 
     title = _clean(getattr(resolution, "title", ""))
     explicit = _clean(getattr(resolution, "explicit_source_title", ""))
+    if "title_candidates_ambiguous" in (getattr(resolution, "issues", ()) or ()):
+        return ""
     if explicit:
         return "" if is_generic_report_title(explicit) else explicit
     if (
@@ -162,8 +164,14 @@ def resolve_report_title(
     ranked = tuple(
         sorted(candidates, key=lambda item: (-item.score, item.value.casefold()))
     )
-    explicit = next(
-        (item.value for item in ranked if item.source == "cover_title_page"), ""
+    suspect_cover = any(
+        number == 1 and _cover_text_may_be_interleaved(text, publisher)
+        for number, text in page_items
+    )
+    explicit = (
+        next((item.value for item in ranked if item.source == "cover_title_page"), "")
+        if not suspect_cover
+        else ""
     )
     if not ranked:
         return ReportTitleResolution(
@@ -172,7 +180,7 @@ def resolve_report_title(
             issues=("generic_title_missing",),
         )
     chosen = ranked[0]
-    ambiguous = _is_ambiguous(ranked)
+    ambiguous = suspect_cover or _is_ambiguous(ranked)
     if ambiguous and identity_resolver is not None:
         response = identity_resolver(
             {
@@ -229,9 +237,15 @@ def resolve_report_title(
         title=chosen.value,
         edition=_edition(chosen.value),
         publisher_candidate=publisher,
-        confidence="high"
-        if chosen.source in {"cover_title_page", "repeated_header_title"}
-        else "medium",
+        confidence=(
+            "low"
+            if suspect_cover
+            else (
+                "high"
+                if chosen.source in {"cover_title_page", "repeated_header_title"}
+                else "medium"
+            )
+        ),
         evidence=(chosen.evidence,) if chosen.evidence else (),
         candidate_source=chosen.source,
         explicit_source_title=explicit,
@@ -344,6 +358,24 @@ def _cover_titles(lines: list[str], publisher_name: str) -> list[str]:
         ):
             values.append(combined)
     return values
+
+
+def _cover_text_may_be_interleaved(text: str, publisher_name: str) -> bool:
+    """Route a discarded cover fragment and later lowercase edition to vision."""
+    lines = [
+        cleaned
+        for line in text.splitlines()[:6]
+        if (cleaned := _clean(line))
+        and not _is_cover_brand_line(cleaned, publisher_name)
+        and not re.match(r"(?:https?://|www\.)", cleaned)
+    ]
+    return bool(
+        len(lines) >= 3
+        and len(lines[0].split()) >= 2
+        and not _looks_like_cover_title(lines[0])
+        and _looks_like_cover_title(lines[1])
+        and any(re.match(r"[a-z]", line) and _YEAR.search(line) for line in lines[2:])
+    )
 
 
 def _first_cover_block_title(lines: list[str], publisher_name: str) -> str:

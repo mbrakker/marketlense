@@ -1196,6 +1196,63 @@ not a new transactional repair, PDF-page inspection, HTML generation or
 publication-readiness run; the earlier candidate rollback remains unchanged.
 E18 remains Active/PARTIAL.
 
+At `525a20e6`, a fresh retained-authority Activate replay again ran the
+baseline and one transactional repair. Baseline review flagged four repetitive
+implications; factual candidate validation found zero unsupported and zero
+unresolved claims, but independent review then flagged two unchanged YouTube
+implication/action fields that the baseline had not identified. The first
+candidate was rolled back, so first-repair acceptance failed. Both fields and
+their two evidence bindings were present in a reconstructed baseline semantic
+review projection; the original rendered request was not retained, and the
+changed surrounding report prevents an identical-input verdict comparison.
+The replay used 43 provider events, 1,422,234 input tokens (136,970 cached),
+160,258 output tokens, an estimated $0.210024, and 834.59 seconds. It did not
+produce HTML or publish. The separately observed public-item inventory omitted
+secondary insight evidence IDs even though semantic review received them; the
+inventory now reuses the existing complete binding projection. This reporting
+fix is not evidence that the review omission or first-repair failure is fixed.
+
+The separate fresh Capgemini run at `525a20e6` promoted candidate 1 and
+recorded validation/readiness pass without a WordPress write. The runner's
+three automatic repair actions are not three candidate attempts. It recorded
+202 provider calls, 2,364,610 input and 381,268 output tokens, nine file-search
+calls, an estimated $0.440776 and 2,256.14 seconds. An independent review of
+the ten principal findings found their cited PDF-page figures consistent, but
+found a malformed cover-derived title, repetitive expert copy, and misleading
+period/region summaries; automated readiness is not an editorial acceptance.
+The source's 2024 personalization month is itself inconsistent between the
+chart legend and source note and must not be silently resolved. Initial
+grounding also rejected a MarketLense-authored recommendation on authorship
+grounds despite identifying it as a compatible recommendation. The retained
+claim batch omitted public-copy classification/context hints available to the
+separate public-item batch. A proposed exact-ID/text/evidence-matched handoff
+was not retained: per-claim result reuse does not compare the current rendered
+context, so later context changes could reuse an incompatible verdict. The
+rendered prompt was not retained, and the omission is not established as the
+cause of the model verdict. Mixed-precision period formatting no
+longer discards the month from the observed metadata, but this does not infer
+or establish the survey period. The title and editorial-quality issues remain
+open pending fresh acceptance. A narrow suspected-interleaving cover pattern
+now routes through the existing visual identity resolver instead of promoting
+the suspect extracted cover text as authoritative; a provider-backed replay
+is still needed to establish the result on the actual cover.
+
+The fresh Activate run at the same `525a20e6` admitted ten verified facts but
+failed validation after three rolled-back candidates; no HTML or WordPress
+write was produced. It recorded 616 provider calls, 3,926,124 input and
+675,219 output tokens, nine file-search calls, $0.723244 estimated cost and
+5,278.437 seconds. Its first candidate passed mutation scope and evidence
+lineage checks but failed grounding and independent editorial review. The
+initial audio claim attributed the chart solely to the research study; the
+original physical PDF page 17 credits both Activate analysis and the study,
+so that attribution is not established by the cited page. The initial review
+also identified broad repetition of findings as implications; subsequent
+review continued to identify generic and repetitive leaves after repair.
+The retained evidence does not establish a deterministic cause for those
+semantic judgments. The previously described context/cache gap remains open;
+neither new validator nor extra retry was added. First-pass and first-repair
+acceptance remain unmet, and the post-fix two-report acceptance remains open.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This

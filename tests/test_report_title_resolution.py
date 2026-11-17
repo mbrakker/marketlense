@@ -240,6 +240,32 @@ def test_ambiguous_title_candidates_use_one_identity_resolver_call():
     assert len(calls) == 1
 
 
+def test_interleaved_cover_is_sent_to_existing_visual_identity_resolution():
+    cover = (
+        "What matters to\nHow AI is transforming\n"
+        "value perception\ntoday’s consumer 2026"
+    )
+    initial = _resolve(file_name="consumer-trends-2026.pdf", pages=[(1, cover)])
+    assert "title_candidates_ambiguous" in initial.issues
+    assert initial.explicit_source_title == ""
+    assert source_backed_title(initial) == ""
+
+    calls = []
+
+    def resolve_identity(evidence):
+        calls.append(evidence)
+        return {"title": "What matters to today’s consumer 2026"}
+
+    resolved = _resolve(
+        file_name="consumer-trends-2026.pdf",
+        pages=[(1, cover)],
+        identity_resolver=resolve_identity,
+    )
+    assert len(calls) == 1
+    assert resolved.candidate_source == "llm_identity_resolution"
+    assert source_backed_title(resolved) == "What matters to today’s consumer 2026"
+
+
 def test_cover_subtitle_is_retained_when_it_completes_the_title():
     resolution = _resolve(
         file_name="state-of-commerce-2026.pdf",

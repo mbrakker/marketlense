@@ -11,6 +11,29 @@ from tests._test_public_editorial_quality_generator._shared import (
 )
 
 
+def test_public_insight_inventory_preserves_all_retained_evidence_bindings() -> None:
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "combined-finding",
+                "text": "The two populations have different outlooks.",
+                "so_what": "The distinction affects planning.",
+                "evidence_id": "verified-fact:first",
+                "evidence_ids": ["verified-fact:first", "verified-fact:second"],
+            }
+        ]
+    }
+
+    items = enumerate_public_editorial_items(artifacts)
+    insight_items = [item for item in items if item.item_id.startswith("insight:")]
+
+    assert len(insight_items) == 2
+    assert all(
+        item.evidence_ids == ["verified-fact:first", "verified-fact:second"]
+        for item in insight_items
+    )
+
+
 def test_public_item_inventory_and_identity_evidence_fail_closed_atomically() -> None:
     artifacts = deepcopy(_retained_artifacts())
     artifacts["public_metadata"] = {

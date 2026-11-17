@@ -143,6 +143,9 @@ def _find_embedded_public_period(value: str) -> Optional[str]:
         if period := _format_date_range(match):
             candidates.append(period)
     for match in _YEAR_RANGE_TOKEN_RE.finditer(value):
+        preceding_word = re.search(r"\b([A-Za-z.]+)\s*$", value[: match.start()])
+        if preceding_word and _month_to_index(preceding_word.group(1)):
+            continue
         candidates.append(f"{match.group('from')}–{match.group('to')}")
     unique = _dedupe_preserve_order(candidates)
     return unique[0] if len(unique) == 1 else None

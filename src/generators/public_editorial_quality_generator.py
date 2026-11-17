@@ -2323,7 +2323,7 @@ def enumerate_public_editorial_items(
         insight_id = insight_entity_id(insight)
         if not insight_id:
             continue
-        evidence_id = str(insight.get("evidence_id") or "").strip()
+        evidence_ids = _public_evidence_ids(insight)
         for field_name in ("text", "so_what", "now_what"):
             if _sanitize_public_prose(insight.get(field_name)):
                 items.append(
@@ -2333,7 +2333,7 @@ def enumerate_public_editorial_items(
                         if field_name != "text"
                         else f"insights:{insight_id}",
                         _sanitize_public_prose(insight.get(field_name)),
-                        [evidence_id] if evidence_id else [],
+                        evidence_ids,
                         "insights_bundle",
                         evidence_text=str(insight.get("evidence") or ""),
                     )
