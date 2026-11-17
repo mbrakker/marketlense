@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -502,8 +503,16 @@ def test_repair_scorecard_keys_repeated_strategy_by_failure_and_evidence(
     assert scorecard.repeated_failed_candidate_attempt_count == 2
 
 
+@pytest.mark.parametrize(
+    ("allowed_path", "valid"),
+    [
+        ("summary.tldr", True),
+        ("insights_final[item=claim-1].so_what", True),
+        ("insights_final[item=claim/1].so_what", False),
+    ],
+)
 def test_repair_scorecard_pairs_a_frozen_baseline_denominator(
-    tmp_path: Path,
+    tmp_path: Path, allowed_path: str, valid: bool,
 ) -> None:
     reports_db = str(tmp_path / "reports.sqlite")
     usage_db = str(tmp_path / "usage.sqlite")
@@ -520,6 +529,7 @@ def test_repair_scorecard_pairs_a_frozen_baseline_denominator(
         promotion_outcome="rolled_back",
         persisting=("failure-a",),
     )
+    baseline_audit["allowed_paths"] = [allowed_path]
     baseline_manifest = {
         "schema_version": "1.0",
         "frozen": True,
@@ -537,7 +547,7 @@ def test_repair_scorecard_pairs_a_frozen_baseline_denominator(
                 "initial_validation_sha256": "e" * 64,
                 "initial_failure_fingerprints": [initial_fingerprint],
                 "evidence_pack_sha256": {"findings": "f" * 64},
-                "expected_legal_mutation_scope": ["summary.tldr"],
+                "expected_legal_mutation_scope": [allowed_path],
                 "identities": {
                     "prompt_identity_sha256": "1" * 64,
                     "artifact_schema_identity": "schema-" + "2" * 64,
@@ -578,6 +588,8 @@ def test_repair_scorecard_pairs_a_frozen_baseline_denominator(
         persisting=(),
         attempt_index=2,
     )
+    first["allowed_paths"] = [allowed_path]
+    second["allowed_paths"] = [allowed_path]
     for payload in (first, second):
         path = audit_root / "report-1" / "report_analysis"
         path.mkdir(parents=True, exist_ok=True)
@@ -597,6 +609,9 @@ def test_repair_scorecard_pairs_a_frozen_baseline_denominator(
     artifact = build_validation_reliability_artifact(request, _ctx())
 
     scorecard = artifact.repair_scorecard
+    if not valid:
+        assert scorecard.benchmark_denominator_complete is False
+        return
     assert scorecard.benchmark_case_count == 1
     assert scorecard.benchmark_denominator_complete is True
     assert scorecard.benchmark_comparison_status == "paired"

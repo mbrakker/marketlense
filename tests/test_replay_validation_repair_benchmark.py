@@ -35,6 +35,10 @@ from src.orchestrators._report_generation_orchestrator.checkpoints import (
 from src.services.llm_service import LLMServiceClient
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
+from tests.test_verified_facts_validation_authority import (
+    SOURCE_IDENTITY,
+    _authority_artifacts,
+)
 
 
 def test_benchmark_manifest_requires_its_frozen_self_hash(tmp_path: Path) -> None:
@@ -95,6 +99,9 @@ def test_benchmark_reuses_the_retained_initial_validation_failures() -> None:
                     "repair_target": "summary",
                     "entity_id": "summary:1",
                     "evidence_ids": ["finding:1"],
+                    "classification": "analyst_interpretation",
+                    "entailment_outcome": "not_established",
+                    "violation_type": "editorial_quality",
                 }
             ],
         }
@@ -102,6 +109,9 @@ def test_benchmark_reuses_the_retained_initial_validation_failures() -> None:
     assert report.status == "fail"
     assert report.issues[0].rule_id == "grounding"
     assert report.issues[0].repair_target == "summary"
+    assert report.issues[0].classification == "analyst_interpretation"
+    assert report.issues[0].entailment_outcome == "not_established"
+    assert report.issues[0].violation_type == "editorial_quality"
 
 
 def _validation_report_with(*rule_ids: str) -> ValidationReport:
@@ -416,9 +426,23 @@ def test_frozen_payload_rejects_missing_fields_and_hash_mismatch() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "variant",
+    [
+        "legacy",
+        "verified",
+        "missing_source",
+        "wrong_source",
+        "stale_digest",
+        "checkpoint_conflict",
+        "missing_snapshot",
+    ],
+)
 def test_benchmark_case_preflight_merges_and_validates_before_repair_setup(
     tmp_path: Path,
+    variant: str,
 ) -> None:
+    verified = variant != "legacy"
     artifacts = {
         "schema_version": "1.0",
         "summary": {
@@ -428,6 +452,34 @@ def test_benchmark_case_preflight_merges_and_validates_before_repair_setup(
         "insights_final": ["one", "two", "three", "four", "five"],
         "quotes_final": [{"text": "Retained quote", "speaker": "Analyst"}],
     }
+    if verified:
+        verified_artifacts = _authority_artifacts()
+        artifacts["verified_facts"] = verified_artifacts["verified_facts"]
+        artifacts["_cache"] = verified_artifacts["_cache"]
+        if variant == "stale_digest":
+            artifacts["_cache"]["visual_authority_canary"]["digest"] = "b" * 64
+        artifacts["insights_final"] = [
+            {"id": str(index), "text": f"Retained insight {index}"}
+            for index in range(1, 6)
+        ]
+        artifacts["editorial_plan"] = {
+            "report_thesis": "Retained report thesis",
+            "themes": [
+                {
+                    "theme": "First",
+                    "priority": 1,
+                    "evidence_ids": ["verified-fact:fact-1"],
+                },
+                {
+                    "theme": "Second",
+                    "priority": 2,
+                    "evidence_ids": ["verified-fact:fact-1"],
+                },
+            ],
+        }
+        if variant == "missing_snapshot":
+            del artifacts["verified_facts"]
+            del artifacts["_cache"]
     base_payload = _complete_payload_seed()
     merged_payload = merge_artifacts_into_payload(
         _report_payload_from_dict(base_payload), artifacts
@@ -457,10 +509,14 @@ def test_benchmark_case_preflight_merges_and_validates_before_repair_setup(
         "initial_validation",
         {"schema_version": "1.0", "issues": [{"rule_id": "grounding"}]},
     )
-    retain(
-        "pre_repair_checkpoint",
-        {"payload": {"analysis": {"payload": base_payload}}},
-    )
+    analysis = {"payload": base_payload}
+    if variant in {"checkpoint_conflict", "missing_snapshot"}:
+        analysis["verified_authority_context"] = {
+            "source_identity": (
+                "other-source" if variant == "checkpoint_conflict" else SOURCE_IDENTITY
+            )
+        }
+    retain("pre_repair_checkpoint", {"payload": {"analysis": analysis}})
     case = {
         "case_id": "fixture",
         "report_id": "report-fixture",
@@ -475,6 +531,10 @@ def test_benchmark_case_preflight_merges_and_validates_before_repair_setup(
             "merged_canonical_sha256": sha256_json(merged_payload.to_dict()),
         },
     }
+    if verified and variant != "missing_source":
+        case["source_identity_id"] = SOURCE_IDENTITY
+    if variant == "wrong_source":
+        case["source_identity_id"] = f"frozen-report|pdf-sha256:{'b' * 64}"
     root_ctx = RunContext(
         schema_version="1.0",
         run_id="benchmark-fixture",
@@ -483,12 +543,30 @@ def test_benchmark_case_preflight_merges_and_validates_before_repair_setup(
         trace_id="benchmark-fixture",
     )
 
+    if variant == "checkpoint_conflict":
+        with pytest.raises(ValueError, match="checkpoint verified authority"):
+            _preflight_benchmark_cases([case], tmp_path, root_ctx)
+        return
+    if variant in {"missing_source", "wrong_source", "stale_digest", "missing_snapshot"}:
+        with pytest.raises(AppError) as raised:
+            _preflight_benchmark_cases([case], tmp_path, root_ctx)
+        assert raised.value.code == "verified_fact_snapshot_invalid"
+        return
     prepared = _preflight_benchmark_cases([case], tmp_path, root_ctx)
 
     assert prepared[0]["base_payload"].figure.title == "Original figure title"
     assert prepared[0]["base_payload"].figure.evidence == "Original figure evidence"
     assert prepared[0]["initial_payload"].figure == prepared[0]["base_payload"].figure
     assert prepared[0]["initial_payload"].quote.text == "Retained quote"
+    if verified:
+        authority = prepared[0]["verified_authority_context"]
+        assert authority.source_identity == SOURCE_IDENTITY
+        assert authority.evidence_packs["findings"]["findings"][0]["id"] == (
+            "verified-fact:fact-1"
+        )
+        assert prepared[0]["evidence_packs"]["findings"]["items"] == []
+    else:
+        assert prepared[0]["verified_authority_context"] is None
 
 
 def test_benchmark_case_preflight_rejects_incomplete_payload_before_clients(

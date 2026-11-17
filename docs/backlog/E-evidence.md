@@ -1117,8 +1117,12 @@ replay, not proof of the original omission's cause. An earlier exploratory
 review used discovery rather than canonical limitation packs (three calls,
 361,171 input and 25,885 output tokens, $0.049060, 192.52 seconds) and is not
 an exact comparison. Neither call repaired or published the report. The frozen
-repair benchmark currently omits verified authority when invoking validation
-and regeneration, so it is not a faithful verified-mode repair replay.
+repair benchmark now reconstructs and checks verified authority from the pinned
+source identity, preserves canonical and discovery packs separately, and
+passes that authority through validation and regeneration. It also accepts
+bounded stable-item paths in scorecard manifests. Provider-free preflight on the
+retained Activate checkpoint matched all 10 canonical facts and both packs;
+this does not establish a successful live repair or editorial acceptance.
 
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality

@@ -75,6 +75,10 @@ from src.services.validation_reliability_service import (
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
+from src.utils.verified_facts import (
+    build_verified_authority_context,
+    verified_facts_mode,
+)
 
 _SCHEMA_IDENTITY_PATHS = (
     "src/schemas/artifacts.schema.json",
@@ -169,9 +173,12 @@ def _validation_report(payload: dict[str, Any]) -> ValidationReport:
             severity=str(item.get("severity") or "error"),
             affected_section=str(item.get("affected_section") or ""),
             rule_id=str(item.get("rule_id") or ""),
+            violation_type=str(item.get("violation_type") or ""),
             repair_target=str(item.get("repair_target") or ""),
             entity_id=str(item.get("entity_id") or ""),
             evidence_ids=[str(value) for value in item.get("evidence_ids", [])],
+            classification=str(item.get("classification") or ""),
+            entailment_outcome=str(item.get("entailment_outcome") or ""),
             schema_version=str(item.get("schema_version") or "1.0"),
         )
         for item in raw_issues
@@ -547,6 +554,45 @@ def _preflight_benchmark_cases(
             raise ValueError("frozen benchmark case must be an object")
         paths, _ = _case_paths(case, workspace)
         artifacts = _read_json(paths["artifacts"])
+        state = case.get("pre_repair_state")
+        checkpoint_path = (
+            paths.get(str(state.get("input_file") or ""))
+            if isinstance(state, dict)
+            else None
+        )
+        analysis = None
+        if checkpoint_path is not None:
+            checkpoint = _read_json(checkpoint_path)
+            payload = checkpoint.get("payload")
+            analysis = payload.get("analysis") if isinstance(payload, dict) else None
+        checkpoint_authority = (
+            analysis.get("verified_authority_context")
+            if isinstance(analysis, dict)
+            else None
+        )
+        authority = (
+            build_verified_authority_context(
+                artifacts,
+                expected_source_identity=str(case.get("source_identity_id") or ""),
+            )
+            if verified_facts_mode(artifacts) or checkpoint_authority is not None
+            else None
+        )
+        if (
+            authority is not None
+            and isinstance(analysis, dict)
+            and (
+                (
+                    "verified_authority_context" in analysis
+                    and analysis["verified_authority_context"] != asdict(authority)
+                ) or (
+                    "authoritative_evidence_packs" in analysis
+                    and analysis["authoritative_evidence_packs"]
+                    != authority.evidence_packs
+                )
+            )
+        ):
+            raise ValueError("checkpoint verified authority does not match")
         evidence_packs = {
             name: _read_json(paths[name]) for name in required_evidence if name in paths
         }
@@ -603,6 +649,7 @@ def _preflight_benchmark_cases(
                 "paths": paths,
                 "artifacts": artifacts,
                 "evidence_packs": evidence_packs,
+                "verified_authority_context": authority,
                 "report_context": report_context,
                 "historical_validation": initial_validation,
                 "case_ctx": case_ctx,
@@ -704,6 +751,10 @@ def replay_benchmark(
         case = prepared["case"]
         artifacts = prepared["artifacts"]
         evidence_packs = prepared["evidence_packs"]
+        authority = prepared["verified_authority_context"]
+        factual_packs = authority.evidence_packs if authority else evidence_packs
+        verified_source = authority.source_identity if authority else ""
+        verified_digest = authority.verified_fact_digest if authority else ""
         report_context = prepared["report_context"]
         historical_validation = prepared["historical_validation"]
         case_ctx = prepared["case_ctx"]
@@ -744,10 +795,12 @@ def replay_benchmark(
             mode_ctx=case_ctx,
             base_payload=base_payload,
             current_artifacts=artifacts,
-            evidence_packs=evidence_packs,
+            evidence_packs=factual_packs,
             vector_store_id=None,
             dependencies=dependencies,
             validation_openai_client=validation_model_client,
+            verified_source_identity=verified_source,
+            verified_fact_digest=verified_digest,
         )
         if any(
             not issue.rule_id
@@ -798,7 +851,7 @@ def replay_benchmark(
                     base_payload=base_payload,
                     current_artifacts=artifacts,
                     current_validation_report=validation_before,
-                    evidence_packs=evidence_packs,
+                    evidence_packs=factual_packs,
                     source_status=(
                         artifacts.get("source_status")
                         if isinstance(artifacts.get("source_status"), dict)
@@ -809,6 +862,11 @@ def replay_benchmark(
                     dependencies=dependencies,
                     validation_openai_client=validation_model_client,
                     regeneration_openai_client=regeneration_model_client,
+                    discovery_evidence_packs=evidence_packs,
+                    source_identity=source_identity_id,
+                    verified_source_identity=verified_source,
+                    verified_fact_digest=verified_digest,
+                    verified_authority_context=authority,
                 )
             except AppError as error:
                 terminal_failure = _terminal_case_failure(error)

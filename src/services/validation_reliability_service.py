@@ -128,7 +128,9 @@ _REQUIRED_USAGE_ATTRIBUTION = (
     "producer_build_identity",
 )
 _SAFE_REPAIR_TOKEN = re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
-_SAFE_REPAIR_PATH = re.compile(r"^[A-Za-z0-9._:/\[\]-]{1,256}$")
+_SAFE_REPAIR_PATH = re.compile(
+    r"^(?=.{1,256}$)(?:[A-Za-z0-9._:/\[\]-]|\[item=[A-Za-z0-9._:-]+\])+$"
+)
 _EVIDENCE_INTRODUCTION_CATEGORIES = {
     "unknown_or_hallucinated_evidence_introduction",
     "unsupported_claim_evidence_introduction",
