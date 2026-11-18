@@ -386,11 +386,16 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     ]
     for artifact in [original, *candidates]:
         _set_interpretive_summary_provenance(artifact)
+        for claim in artifact["soft_copy_claim_provenance"]["claims"]:
+            if claim["text_hash"] == hashlib.sha256(b"Original summary").hexdigest():
+                claim["claim_id"] = "soft_copy:summary:unchanged"
+                claim["evidence_ids"] = ["f1"]
     regeneration_inputs = []
     regeneration_artifact_inputs = []
     repair_usage_attempts = []
     regeneration_targets = []
     regeneration_strategies = []
+    planned_findings = []
     retry_memories = []
     candidate_package_reads = []
     promoted_candidate_packages = []
@@ -429,7 +434,18 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
                         affected_section="linkedin_post",
                         rule_id="candidate_y",
                         repair_target="linkedin_post",
-                    )
+                    ),
+                    ValidationIssue(
+                        schema_version="1.0",
+                        message=(
+                            "The item denominator is not established by the source."
+                        ),
+                        severity="error",
+                        affected_section="summary",
+                        rule_id="grounding",
+                        entity_id="soft_copy:summary:unchanged",
+                        evidence_ids=["f1"],
+                    ),
                 ],
                 severity="error",
             )
@@ -474,6 +490,9 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         regeneration_targets.append(
             [target.target_section for target in request.plan.targets]
         )
+        planned_findings.append(
+            [issue for target in request.plan.targets for issue in target.issues]
+        )
         retry_memories.append(list(request.repair_memory))
         attempt = request.attempt_index
         strategy = "current_evidence" if attempt == 1 else "alternative_evidence"
@@ -512,7 +531,12 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
             "doc_map": {"docMap": {"title": "Doc Title"}},
             "findings": {
                 "findings": [
-                    {"id": f"f{index}", "pages": [index]} for index in range(1, 6)
+                    {
+                        "id": f"f{index}",
+                        "evidence": "Original summary",
+                        "pages": [index],
+                    }
+                    for index in range(1, 6)
                 ]
             },
             "quote_candidates": {"quote_candidates": [{"id": "q1", "page": 1}]},
@@ -538,12 +562,19 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         deps,
     )
     assert regeneration_inputs == ["original artifact", "original artifact"]
+    assert not any(
+        issue.message == "The item denominator is not established by the source."
+        and issue.entity_id == "soft_copy:summary:unchanged"
+        for issue in planned_findings[1]
+    )
     assert regeneration_artifact_inputs[0] == regeneration_artifact_inputs[1]
     assert repair_usage_attempts == [1, 2]
     assert regeneration_targets == [["summary"], ["summary"]]
     assert regeneration_strategies == ["current_evidence", "alternative_evidence"]
     assert retry_memories[0] == []
-    assert retry_memories[1][0].introduced[0].rule_id == "candidate_y"
+    assert any(
+        item.rule_id == "candidate_y" for item in retry_memories[1][0].introduced
+    )
     assert retry_memories[1][0].repair_strategy == "current_evidence"
     assert retry_memories[1][0].strategy_fingerprint == (
         state.regeneration_attempts[0].strategy_fingerprint
@@ -566,7 +597,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
             encoding="utf-8"
         )
     )
-    assert first_audit["repair_delta"]["introduced_hard_failure_count"] == 1
+    assert first_audit["repair_delta"]["introduced_hard_failure_count"] == 2
     assert first_audit["repair_decisions"][0]["minimal_patch"][0]["value"] == (
         "failed candidate"
     )

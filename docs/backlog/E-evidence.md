@@ -1278,6 +1278,18 @@ rejection is defensible; the different earlier verdict is not evidence that
 the more specific claim should be accepted. The semantic-context cache gap
 and the cause of the differing verdicts remain separate questions.
 
+In the retained Capgemini candidate, a newly detected denominator failure
+applied to unchanged promoted summary copy, but the next repair plan was
+built only from the promoted validation report; rejected-candidate memory
+retained fingerprints without the diagnostic. The verified-mode repair loop
+now passes such findings to its existing planner only after candidate and
+scope checks succeed and exact claim, source-fact and evidence provenance
+remain unchanged. It does not promote a rejected candidate. A provider-free
+check against the retained artifacts routes both affected summary paths into
+one target while retaining the validator explanations. This addresses the
+subsequent-repair handoff, not the initial inconsistent verdict or the
+first-repair acceptance gate; live improvement remains unproven.
+
 The companion fresh Activate run on `f5bab376` terminated before final
 editorial artifacts with `artifact_structured_output_invalid` in
 `theme_coverage`; the retained inner error class was

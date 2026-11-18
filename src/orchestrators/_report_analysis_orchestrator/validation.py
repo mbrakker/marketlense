@@ -110,6 +110,7 @@ from src.orchestrators._report_analysis_orchestrator.payload import (
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
     _build_target,
+    _soft_copy_claim_paths,
     _stable_target_strategy_fingerprint,
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
@@ -2383,6 +2384,108 @@ def _failure_fingerprint(issue: ValidationIssue) -> FailureFingerprint:
     )
 
 
+def _unchanged_candidate_claim_issues(
+    promoted: Dict[str, Any],
+    candidate: Dict[str, Any],
+    issues: Sequence[ValidationIssue],
+) -> List[ValidationIssue]:
+    """Select candidate findings whose exact public claim remains promoted."""
+    facts = promoted.get("verified_facts")
+    if (
+        not isinstance(facts, list)
+        or not facts
+        or facts != candidate.get("verified_facts")
+    ):
+        return []
+    try:
+        old_claims = soft_copy_claim_provenance_from_payload(
+            promoted.get("soft_copy_claim_provenance")
+        )
+        new_claims = soft_copy_claim_provenance_from_payload(
+            candidate.get("soft_copy_claim_provenance")
+        )
+    except (AppError, TypeError, ValueError):
+        return []
+    selected = []
+    for issue in issues:
+        entity = str(issue.entity_id or "").strip()
+        section = str(issue.affected_section or "").strip()
+        family = (
+            "summary"
+            if section in {"tldr", "executive_summary", "card_tldr_compact"}
+            else section.split(".", 1)[0]
+        )
+        if (
+            issue.rule_id != "grounding"
+            or str(issue.severity).lower() != "error"
+            or not entity.startswith("soft_copy:")
+            or family not in {"summary", "expert_comment", "linkedin_post"}
+        ):
+            continue
+        old = [c for c in old_claims if c.claim_id == entity]
+        new = [c for c in new_claims if c.claim_id == entity]
+        if len(old) != 1 or len(new) != 1:
+            continue
+        a, b = old[0], new[0]
+        if (
+            a.artifact_family != family
+            or b.artifact_family != family
+            or a.text_hash != b.text_hash
+            or a.classification != b.classification
+            or a.evidence_ids != b.evidence_ids
+            or a.source_spans != b.source_spans
+            or sorted(issue.evidence_ids) != sorted(a.evidence_ids)
+            or not a.evidence_ids
+        ):
+            continue
+        old_paths = _soft_copy_claim_paths(
+            family=family, entity_id=entity, artifacts=promoted
+        )
+        new_paths = _soft_copy_claim_paths(
+            family=family, entity_id=entity, artifacts=candidate
+        )
+        section_path = (
+            f"summary.{section}"
+            if section in {"tldr", "executive_summary", "card_tldr_compact"}
+            else section
+        )
+        matching = [
+            p
+            for p in old_paths
+            if section == "summary" or p.split("[", 1)[0] == section_path
+        ]
+        if not matching or old_paths != new_paths:
+            continue
+        if len({p.split("[", 1)[0] for p in old_paths}) != len(old_paths):
+            continue
+        if family == "summary" and any(
+            promoted.get("summary", {}).get(
+                path.split("[", 1)[0].removeprefix("summary.")
+            )
+            != candidate.get("summary", {}).get(
+                path.split("[", 1)[0].removeprefix("summary.")
+            )
+            for path in old_paths
+        ):
+            continue
+        for path in matching:
+            if path not in new_paths:
+                continue
+            bound_section = path.split("[", 1)[0]
+            if family == "summary":
+                field = bound_section.removeprefix("summary.")
+                old_text = promoted.get("summary", {}).get(field)
+                new_text = candidate.get("summary", {}).get(field)
+            else:
+                old_text = promoted.get(family)
+                new_text = candidate.get(family)
+            if isinstance(old_text, str) and old_text == new_text:
+                bound_issue = replace(issue, affected_section=bound_section)
+                if bound_issue not in selected:
+                    selected.append(bound_issue)
+    return selected
+
+
 def _evidence_introduction_category(issue: ValidationIssue) -> str | None:
     """Classify evidence failures using stable rules and explicit reason codes."""
 
@@ -4572,6 +4675,7 @@ def _run_validation_regeneration_loop(
     rejected_strategy_keys: set[str] = set()
     rejected_candidate_hashes: set[str] = set()
     repair_memory: List[RepairDelta] = []
+    candidate_claim_issues: List[ValidationIssue] = []
     promoted_payload_overrides: Dict[str, str] = {}
     context_evidence_packs = discovery_evidence_packs or evidence_packs
     context_doc_map = (
@@ -4626,8 +4730,9 @@ def _run_validation_regeneration_loop(
         )
         # Strategy memory describes rejected candidates; only the promoted
         # artifacts and their validation report define current planner state.
+        planning_issues = [*current_validation_report.issues, *candidate_claim_issues]
         plan = _build_regeneration_plan(
-            issues=current_validation_report.issues,
+            issues=planning_issues,
             artifacts=working_artifacts,
             broad_retry_available=not verified_mode and not broad_retry_used,
             rejected_strategy_keys=rejected_strategy_keys,
@@ -4636,7 +4741,7 @@ def _run_validation_regeneration_loop(
         )
         plan, empty_grounding_strategies = _preflight_empty_grounding_strategies(
             plan=plan,
-            issues=current_validation_report.issues,
+            issues=planning_issues,
             artifacts=working_artifacts,
             evidence_packs=evidence_packs,
             doc_map=context_doc_map,
@@ -5369,6 +5474,15 @@ def _run_validation_regeneration_loop(
                 rejected_strategy_keys.add(strategy_fingerprint)
                 rejected_strategy_keys.update(planned_strategy_keys)
                 repair_memory.append(repair_delta)
+                candidate_claim_issues = (
+                    _unchanged_candidate_claim_issues(
+                        promoted_artifacts,
+                        candidate_artifacts,
+                        candidate_validation_report.issues,
+                    )
+                    if verified_mode and not deterministic_candidate_rejection
+                    else []
+                )
                 if candidate_changed:
                     rejected_candidate_hashes.add(rejection_fingerprint)
                 # Deterministic identity corrections are candidate-scoped: a
