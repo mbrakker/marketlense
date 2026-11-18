@@ -1309,6 +1309,60 @@ unclassified, and no raw model response or source text is retained by this
 change. This makes those two future failure modes diagnosable; it does not
 identify or correct the missing cause of the earlier Activate failure.
 
+On code commit `97947d66`, the exact retained-authority Activate first-repair
+replay failed: factual validation retained zero unsupported and zero
+unresolved claims, and mutation scope and evidence lineage passed, but the
+independent editorial review rejected five repetitive insight leaves that
+were unchanged and not nominated by its baseline review. One repair was
+attempted and rolled back. The replay used 53 recorded provider events,
+1,298,812 input and 177,898 output tokens, and an estimated $0.205922; its
+baseline and repair stages took 227.93 and 651.99 seconds respectively.
+This does not demonstrate first-repair acceptance or establish the exact
+reason the earlier review omitted those weaknesses.
+
+A fresh isolated Activate run on the same code commit inadvertently omitted
+the verified-facts architecture flag and therefore used the legacy path. It
+is not a verified-mode acceptance run. It admitted the frozen PDF but failed
+closed in report analysis with
+`soft_copy_claim_provenance_coverage_invalid` (declared claim did not exactly
+match public text). It recorded two unsupported and one unresolved retained
+factual claims, 472 provider calls, 1,539,239 input and 327,614 output tokens,
+an estimated $0.338292 and 3,408.8 seconds. It produced no publication-ready
+HTML or WordPress write. These counts are validation outcomes, not an
+independent judgment that every rejected claim is factually wrong. Retained
+run: `C:/ml-acceptance-97947d66-results/activate/frozen-reliability-wbsp35y3`.
+The new failures require investigation; Capgemini has not yet been rerun on
+this code, and E18 acceptance remains **PARTIAL**.
+
+Independent inspection of the original Activate PDF, physical page 82,
+confirmed that its sports-viewer definition includes viewing in a given week;
+the legacy run's unresolved weekly-cohort claim is source-supported even
+though its bound combined finding omitted that footnote. Two other negative
+verdicts rejected current MarketLense-authored recommendations because the
+source did not document MarketLense issuing them; their stated rationale
+conflicts with the existing editorial-attribution policy. These findings do
+not justify automatically accepting the claims or bypassing grounding, and
+other editorial and factual issues remain. The exact provenance-mismatch
+caller and claim were not captured. A separate verified-mode run is required.
+
+The subsequent correctly configured verified-mode Activate run on
+`97947d66` admitted the frozen source but failed during `insights_final`
+structured-output recovery: all three responses parsed, and the terminal
+inner class was `artifact_final_insight_coverage_invalid`. A bounded merged
+diagnostic also recorded invalid insight ID
+`news-audience-trust-and-subscription-signals`; it does not establish that
+this ID caused the final attempt's coverage error. The admitted candidate
+roster, final-insight request, and rejected responses were not retained, so
+the record cannot establish whether that ID was invented or lost during a
+handoff. Discovery findings alone cannot establish admission. The run used
+465 provider calls, 1,221,122 input and 262,624 output tokens, an estimated $0.275806 and
+3,237.282 seconds. No final HTML or WordPress write was produced. Retained
+run: `C:/ml-acceptance-97947d66-results/activate-verified/frozen-reliability-2w9bbsg4`.
+The requested first-repair and verified end-to-end gates remain **FAIL**.
+The remediation projection now retains allowlisted error classes and bounded
+invalid insight IDs per structured-output attempt. It does not retain raw
+responses or retroactively recover the missing attempt identities from this run.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This

@@ -1000,7 +1000,12 @@ def _attempt_diagnostic(
         value = _bounded_context_scalar(evaluation.bounded_context.get(key))
         if value is not None:
             diagnostic[key] = value
-    for key in ("missing_item_ids", "unexpected_item_ids", "duplicate_item_ids"):
+    for key in (
+        "missing_item_ids",
+        "unexpected_item_ids",
+        "duplicate_item_ids",
+        "invalid_insight_ids",
+    ):
         tokens = _bounded_context_tokens(evaluation.bounded_context.get(key))
         if tokens:
             diagnostic[key] = tokens

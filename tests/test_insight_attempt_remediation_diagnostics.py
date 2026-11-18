@@ -1,0 +1,151 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from src.contracts.openai import OpenAIResponseResult
+from src.contracts.remediation import RemediationListRequest
+from src.contracts.structured_output import StructuredOutputExecutionRequest
+from src.orchestrators.remediation_orchestrator import record_workflow_failure
+from src.services.state_service import list_remediation_records
+from src.services.structured_output_service import execute_structured_output
+from src.utils.errors import AppError
+from src.utils.structured_output import StructuredOutputFailure
+from tests._test_artifact_generator._shared import _ctx
+
+
+def test_insight_attempt_error_classes_survive_remediation_without_response_text(
+    tmp_path,
+):
+    codes = {
+        "primary": "artifact_final_insight_lineage_invalid",
+        "model_repair": "schema_reference_missing",
+        "regeneration": "artifact_final_insight_coverage_invalid",
+    }
+
+    def call_model(mode, original_response, schema_errors):
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps({"phase": mode, "source": "private source prose"}),
+            model="test",
+        )
+
+    def validate(payload):
+        ids = {
+            "primary": [
+                "candidate-1",
+                "private source prose",
+                "x" * 129,
+                "candidate-2",
+                "candidate-3",
+                "candidate-4",
+            ],
+            "model_repair": ["candidate-9"],
+            "regeneration": ["candidate-2"],
+        }
+        raise AppError(
+            code=codes[payload["phase"]],
+            message="invalid",
+            context={"invalid_insight_ids": ids[payload["phase"]]},
+        )
+
+    ctx = _ctx()
+    request = StructuredOutputExecutionRequest(
+        schema_version="1.0",
+        report_id="report",
+        artifact_family="insights_final",
+        schema_name="artifacts",
+        model="test",
+        terminal_failure_code="artifact_structured_output_invalid",
+    )
+    with pytest.raises(StructuredOutputFailure) as caught:
+        execute_structured_output(
+            request,
+            ctx,
+            call_model=call_model,
+            normalize_payload=lambda p: p,
+            validate_payload=validate,
+            is_substantive=lambda p: bool(p),
+            model_pricing={},
+        )
+    state_db = str(tmp_path / "state.sqlite")
+    record_workflow_failure(
+        state_db=state_db,
+        workflow="report_generation",
+        stage="artifact_generation",
+        operation="insights_final",
+        error=caught.value,
+        ctx=ctx,
+        report_id="report",
+    )
+    records = list_remediation_records(
+        RemediationListRequest(schema_version="1.0", state_db=state_db), ctx
+    ).records
+    diagnostics = records[0].diagnostics
+    attempts = diagnostics["error_context"]["attempt_diagnostics"]
+    assert [(a["mode"], a["error_class"]) for a in attempts] == [
+        ("primary", "artifact_final_insight_lineage_invalid"),
+        ("model_repair", "schema_reference_missing"),
+        ("regeneration", "artifact_final_insight_coverage_invalid"),
+    ]
+    assert all(a["parse_status"] == "valid" for a in attempts)
+    assert [a["invalid_insight_ids"] for a in attempts] == [
+        ["candidate-1", "candidate-2", "candidate-3"],
+        ["candidate-9"],
+        ["candidate-2"],
+    ]
+    assert diagnostics["error_context"]["invalid_insight_ids"] == [
+        "candidate-1",
+        "candidate-2",
+        "candidate-3",
+    ]
+    assert "private source prose" not in json.dumps(diagnostics)
+
+
+def test_unrecognized_attempt_error_class_is_not_persisted(tmp_path):
+    ctx = _ctx()
+    error = StructuredOutputFailure(
+        code="artifact_structured_output_invalid",
+        message="invalid",
+        artifact_family="insights_final",
+        response_text="private response",
+        failure_context={
+            "attempt_diagnostics": [
+                {
+                    "attempt": 0,
+                    "mode": "primary",
+                    "error_class": "private_source_prose",
+                    "invalid_insight_ids": [
+                        "private source prose",
+                        "x" * 129,
+                        "safe-1",
+                    ],
+                },
+                {
+                    "attempt": 1,
+                    "mode": "model_repair",
+                    "error_class": ["private"],
+                    "invalid_insight_ids": {"private": "source"},
+                },
+            ]
+        },
+    )
+    state_db = str(tmp_path / "state.sqlite")
+    record_workflow_failure(
+        state_db=state_db,
+        workflow="report_generation",
+        stage="artifact_generation",
+        operation="insights_final",
+        error=error,
+        ctx=ctx,
+        report_id="report",
+    )
+    records = list_remediation_records(
+        RemediationListRequest(schema_version="1.0", state_db=state_db), ctx
+    ).records
+    attempts = records[0].diagnostics["error_context"]["attempt_diagnostics"]
+    assert all("error_class" not in item for item in attempts)
+    assert attempts[0]["invalid_insight_ids"] == ["safe-1"]
+    assert "invalid_insight_ids" not in attempts[1]
+    assert "private" not in json.dumps(records[0].diagnostics)

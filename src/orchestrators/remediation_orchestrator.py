@@ -83,6 +83,23 @@ _FAILURE_CONTEXT_KEYS = {
 _SAFE_FAILURE_CONTEXT_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
 )
+_SAFE_ATTEMPT_ERROR_CLASSES = frozenset(
+    {
+        "artifact_final_insight_coverage_invalid",
+        "artifact_final_insight_lineage_invalid",
+        "artifact_final_insight_repair_invalid",
+        "schema_reference_missing",
+        "abstention_normalization_failed",
+        "deterministic_repair_invalid",
+        "empty_response",
+        "invalid_json",
+        "output_truncated",
+        "provider_incomplete",
+        "provider_refusal",
+        "schema_normalization_failed",
+        "structured_output_empty",
+    }
+)
 _COVERAGE_DIAGNOSTIC_SCALAR_KEYS = frozenset(
     {
         "stage",
@@ -476,6 +493,24 @@ def _bounded_failure_context(context: object) -> dict[str, object]:
                 if mode not in ("primary", "model_repair", "regeneration"):
                     continue
                 retained_attempt = {"attempt": attempt, "mode": mode}
+                error_class = item.get("error_class")
+                if (
+                    isinstance(error_class, str)
+                    and error_class in _SAFE_ATTEMPT_ERROR_CLASSES
+                ):
+                    retained_attempt["error_class"] = error_class
+                invalid_ids = item.get("invalid_insight_ids")
+                if isinstance(invalid_ids, list):
+                    identifiers = [
+                        token
+                        for value in invalid_ids
+                        if isinstance(value, str)
+                        if (token := value.strip())
+                        and len(token) <= 128
+                        and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS
+                    ][:3]
+                    if identifiers:
+                        retained_attempt["invalid_insight_ids"] = identifiers
                 category = item.get("coverage_failure_category")
                 if category in (
                     "unauthorized_supporting_insights",
