@@ -1319,6 +1319,10 @@ attempted and rolled back. The replay used 53 recorded provider events,
 baseline and repair stages took 227.93 and 651.99 seconds respectively.
 This does not demonstrate first-repair acceptance or establish the exact
 reason the earlier review omitted those weaknesses.
+All five affected item IDs appeared once in both retained 48-item review
+inventories, and their individual insight leaves were unchanged. Other
+report context changed, and the exact rendered review requests were not
+retained, so this does not isolate model variability from context effects.
 
 A fresh isolated Activate run on the same code commit inadvertently omitted
 the verified-facts architecture flag and therefore used the legacy path. It
