@@ -3492,6 +3492,7 @@ def validate_final_insight_editorial_coverage(
         message=message,
         retryable=False,
         context={
+            "coverage_failure_category": "missing_planned_themes",
             "omitted_central_themes": coverage["omitted_central_themes"],
             "omitted_essential_themes": coverage["omitted_essential_themes"],
         },

@@ -1367,6 +1367,18 @@ The remediation projection now retains allowlisted error classes and bounded
 invalid insight IDs per structured-output attempt. It does not retain raw
 responses or retroactively recover the missing attempt identities from this run.
 
+The final-insight coverage validator now supplies the existing bounded
+`missing_planned_themes` category to each structured-output attempt. A
+provider-free regression exercises the actual coverage validator through
+remediation persistence and checks that source theme text is not retained.
+This improves the next failure's diagnosis; it does not identify the missing
+theme or establish the cause of the historical Activate failure. A separate
+controlled legacy-grounding reproduction also showed that final materialization
+can retain a supported verdict after surrounding evidence changes. Binding
+the successful grounding context across reuse and finalization remains open;
+no historical approvals were changed. First-repair and end-to-end acceptance
+remain unproven.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This
