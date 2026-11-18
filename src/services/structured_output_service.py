@@ -991,6 +991,9 @@ def _attempt_diagnostic(
         "disposition": evaluation.disposition or "invalid",
     }
     diagnostic.update(_provider_response_context(response))
+    category = evaluation.bounded_context.get("coverage_failure_category")
+    if category in ("unauthorized_supporting_insights", "missing_planned_themes"):
+        diagnostic["coverage_failure_category"] = category
     # Keep coverage diagnostics associated with the response that produced
     # them; the terminal context also merges phases for backward compatibility.
     for key in ("item_id", "expected_item_count", "actual_item_count"):
@@ -1061,6 +1064,12 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
 
     context = error.context if isinstance(error.context, dict) else {}
     retained: dict[str, Any] = {}
+    assessment_category = context.get("assessment_failure_category")
+    if assessment_category in (
+        "unauthorized_supporting_insights",
+        "missing_planned_themes",
+    ):
+        retained["coverage_failure_category"] = assessment_category
     for key in _ACTIONABLE_CONTEXT_SCALAR_KEYS:
         value = _bounded_context_scalar(context.get(key))
         if value is not None:

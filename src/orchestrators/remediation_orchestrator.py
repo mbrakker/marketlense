@@ -78,6 +78,7 @@ _FAILURE_CONTEXT_KEYS = {
     "stage",
     "task",
     "coverage_diagnostics",
+    "attempt_diagnostics",
 }
 _SAFE_FAILURE_CONTEXT_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
@@ -460,6 +461,33 @@ def _bounded_failure_context(context: object) -> dict[str, object]:
             bounded = _bounded_coverage_diagnostics(value)
             if bounded:
                 result[key] = bounded
+            continue
+        if key == "attempt_diagnostics":
+            if not isinstance(value, list):
+                continue
+            attempts = []
+            for item in value[:3]:
+                if not isinstance(item, dict):
+                    continue
+                attempt = item.get("attempt")
+                mode = item.get("mode")
+                if type(attempt) is not int or attempt not in (0, 1, 2):
+                    continue
+                if mode not in ("primary", "model_repair", "regeneration"):
+                    continue
+                retained_attempt = {"attempt": attempt, "mode": mode}
+                category = item.get("coverage_failure_category")
+                if category in (
+                    "unauthorized_supporting_insights",
+                    "missing_planned_themes",
+                ):
+                    retained_attempt["coverage_failure_category"] = category
+                parse_status = item.get("parse_status")
+                if parse_status in ("valid", "invalid", "not_attempted"):
+                    retained_attempt["parse_status"] = parse_status
+                attempts.append(retained_attempt)
+            if attempts:
+                result[key] = attempts
             continue
         if key in {
             "missing_claim_ids",

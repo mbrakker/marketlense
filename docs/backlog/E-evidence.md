@@ -1269,6 +1269,15 @@ no final HTML or WordPress write: 181 provider calls, 2,511,833 input and
 end-to-end acceptance remain unmet. No conclusion about the factual support
 of the denominator is inferred from the fact that the earlier pass missed it.
 
+Follow-up source inspection of physical PDF page 15 confirms the 80%, 70%,
+and 64% chart labels and the overall October 2025 sample of 12,000. The
+canonical fact explicitly states that item-level denominators are not
+separately stated, however, so a claim that makes 12,000 each item's exact
+denominator remains more specific than that authority. The repair-time
+rejection is defensible; the different earlier verdict is not evidence that
+the more specific claim should be accepted. The semantic-context cache gap
+and the cause of the differing verdicts remain separate questions.
+
 The companion fresh Activate run on `f5bab376` terminated before final
 editorial artifacts with `artifact_structured_output_invalid` in
 `theme_coverage`; the retained inner error class was
@@ -1280,6 +1289,13 @@ $0.322663 and ran for 3,422.078 seconds. No final HTML or WordPress write was
 produced, and no first automatic editorial repair was reached. Both fresh
 same-producer runs therefore failed acceptance. The implementation remains
 PARTIAL despite the passing hosted tests and confirmed visual title resolution.
+
+The follow-up diagnostic correction retains bounded per-attempt metadata and
+distinguishes unauthorized supporting insight IDs from missing planned themes
+in durable remediation records. Other coverage-contract failures remain
+unclassified, and no raw model response or source text is retained by this
+change. This makes those two future failure modes diagnosable; it does not
+identify or correct the missing cause of the earlier Activate failure.
 
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality

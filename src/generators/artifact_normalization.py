@@ -3135,6 +3135,7 @@ def validate_substantive_editorial_theme_coverage(
                 context={
                     "theme": theme,
                     "assessment_contract_failure": True,
+                    "assessment_failure_category": "unauthorized_supporting_insights",
                 },
             )
         if status == "covered" and not supporting_ids:
@@ -3335,6 +3336,7 @@ def validate_substantive_editorial_theme_coverage(
             context={
                 "missing_themes": missing_themes,
                 "assessment_contract_failure": True,
+                "assessment_failure_category": "missing_planned_themes",
             },
         )
 
