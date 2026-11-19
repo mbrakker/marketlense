@@ -1684,17 +1684,26 @@ def materialize_retained_claim_package(
         if isinstance(package, dict)
         else {}
     )
-    reusable_semantic_results = _claim_validation_semantic_results_for_final_inputs(
-        candidate_payload,
-        current=current,
-        report_id=report_id,
-        source_id=source_id,
-        evidence_packs=evidence_packs,
-        source_pages=source_pages,
-        source_md5=source_md5,
-        configuration_hash=configuration_hash,
-        policy_hash=policy_hash,
-    )
+    # A verified grounding batch can include other public text as context.
+    # Matching only the individual claim and evidence is therefore insufficient
+    # after the validated artifact snapshot changes. Revalidate that snapshot
+    # before finalization rather than carry forward a potentially stale verdict.
+    reusable_semantic_results = {}
+    if (
+        not verified_facts_only
+        or candidate_payload.get("artifact_hash") == current.artifact_hash
+    ):
+        reusable_semantic_results = _claim_validation_semantic_results_for_final_inputs(
+            candidate_payload,
+            current=current,
+            report_id=report_id,
+            source_id=source_id,
+            evidence_packs=evidence_packs,
+            source_pages=source_pages,
+            source_md5=source_md5,
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+        )
     current_results = current_payload["results"]
     current_by_candidate: dict[str, list[dict]] = {}
     for result in current_results:
@@ -2071,6 +2080,7 @@ def reuse_retained_claim_semantic_results(
     retrieval_identity: str,
     prompt_content_hash_by_claim_id: dict[str, str],
     execution_context_by_claim_id: Mapping[str, Mapping[str, str]] | None = None,
+    require_matching_artifact_hash: bool = True,
 ) -> tuple[ClaimValidationPackage, list[ClaimSemanticInput], dict[str, object]]:
     """Reuse only passing semantic results bound to exact claim/source identities."""
     fallback_reasons: dict[str, int] = {}
@@ -2100,6 +2110,12 @@ def reuse_retained_claim_semantic_results(
         or prior.get("artifact_hash") != expected_prior_artifact_hash
     ):
         reject("prior_artifact_identity_mismatch")
+        old_results = []
+    elif (
+        require_matching_artifact_hash
+        and prior.get("artifact_hash") != package.artifact_hash
+    ):
+        reject("current_artifact_identity_changed")
         old_results = []
     elif prior.get("readiness_status") not in {
         "awaiting_review",

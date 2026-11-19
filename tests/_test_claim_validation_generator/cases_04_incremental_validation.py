@@ -154,6 +154,7 @@ def _reuse(
         prompt_content_hash_by_claim_id={
             item.candidate.claim_id: prompt_content_hash for item in current_inputs
         },
+        require_matching_artifact_hash=False,
         **_CONTEXT,
     )
 

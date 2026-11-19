@@ -878,6 +878,7 @@ def run_grounding_check(
             retrieval_identity=retrieval_identity,
             prompt_content_hash_by_claim_id=prompt_content_hash_by_claim_id,
             execution_context_by_claim_id=execution_context_by_claim_id,
+            require_matching_artifact_hash=verified_mode,
         )
     )
 

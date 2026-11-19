@@ -1379,6 +1379,16 @@ the successful grounding context across reuse and finalization remains open;
 no historical approvals were changed. First-repair and end-to-end acceptance
 remain unproven.
 
+Follow-up containment for verified-mode incremental reuse and finalization
+rejects semantic results when the current artifact hash differs from the
+validated candidate package. Isolated regressions change surrounding editorial
+context without changing a claim or its evidence and verify that the old verdict
+is no longer retained; an unchanged snapshot remains eligible. This is
+deliberately conservative and can require revalidation after unrelated artifact
+changes. It does not establish successful-call context identity for other
+grounding inputs, recovery or split calls, and does not change existing
+approvals. Full verified end-to-end and first-repair acceptance remain unproven.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
