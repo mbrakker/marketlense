@@ -1379,6 +1379,14 @@ the successful grounding context across reuse and finalization remains open;
 no historical approvals were changed. First-repair and end-to-end acceptance
 remain unproven.
 
+The report-analysis workflow no longer labels a hash of provider store/file
+identifiers and timestamps as verified vector content. Its existing missing-
+provenance cache gates now bypass vector-backed reuse until actual corpus
+identity can be established. The local workflow regression exercises this
+handoff through evidence-cache selection without provider calls. This does not
+prove remote store membership or fix grounding-context materialization; it may
+increase regeneration cost and latency. Existing approvals are unchanged.
+
 The latest bounded transactional-removal reproduction and its remaining live
 acceptance limitations are recorded in the existing [verified-claims quality
 evidence](../quality/verified-claims-step2-visual-shadow-20261018.md). This

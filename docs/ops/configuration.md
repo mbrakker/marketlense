@@ -87,6 +87,8 @@ The important operator sections are `paths`, `ingest`, `publish`, `browser_downl
 
 Report-analysis `doc_map` uses the Responses semantic cache to retain its typed
 File Search result excerpts when the vector-store content identity is known.
+The current report-analysis workflow does not establish that identity, so this
+persistent cache is bypassed until independent corpus proof is available.
 The cache lives under the configured `paths.cache_dir`, is keyed by the exact
 vector-store ID/content identity and retrieval prompt contract, and expires after
 seven days. Keep that directory under the same filesystem access controls as

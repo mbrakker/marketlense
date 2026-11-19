@@ -106,9 +106,10 @@ gates consume them. The old composite evidence, taxonomy, and validation caches
 are therefore not reuse authority; missing vector-content proof, source proof,
 or any retained-output proof triggers the existing regeneration path.
 
-For vector-backed artifact routes, the semantic-input identity also includes a
-content identity made from the source, vector-store ID, provider file ID, and
-indexing timestamp. If that proof is absent, reuse is disabled for that family.
+Vector-backed artifact routes require verified vector-store content identity.
+The report-analysis workflow currently cannot independently prove the indexed
+bytes and store membership, so it supplies no identity and disables reuse for
+those families. Source and provider identifiers or timestamps do not prove it.
 Likewise, a result reached through structured-output repair/regeneration is
 retained without primary-family input proof, so it cannot be reused until a
 fresh primary-family result is materialized.

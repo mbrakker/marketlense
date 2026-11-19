@@ -108,7 +108,6 @@ from src.orchestrators._report_analysis_orchestrator.vector_store import (
     _await_vector_store_indexing,
     _is_vector_store_ready,
 )
-from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.report_identity import (
@@ -509,18 +508,9 @@ def run_report_analysis(
     artifact_kwargs: dict[str, Any] = {}
     if evidence_pack_openai_client is not None:
         evidence_kwargs["openai_client"] = evidence_pack_openai_client
-    vector_store_content_hash = (
-        sha256_json(
-            {
-                "source_id": runtime.md5 or runtime.file.file_id,
-                "vector_store_id": vector_state.vector_store_id,
-                "openai_file_id": vector_state.openai_file_id,
-                "indexed_at_utc": vector_state.indexed_at_utc,
-            }
-        )
-        if vector_state.vector_store_id and vector_state.openai_file_id
-        else None
-    )
+    # Provider IDs and timestamps do not prove the bytes or current membership
+    # of a vector store. Leave provenance unverified until that proof exists.
+    vector_store_content_hash = None
     evidence_kwargs["vector_store_content_hash"] = vector_store_content_hash
     chart_identity_enricher = None
     if source_openai_client is not None and source_dependencies is not None:

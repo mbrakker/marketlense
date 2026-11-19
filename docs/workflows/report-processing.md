@@ -753,8 +753,9 @@ provider-call duration. Reused outputs still pass deterministic assembly and
 the normal report grounding, semantic, editorial, render, and publish-readiness
 gates.
 
-Vector-backed artifact reuse additionally requires a content identity composed
-from the source, vector-store, provider-file, and indexing identities; absent
+Vector-backed artifact reuse additionally requires verified content identity.
+Report analysis currently leaves that identity absent because provider IDs and
+timestamps do not prove the indexed bytes or current store membership; absent
 vector provenance disables reuse. A family that needed structured-output repair
 or regeneration is retained without primary-family reuse proof, so a later run
 regenerates it through the primary route before it can converge to reusable

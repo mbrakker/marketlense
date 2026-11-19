@@ -179,6 +179,18 @@ def test_generate_report_vector_store_with_validation(
     assert_no_defaulted_required_fields,
     caplog,
 ) -> None:
+    from src.contracts.prompt_family_materialization import PromptFamilyReuseResponse
+    from tests._test_evidence_pack_generator._shared import (
+        FakeAnalysisStore,
+        FakeOpenAIClient,
+        FakePromptClient,
+        generate_evidence_packs,
+        substantive_doc_map,
+    )
+    from tests._test_evidence_pack_generator._shared import (
+        _settings as evidence_settings,
+    )
+
     settings = _ingest_settings(tmp_path)
     settings = settings.__class__(
         **{**settings.__dict__, "openai_timeout_seconds": 3600.0}
@@ -200,6 +212,9 @@ def test_generate_report_vector_store_with_validation(
     analysis_store: list[tuple[str, object]] = []
     metadata_upserts = []
     vector_calls: list[tuple[str, dict[str, object]]] = []
+    cache_requests = []
+    model_requests = []
+    provenance = {}
     execution_trace: list[str] = []
     taxonomy_started = threading.Event()
     evidence_started = threading.Event()
@@ -289,6 +304,7 @@ def test_generate_report_vector_store_with_validation(
         )
 
     def _extract_taxonomy(req, ctx):
+        provenance["taxonomy"] = req.vector_store_content_hash
         execution_trace.append("taxonomy_start")
         taxonomy_started.set()
         overlap_flags["taxonomy_saw_evidence"] = evidence_started.wait(1.0)
@@ -315,6 +331,37 @@ def test_generate_report_vector_store_with_validation(
         evidence_started.set()
         overlap_flags["evidence_saw_taxonomy"] = taxonomy_started.wait(1.0)
         assert settings.openai_timeout_seconds == 3600.0
+        provenance["evidence"] = kwargs.get("vector_store_content_hash")
+
+        class RecordingClient(FakeOpenAIClient):
+            def openai_respond_with_vector_store(self, req, call_ctx):
+                model_requests.append(req)
+                return super().openai_respond_with_vector_store(req, call_ctx)
+
+        def retained_reader(request, call_ctx):
+            cache_requests.append(request)
+            return PromptFamilyReuseResponse(
+                schema_version="1.0",
+                reusable=True,
+                reason="reused",
+                output_payload=substantive_doc_map("stale"),
+                artifact_id="retained",
+                output_hash="retained-hash",
+            )
+
+        generated = generate_evidence_packs(
+            report_id=report_id,
+            report_name="report",
+            vector_store_id=vector_store_id,
+            vector_store_content_hash=kwargs.get("vector_store_content_hash"),
+            settings=evidence_settings(tmp_path, evidence_pack_registry=["doc_map"]),
+            ctx=replace(ctx, source_identity_id="source:canonical-report"),
+            openai_client=RecordingClient(substantive_doc_map()),
+            prompt_client=FakePromptClient(),
+            analysis_store=FakeAnalysisStore(),
+            prompt_family_reuse_reader=retained_reader,
+        )
+        provenance["doc_map"] = generated["doc_map"]["doc_id"]
         return {
             "doc_map": {
                 "docMap": {
@@ -342,6 +389,7 @@ def test_generate_report_vector_store_with_validation(
         report_name=None,
         **kwargs,
     ):
+        provenance["artifacts"] = kwargs.get("vector_store_content_hash")
         payload = _analysis_artifacts()
         _store_pack(
             AnalysisStorePackRequest(
@@ -357,6 +405,7 @@ def test_generate_report_vector_store_with_validation(
         return payload
 
     def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
+        provenance["validation"] = req.vector_store_content_hash
         validation_calls.append(req.report_id)
         slug = slugify(kwargs.get("report_name") or req.report_id)
         return ValidationReport(
@@ -461,6 +510,17 @@ def test_generate_report_vector_store_with_validation(
 
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "processed"
+    assert provenance["evidence"] is None
+    assert provenance == {
+        "taxonomy": None,
+        "evidence": None,
+        "doc_map": "d1",
+        "artifacts": None,
+        "validation": "",
+    }
+    assert cache_requests == []
+    assert len(model_requests) == 1
+    assert model_requests[0].response_cache_enabled is False
     assert projection_requests[0].rendered_html_path == outcome.html_path
     events = _decode_log_events(caplog, rgo.logger.name)
     assert any(
