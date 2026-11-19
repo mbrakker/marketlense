@@ -1389,12 +1389,34 @@ changes. It does not establish successful-call context identity for other
 grounding inputs, recovery or split calls, and does not change existing
 approvals. Full verified end-to-end and first-repair acceptance remain unproven.
 
+A provider-free integration regression now exercises verified grounding,
+transactional first-repair promotion and final claim materialization together:
+after an artifact edit, an unchanged claim is grounded again and the validated
+candidate is promoted. Its source facts, repair and model responses are test
+fixtures, so it does not establish live-report quality or provider reliability.
+
 An isolated Activate attempt on `933d4bde` stopped during report selection
 without a terminal result or captured process-exit reason. Its model-usage
 ledger contains no events, but its budget ledger records vector-store creation,
 file upload and attachment; remote cleanup is unverified. The run did not
 reach verified grounding or HTML and is not acceptance evidence. Its retained
 state is under `C:/ml-verified-e2e-20261119-results/frozen-reliability-xdti1wbh`.
+An isolated retry on `8977cd99` also exited with code 1 during report
+selection without a traceback or terminal result; the cause is not established.
+Its retained state is under
+`C:/ml-verified-e2e-8977-results/frozen-reliability-1xz0ngup`.
+
+PDF candidate extraction had used PyMuPDF concurrently from threads, which its
+upstream documentation does not support. Candidate extraction now runs within
+one thread per invocation; requested multi-worker ordering and image-only table
+limits have focused regressions. An opt-in Activate source comparison checks
+candidate identities across requested worker counts. This does not establish
+process-wide PDF serialization or prove that threading caused either silent
+live exit. The report pipeline and live repair acceptance remain unverified.
+The pinned-PyMuPDF golden candidate gate passed all four signatures and
+counts (28, 86, 20 and 3); three runtime warnings ranged from 25.3% to 32.3%
+against its stored baseline while another extraction was running. These are
+not an isolated before/after latency measurement.
 
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-

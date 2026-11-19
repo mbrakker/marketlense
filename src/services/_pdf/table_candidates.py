@@ -6,7 +6,6 @@ while isolating pdfplumber/table heuristics into a dedicated upgrade surface.
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import replace
 from typing import Dict, List, Optional, cast
 
@@ -17,16 +16,21 @@ from PIL import ImageFilter
 
 from src.contracts.candidates import Candidate, CandidateFeatures
 
+from .candidate_metrics import (
+    bounded_quality as _bounded_quality,
+)
+from .candidate_metrics import (
+    candidate_ocr_density as _candidate_ocr_density,
+)
+from .page_artifacts import PdfPageArtifactCache, get_page_artifacts
 from .table_heuristics import (
     TABLE_SETTINGS_LATTICE,
     TABLE_SETTINGS_STREAM,
     TABLE_WIDE_FIGURE_CONTEXT_HORIZONTAL_PAD,
     TABLE_WIDE_FIGURE_CONTEXT_MAX_DIST,
     TABLE_WIDE_FIGURE_CONTEXT_TOP_BAND,
-    _TableCandidate,
     _avg_first_col_words,
     _avg_words_per_cell,
-    _candidate_index_from_id,
     _cell_is_numeric,
     _col_consistency,
     _dedupe_table_candidates,
@@ -38,28 +42,23 @@ from .table_heuristics import (
     _index_page_ratio,
     _int_count,
     _numeric_char_ratio,
+    _resolve_candidate_parallel_workers,
     _row_len_cv,
     _row_nonempty_counts,
     _row_text_lengths,
-    _split_even_chunks,
-    _resolve_candidate_parallel_workers,
     _s,
     _suppress_pdfminer_warnings,
-    _table_preview,
     _table_page_text_blocks,
-    _table_text_bands,
+    _table_preview,
     _table_sort_key,
+    _table_text_bands,
+    _TableCandidate,
     _tally_reason,
     _text_block_stats,
     _text_stats,
     _validate_table_candidate,
 )
-from .page_artifacts import PdfPageArtifactCache, get_page_artifacts
 from .visual_candidates import _render_visual_probe_image, _visual_probe_profile
-from .candidate_metrics import (
-    bounded_quality as _bounded_quality,
-    candidate_ocr_density as _candidate_ocr_density,
-)
 
 
 def _table_confidence_score(candidate: _TableCandidate) -> float:
@@ -398,6 +397,8 @@ def _extract_tables_sequential(
                                         features=features,
                                     )
                                 )
+                                if max_candidates > 0 and len(out) >= max_candidates:
+                                    break
                                 continue
                             stats["skipped_pages"] = (
                                 _int_count(stats.get("skipped_pages", 0)) + 1
@@ -544,73 +545,16 @@ def extract_table_candidates(
     doc: Optional[fitz.Document] = None,
     artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
-    try:
-        if doc is not None:
-            all_pages = list(range(len(doc)))
-        else:
-            temp_doc = fitz.open(pdf_path)
-            try:
-                all_pages = list(range(len(temp_doc)))
-            finally:
-                temp_doc.close()
-    except Exception:
-        return _extract_tables_sequential(
-            pdf_path,
-            max_candidates=max_candidates,
-            pages=pages,
-            doc=doc,
-            artifact_cache=artifact_cache,
-        )
-    page_numbers = pages if pages is not None else all_pages
-    worker_count = _resolve_candidate_parallel_workers(
-        parallel_workers, len(page_numbers)
+    # PyMuPDF cannot safely be used concurrently by threads in one process.
+    # Preserve the public worker argument while using the supported serial path.
+    if pages is not None and _resolve_candidate_parallel_workers(
+        parallel_workers, len(pages)
+    ) > 1:
+        pages = sorted(pages)
+    return _extract_tables_sequential(
+        pdf_path,
+        max_candidates=max_candidates,
+        pages=pages,
+        doc=doc,
+        artifact_cache=artifact_cache,
     )
-    if worker_count <= 1 or len(page_numbers) <= 1:
-        return _extract_tables_sequential(
-            pdf_path,
-            max_candidates=max_candidates,
-            pages=page_numbers,
-            doc=doc,
-            artifact_cache=artifact_cache,
-        )
-    chunks = _split_even_chunks(page_numbers, worker_count)
-    merged_stats: Dict[str, object] = {
-        "raw_lattice": 0,
-        "raw_stream": 0,
-        "validated": 0,
-        "deduped": 0,
-        "rejected": 0,
-        "reasons": {},
-    }
-    merged_candidates: List[Candidate] = []
-    with ThreadPoolExecutor(max_workers=worker_count) as executor:
-        futures = {
-            executor.submit(
-                _extract_tables_sequential,
-                pdf_path,
-                0,
-                chunk,
-                None,
-                artifact_cache,
-            ): chunk
-            for chunk in chunks
-        }
-        for future in as_completed(futures):
-            chunk_candidates, chunk_stats = future.result()
-            merged_candidates.extend(chunk_candidates)
-            for key, value in chunk_stats.items():
-                if key == "reasons":
-                    reasons = value if isinstance(value, dict) else {}
-                    for reason, count in reasons.items():
-                        for _ in range(max(0, _int_count(count))):
-                            _tally_reason(merged_stats, str(reason))
-                    continue
-                merged_stats[key] = _int_count(merged_stats.get(key, 0)) + _int_count(
-                    value
-                )
-    merged_candidates.sort(
-        key=lambda candidate: (candidate.page, _candidate_index_from_id(candidate.id))
-    )
-    if max_candidates > 0:
-        merged_candidates = merged_candidates[:max_candidates]
-    return merged_candidates, merged_stats

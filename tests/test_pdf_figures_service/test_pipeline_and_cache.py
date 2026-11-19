@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 from src.contracts.report_assets import CropRefineBBoxApplyRequest
+from src.services._pdf._visual_candidates._extraction.workflow import (
+    extract_visual_candidates,
+)
+from src.services._pdf.table_candidates import extract_table_candidates
 from src.services.pdf_service import apply_crop_refine_bbox
 
 from .builders import *  # noqa: F401,F403
@@ -91,6 +95,84 @@ def test_collect_candidates_returns_chart_and_table_contracts(
     assert response.stats.page_triage_records
     assert response.stats.page_triage_evaluated_count == len(
         response.stats.page_triage_records
+    )
+
+
+def test_collect_candidates_reports_safe_effective_pdf_worker_count(tmp_path, caplog):
+    pdf_path = tmp_path / "candidates.pdf"
+    _build_candidates_pdf(pdf_path)
+    caplog.set_level(
+        logging.INFO, logger="market_lense.pdf_service.candidate_extraction"
+    )
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=tmp_path.as_posix(),
+            report_name="report",
+            parallel_workers=5,
+        ),
+        _ctx(),
+    )
+
+    assert {candidate.kind for candidate in response.candidates} == {"chart", "table"}
+    events = _events(caplog, "market_lense.pdf_service.candidate_extraction")
+    start = next(
+        event for event in events if event.get("event") == "extract_candidates_start"
+    )
+    assert start["fields"]["requested_parallel_workers"] == 5
+    assert start["fields"]["parallel_workers"] == 1
+
+
+def test_table_candidate_limit_applies_to_image_only_pages(tmp_path):
+    pdf_path = tmp_path / "image-only-tables.pdf"
+    doc = fitz.open()
+    try:
+        for _ in range(2):
+            page = doc.new_page(width=960, height=540)
+            page.insert_image(fitz.Rect(0, 0, 960, 540), stream=_table_image_bytes())
+        doc.save(pdf_path.as_posix())
+    finally:
+        doc.close()
+
+    candidates, _ = extract_table_candidates(
+        pdf_path.as_posix(), max_candidates=1, parallel_workers=5
+    )
+
+    assert len(candidates) == 1
+    assert candidates[0].page == 0
+
+    reordered, _ = extract_table_candidates(
+        pdf_path.as_posix(), max_candidates=1, parallel_workers=5, pages=[1, 0]
+    )
+    assert len(reordered) == 1
+    assert reordered[0].page == 0
+
+
+def test_visual_candidates_keep_parallel_request_page_order(tmp_path):
+    source_path = tmp_path / "source.pdf"
+    pdf_path = tmp_path / "two-pages.pdf"
+    _build_candidates_pdf(source_path)
+    source = fitz.open(source_path)
+    target = fitz.open()
+    try:
+        target.insert_pdf(source)
+        target.insert_pdf(source)
+        target.save(pdf_path)
+    finally:
+        target.close()
+        source.close()
+    candidates, _ = extract_visual_candidates(
+        pdf_path.as_posix(),
+        tmp_path.as_posix(),
+        "report",
+        pages=[1, 0],
+        parallel_workers=5,
+    )
+    assert {candidate.page for candidate in candidates} == {0, 1}
+    assert [candidate.page for candidate in candidates] == sorted(
+        candidate.page for candidate in candidates
     )
 
 

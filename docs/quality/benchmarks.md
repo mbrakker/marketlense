@@ -239,13 +239,16 @@ required before changing production model-concurrency settings.
 `scripts/quality/benchmark_pdf_candidate_parallelism.py` measures the real PDF
 visual-candidate extractor on the committed golden corpus (three retained
 dense reports plus the retained Mintel browser-acquired report). It
-compares every supported worker count from one through eight against the
+compares requested worker counts from one through eight against the
 five-worker report-pipeline baseline, with two warmups and seven retained
 samples per profile. A profile is eligible only when every source PDF retains
 its exact hash, candidate count, candidate signature, and degraded-page count.
 The selector requires a median improvement of at least 3% and more than twice
 the greater coefficient of variation; otherwise it retains the five-worker
-baseline. This corpus measures visual-candidate extraction only, so other PDF
-stages require their own worker matrices.
+baseline. Candidate extraction currently uses one effective worker for every
+requested count because PyMuPDF does not support threaded use; the matrix no
+longer measures distinct candidate-extraction concurrency levels. This corpus
+measures visual-candidate extraction only, so other PDF stages require their
+own worker matrices.
 
 See [non-regression policy](non-regression-policy.md) and [release gates](release-gates.md).

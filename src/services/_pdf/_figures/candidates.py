@@ -19,7 +19,6 @@ from src.utils.path_utils import safe_path_segment
 
 from ..page_artifacts import PdfPageArtifactCache, create_page_artifact_cache
 from ..shared import candidate_logger
-from ..table_heuristics import _resolve_candidate_parallel_workers
 from ..visual_heuristics import PDF_FIGURE_EXCEPTIONS
 from .pruning import _prune_final_chart_candidates
 from .triage import (
@@ -303,7 +302,9 @@ def _clip_candidates_to_page_bounds(
 def collect_candidates(
     request: ExtractCandidatesRequest, ctx: RunContext
 ) -> ExtractCandidatesResponse:
-    parallel_workers = _resolve_candidate_parallel_workers(request.parallel_workers, 8)
+    # Both candidate extractors use PyMuPDF, which does not support threads.
+    # Keep the request field for compatibility, but use one effective worker.
+    parallel_workers = 1
     excluded_pages = {
         int(page)
         for page in (request.exclude_page_indices or [])
@@ -321,6 +322,7 @@ def collect_candidates(
                     request.pdf_context and request.pdf_context.fitz_doc
                 ),
                 "parallel_workers": parallel_workers,
+                "requested_parallel_workers": request.parallel_workers,
                 "exclude_page_indices": sorted(excluded_pages),
                 "page_gate_enabled": bool(request.page_gate_enabled),
                 "page_gate_min_score": round(float(request.page_gate_min_score), 3),
