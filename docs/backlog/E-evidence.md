@@ -1428,7 +1428,9 @@ but was rolled back after revalidation classified an unchanged MarketLense
 recommendation as an unresolved factual claim. The retained verdict called it
 non-fatal editorial advice but supplied prose such as "No timeframe asserted"
 as an unknown protected claim value. A second candidate was rolled back on an
-independent expert-comment distinctness verdict. The final report retained the
+independent expert-comment distinctness verdict: its replacement repeated the
+same audio and sports figures and synthesis already present in the comment.
+The final report retained the
 initial summary error; no final HTML or first-repair success was established.
 The run and its two candidate audits are retained under
 `C:/ml-verified-e2e-25646-results/frozen-reliability-_ogjyman`.
