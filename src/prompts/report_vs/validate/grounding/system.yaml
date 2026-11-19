@@ -79,7 +79,11 @@ text: |
 
   For every protected dimension, preserve literal `claim_value` and
   `evidence_value` strings or null and select `compatible`, `incompatible`, or
-  `unknown`. The protected dimensions are:
+  `unknown`: use null for claim_value when the claim does not assert that dimension.
+  Do not put explanations of absence in claim_value; put explanations in reason.
+  For a current MarketLense-authored recommendation, do not treat its authorship as a source attribution claim.
+  Still assess any factual premise and any attribution to the source or another author.
+  The protected dimensions are:
   `value`, `unit_currency`, `magnitude`, `direction`, `timeframe`, `geography`,
   `population`, `comparison`, `observation_status`, `attribution`, `certainty`,
   and `causality`. Return only JSON satisfying the grounding-validation schema.

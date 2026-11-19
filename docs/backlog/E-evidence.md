@@ -1418,6 +1418,29 @@ counts (28, 86, 20 and 3); three runtime warnings ranged from 25.3% to 32.3%
 against its stored baseline while another extraction was running. These are
 not an isolated before/after latency measurement.
 
+The next isolated Activate verified-mode run at `25646a18` completed with a
+typed `validation_failed` outcome, not publication readiness. It admitted 9
+of 10 visual candidates, quarantined one, and made 575 recorded model calls
+for an estimated $0.66889 over 4,296.351 seconds; there were no WordPress
+writes. The original PDF's physical page 82 confirms the source's 18+ U.S.
+sports-viewer boundary. The first summary candidate restored this boundary
+but was rolled back after revalidation classified an unchanged MarketLense
+recommendation as an unresolved factual claim. The retained verdict called it
+non-fatal editorial advice but supplied prose such as "No timeframe asserted"
+as an unknown protected claim value. A second candidate was rolled back on an
+independent expert-comment distinctness verdict. The final report retained the
+initial summary error; no final HTML or first-repair success was established.
+The run and its two candidate audits are retained under
+`C:/ml-verified-e2e-25646-results/frozen-reliability-_ogjyman`.
+
+The grounding prompt now explicitly requests null for an unasserted dimension
+and distinguishes current MarketLense-authored advice from a claim about the
+source's recommendations. Actual unknown asserted dimensions, contradictions
+and unsupported factual premises remain blocking. A prompt-contract regression
+and semantic-disposition tests verify the handover and safeguards; a fresh
+provider-backed replay is still required to establish whether this reduces
+the observed false block or resolves the separate distinctness failure.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
