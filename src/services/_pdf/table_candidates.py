@@ -547,9 +547,10 @@ def extract_table_candidates(
 ) -> tuple[List[Candidate], Dict[str, object]]:
     # PyMuPDF cannot safely be used concurrently by threads in one process.
     # Preserve the public worker argument while using the supported serial path.
-    if pages is not None and _resolve_candidate_parallel_workers(
-        parallel_workers, len(pages)
-    ) > 1:
+    if (
+        pages is not None
+        and _resolve_candidate_parallel_workers(parallel_workers, len(pages)) > 1
+    ):
         pages = sorted(pages)
     return _extract_tables_sequential(
         pdf_path,

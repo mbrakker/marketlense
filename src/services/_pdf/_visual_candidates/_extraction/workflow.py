@@ -48,9 +48,11 @@ def extract_visual_candidates(
         pages=pages,
         artifact_cache=artifact_cache,
     )
-    if not save_thumbs and pages is not None and _resolve_candidate_parallel_workers(
-        parallel_workers, len(pages)
-    ) > 1:
+    if (
+        not save_thumbs
+        and pages is not None
+        and _resolve_candidate_parallel_workers(parallel_workers, len(pages)) > 1
+    ):
         candidates.sort(
             key=lambda candidate: (
                 candidate.page,
