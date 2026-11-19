@@ -1389,6 +1389,13 @@ changes. It does not establish successful-call context identity for other
 grounding inputs, recovery or split calls, and does not change existing
 approvals. Full verified end-to-end and first-repair acceptance remain unproven.
 
+An isolated Activate attempt on `933d4bde` stopped during report selection
+without a terminal result or captured process-exit reason. Its model-usage
+ledger contains no events, but its budget ledger records vector-store creation,
+file upload and attachment; remote cleanup is unverified. The run did not
+reach verified grounding or HTML and is not acceptance evidence. Its retained
+state is under `C:/ml-verified-e2e-20261119-results/frozen-reliability-xdti1wbh`.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
