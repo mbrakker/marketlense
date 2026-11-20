@@ -39,9 +39,9 @@ allowlist:
     max_delta_percent: 0.015
   - pattern: "families.publishing.total_tokens"
     owner: "MarketLense engineering"
-    reason: "Bounded prompt additions support specific non-contradictory interpretation, actionable insight cards, and verbatim quote reuse."
+    reason: "Bounded prompt additions support specific non-contradictory interpretation, actionable insight cards, verbatim quote reuse, and preservation of material methodology in standalone metric copy; the additional one-token allowance is approved."
     expires_on: "2026-12-31"
-    max_delta_absolute: 745
+    max_delta_absolute: 746
   - pattern: "families.report.total_tokens"
     owner: "MarketLense engineering"
     reason: "Bounded prompt additions preserve broad-report taxonomy facets, inclusive page ranges, and numeric bindings to direct finding evidence."

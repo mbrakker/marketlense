@@ -1503,6 +1503,22 @@ from statistical significance and prohibits attributing an omitted uncertainty
 measure to the source; it still requires material uncertainty and assessment
 of any stronger inference. Fresh model-backed validation remains necessary.
 
+An isolated revalidation of that rolled-back candidate at `a0409521` did not
+establish promotion: independent review flagged the original summary's missing
+18+ boundary and a video metric's standalone public copy missing its seven-day
+averaging qualification, confirmed on physical PDF page 10. The candidate was
+not promoted or published. Its retained diagnostic is under
+`C:/ml-activate-candidate-a040/tmp/candidate-validation-20261120/`;
+its configuration identity differed from the original run. The generation
+and scoped-repair instructions now explicitly preserve material methodology,
+including averaging, in standalone metric copy. Focused tests cover the prompt
+contract, not model compliance or a successful transactional repair. The
+prompt fixture measured publishing-family 49,573 versus 48,827 tokens. The
+user approved increasing the existing bounded allowance from 745 to 746 tokens;
+the baseline and general gate thresholds remain unchanged. Fresh first-repair
+and full-report acceptance remain open; no current-SHA Activate or Capgemini
+readiness is claimed.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
