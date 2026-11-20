@@ -1471,6 +1471,16 @@ contracts; model-owned item selection and all nomination validation remain
 unchanged. This removes a conflicting instruction, but a fresh replay is
 required to establish whether the model localizes the observed failure.
 
+A second isolated replay at `c7afc72c` revalidated the same retained
+artifacts and passed without a repair because the collective distinctness
+failure did not reproduce. It made 28 recorded model calls at an estimated
+$0.07121. The original audio and AR implication/action pairs remained
+unchanged, so this is an inconsistent editorial judgment, not evidence of a
+successful repair. The review prompt now explicitly asks the model to assess
+each implication/action pair for substantive repetition. No deterministic
+semantic rule or additional validator was introduced; current tests establish
+the prompt contract and preserved gates, not live review consistency.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
