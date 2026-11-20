@@ -1443,6 +1443,17 @@ and semantic-disposition tests verify the handover and safeguards; a fresh
 provider-backed replay is still required to establish whether this reduces
 the observed false block or resolves the separate distinctness failure.
 
+The expert-comment claim-repair handover now includes the current public
+comment as editorial context in the existing scope payload, including earlier
+accepted replacements in the same attempt. The prompt explicitly forbids using
+this context as evidence. It does not add sibling text to the selected source
+evidence or alter scope, provenance or promotion checks.
+Targeted boundary tests cover unchanged sibling preservation and successive
+repairs; they do not establish model behavior or live acceptance. The retained
+Activate case passes reconstruction preflight against the correct target
+checkout and hash-qualified source identity; a frozen manifest and fresh
+provider-backed repair replay remain necessary for live verification.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus

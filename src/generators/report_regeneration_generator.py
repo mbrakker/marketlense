@@ -7229,6 +7229,15 @@ def _handle_expert_comment_regeneration(
                             {
                                 "mode": "claim",
                                 "failed_claim": repair.text,
+                                "public_context": _reconstruct_soft_copy_claims(
+                                    execution.state.expert_comment,
+                                    [
+                                        item
+                                        for item in claim_repairs
+                                        if item.claim.claim_id in replacements
+                                    ],
+                                    replacements,
+                                ),
                                 "preserve_sibling_claims": True,
                             }
                         ),
