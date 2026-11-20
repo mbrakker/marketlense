@@ -1555,6 +1555,21 @@ futile later attempts; it does not
 fix first-pass analytical quality or establish first-repair success. Those
 remain open and require a fresh provider-backed validation.
 
+Further inspection distinguishes two unresolved mechanisms. The initial
+insight-generation prompt already requests non-repetitive commercial analysis;
+the retained initial model output nevertheless contained generic implications,
+so a deterministic missing-input cause has not been established. Atomic
+insight repair serializes the full current insight, but its prompt does not
+explicitly require the replacement to be distinct from the unchanged sibling,
+whereas the independent reviewer assesses the pair. The exact rendered repair
+request was not retained, so delivery of every contextual byte is unproven.
+Clarifying that mismatch is a hypothesis requiring a controlled model-backed
+comparison, not proof of improved first-repair success. The existing frozen
+repair benchmark requires hash-pinned pre-repair inputs and revalidates before
+planning; this run has no verified benchmark manifest or confirmed lossless
+pre-repair payload reconstruction. A replay must not silently substitute a
+different input or claim to reproduce the historical first repair.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
