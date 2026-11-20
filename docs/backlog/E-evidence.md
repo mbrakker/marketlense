@@ -1451,8 +1451,25 @@ evidence or alter scope, provenance or promotion checks.
 Targeted boundary tests cover unchanged sibling preservation and successive
 repairs; they do not establish model behavior or live acceptance. The retained
 Activate case passes reconstruction preflight against the correct target
-checkout and hash-qualified source identity; a frozen manifest and fresh
-provider-backed repair replay remain necessary for live verification.
+checkout and hash-qualified source identity; its first provider-backed replay
+is described below.
+
+An isolated retained-case replay at `cc706f00` passed hash and authority
+preflight, but the original age-boundary failure did not reproduce during
+fresh baseline validation, so the benchmark performed no repair attempts.
+Grounding passed; independent editorial review failed on repetitive audio and
+AR implication/action pairs. Its report-level verdict did not nominate any
+individual repair items, so the failure remained unlocalized and fail-closed.
+The replay made 29 recorded model calls at an estimated $0.11659; its
+configuration identity differs from the original run, and the result does
+not prove first-repair success or establish a comparable success rate.
+
+The public-review prompt previously said that only a single affected item
+could request a report repair while separately instructing collective repair
+nominations with that field empty. It now distinguishes those two existing
+contracts; model-owned item selection and all nomination validation remain
+unchanged. This removes a conflicting instruction, but a fresh replay is
+required to establish whether the model localizes the observed failure.
 
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-

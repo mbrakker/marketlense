@@ -64,9 +64,9 @@ text: |
   info or warning, all four dimensions to pass, and empty rule_id,
   hard_fail_class, affected_item_id, and repair_target. A report fail or
   unresolved verdict requires severity=error, a substantive reason, at least
-  one nonpassing dimension, and rule_id or hard_fail_class. Only a localized
-  affected_item_id with that item's exact allowed repair target may request a
-  report repair; an unlocalized report defect must leave both fields empty.
+  one nonpassing dimension, and rule_id or hard_fail_class. For a single-target report repair,
+  use a localized affected_item_id and its exact allowed repair target; collective
+  insight-leaf repairs use repair_items below and leave both fields empty.
 
   For a report fail or unresolved editorial-quality verdict, when collective
   analytical depth or distinctness weaknesses are localizable to eligible
