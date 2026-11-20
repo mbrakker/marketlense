@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from types import SimpleNamespace
@@ -10,6 +11,10 @@ import pytest
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.regeneration import repair_strategy_fingerprint
 from src.contracts.report_analysis import AnalysisPackPathResponse
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_to_payload,
+)
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.public_editorial_quality_generator import (
     public_editorial_report_review_scope,
@@ -254,6 +259,56 @@ def test_collective_editorial_failure_keeps_model_selected_repairs_scoped(tmp_pa
     )
     assert exhausted.mode == "skip"
     assert exhausted.targets == []
+    artifacts["linkedin_post"] = "Original LinkedIn claim."
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [
+            SoftCopyClaimProvenance(
+                schema_version="1.0",
+                artifact_family="linkedin_post",
+                claim_id="soft_copy:linkedin_post:claim-1",
+                text_hash=hashlib.sha256(b"Original LinkedIn claim.").hexdigest(),
+                classification="interpretive",
+                evidence_ids=("f1",),
+                source_spans=(),
+                producing_prompt_identity={"namespace": "test/linkedin"},
+                generation_attempt=1,
+                regeneration_attempt=0,
+            )
+        ]
+    )
+    linkedin_issue = ValidationIssue(
+        schema_version="1.0",
+        message="The public post omits a material population boundary.",
+        severity="error",
+        affected_section="linkedin_post",
+        rule_id="public_editorial_quality.semantic_review",
+        violation_type="semantic_review_unresolved",
+        entity_id="soft_copy:linkedin_post:claim-1",
+        repair_target="linkedin_post",
+        evidence_ids=["f1"],
+    )
+    viable_plan = _build_regeneration_plan(
+        issues=[*quality.issues, linkedin_issue],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+    assert viable_plan.mode == "targeted"
+    assert {target.target_section for target in viable_plan.targets} == {
+        "insights_bundle",
+        "linkedin_post",
+    }
+    mixed_plan = _build_regeneration_plan(
+        issues=[*quality.issues, linkedin_issue],
+        artifacts=artifacts,
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected,
+    )
+    assert mixed_plan.mode == "skip"
+    assert mixed_plan.targets == []
+    assert any(
+        issue.rule_id == "public_editorial_quality.semantic_collective_editorial_repair"
+        for issue in mixed_plan.unmappable_issues
+    )
     grounding_warning = ValidationIssue(
         schema_version="1.0",
         message="Retained grounding context for the same insight.",

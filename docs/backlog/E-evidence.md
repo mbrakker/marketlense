@@ -1519,6 +1519,42 @@ the baseline and general gate thresholds remain unchanged. Fresh first-repair
 and full-report acceptance remain open; no current-SHA Activate or Capgemini
 readiness is claimed.
 
+Fresh isolated Activate verification at `dcd480bc` ended `validation_failed`
+after 4,010.01 seconds, 548 provider calls, eight file-search calls and an
+estimated $0.595207; no WordPress write occurred. All ten visual candidates
+were admitted. Initial independent review flagged insufficient analytical
+depth and repetitive implications/actions across the generated insights, plus
+a LinkedIn cohort definition missing the source's 4.5-hour boundary. The
+first scoped candidate added the boundary and passed mutation-scope and evidence
+lineage checks, but independent review found two newly repetitive insight
+action/implication pairs; the transaction rolled back. Its grounding observation
+on the news insight was informational, not a blocking error. A second candidate
+targeted the LinkedIn claim with an alternative-evidence strategy but did not
+resolve the original insight errors and also rolled back. No final HTML or
+publication readiness was established. Retained workflow and candidate audits:
+`C:/ml-activate-e2e-dcd480bc-results/frozen-reliability-nem1t7kf`. This is
+current-SHA failure evidence, not a demonstrated improvement or an acceptance
+pass. The earlier `25646a18` run cost $0.66889 over 4,296.351 seconds and had
+575 provider calls, but the changed producer and model variability prevent
+attributing the difference solely to code changes.
+
+The rollback exposed a planner defect: after the only permitted strategy for
+a collective insight wording failure was rejected, that hard target was omitted
+while another family could still consume retries, although it could not repair
+the unchanged insight leaf. The planner now stops and retains those exhausted
+insight issues rather than executing that incomplete plan. It still permits a
+multi-family repair when each blocking insight target has a viable strategy;
+it does not promote partial candidates or loosen evidence and validation gates.
+Focused regression tests reproduce the mixed exhausted/viable plan and cover
+the viable multi-family case. A provider-free replay of the retained Activate
+baseline and rejected-strategy keys matched its baseline hash and first-plan
+paths: before the change it selected LinkedIn-only alternative evidence;
+afterward it skips with 23 unmappable issues, including the exhausted insight
+issues. This is a planner replay, not a new full workflow. The change avoids
+futile later attempts; it does not
+fix first-pass analytical quality or establish first-repair success. Those
+remain open and require a fresh provider-backed validation.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus

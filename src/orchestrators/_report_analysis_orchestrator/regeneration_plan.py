@@ -1958,11 +1958,12 @@ def _build_regeneration_plan(
             issue for issue in unmappable if str(issue.severity).lower() == "error"
         ]
     if grouped:
-        targets = [
-            built_target
-            for target_key in TARGET_ORDER
-            if target_key in grouped
-            for issue_group in (
+        targets = []
+        exhausted_collective_insights: List[RegenerationIssue] = []
+        for target_key in TARGET_ORDER:
+            if target_key not in grouped:
+                continue
+            issue_groups = (
                 _summary_issue_groups(grouped[target_key], artifacts)
                 if target_key == "summary"
                 else (
@@ -1971,16 +1972,32 @@ def _build_regeneration_plan(
                     else [grouped[target_key]]
                 )
             )
-            for built_target in [
-                _build_target(
+            for issue_group in issue_groups:
+                built_target = _build_target(
                     target_key,
                     issue_group,
                     rejected_strategy_keys,
                     artifacts,
                 )
-            ]
-            if built_target is not None
-        ]
+                if built_target is not None:
+                    targets.append(built_target)
+                elif target_key == "insights_bundle" and any(
+                    issue.rule_id
+                    == "public_editorial_quality.semantic_collective_editorial_repair"
+                    and str(issue.severity).lower() == "error"
+                    for issue in issue_group
+                ):
+                    exhausted_collective_insights.extend(issue_group)
+        if exhausted_collective_insights:
+            # Other families cannot repair these specific insight leaves. A
+            # partial candidate would retain their blocking failures after
+            # rollback while consuming another provider-backed attempt.
+            return RegenerationPlan(
+                mode="skip",
+                targets=[],
+                unmappable_issues=[*unmappable, *exhausted_collective_insights],
+                broad_retry_allowed=False,
+            )
         if not targets:
             # Every targetable failure exhausted its distinct strategies; the
             # remaining issues stay terminal instead of repeating a rejection.
