@@ -1481,6 +1481,28 @@ each implication/action pair for substantive repetition. No deterministic
 semantic rule or additional validator was introduced; current tests establish
 the prompt contract and preserved gates, not live review consistency.
 
+With the pairwise instruction at `ac62ff62`, a third retained-case validation
+identified three repetitive insight action leaves and returned evidence-bound
+item-level repair nominations. The benchmark did not run repair because the
+new localized fingerprints differed from the earlier collective fingerprint;
+its exact-match policy was not weakened. The run made 27 model calls at an
+estimated $0.06702. These results support the handover correction but do not
+establish first-repair success or stable reviewer behavior.
+
+A separate isolated production-loop continuation from that exact localized
+verdict generated one scoped candidate: all three repeated-action failures
+resolved and scope and evidence-lineage checks passed. It was rolled back
+because the independent review newly required an uncertainty qualification
+on an unchanged news-discovery finding. The review described the absence of
+confidence intervals as source-stated, but physical PDF page 98 displays the
+40% and 38% values without such a statement; the finding itself is descriptive
+and does not claim statistical significance. The continuation made 29 model
+calls at an estimated $0.11552. No first-candidate promotion occurred.
+The review prompt now distinguishes descriptive source-reported differences
+from statistical significance and prohibits attributing an omitted uncertainty
+measure to the source; it still requires material uncertainty and assessment
+of any stronger inference. Fresh model-backed validation remains necessary.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus

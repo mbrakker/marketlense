@@ -109,7 +109,10 @@ text: |
   useful implications rather than generic description. Distinctness means the
   selected content is non-repetitive and coherent. Limitations means material
   uncertainty, boundaries, counter-findings, and source limitations are not
-  misleadingly omitted. The public_content index labels whether a surface is
+  misleadingly omitted. Do not infer statistical significance from a descriptive
+  source-reported rank or difference; assess any stronger inference on its
+  merits, and do not call an omitted uncertainty measure source-stated.
+  The public_content index labels whether a surface is
   primary analysis, summary/orientation, expert synthesis, distribution copy,
   or a supporting projection. Reuse of the same bound fact across those
   surfaces can be intentional for audience, orientation, distribution, or
