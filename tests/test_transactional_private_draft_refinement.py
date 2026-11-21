@@ -1,6 +1,8 @@
 """Regression for editorial-only private repair drafts using a retained report."""
 
+import hashlib
 import json
+import logging
 import os
 from copy import deepcopy
 from dataclasses import replace
@@ -16,6 +18,7 @@ from src.generators.report_generation_dependencies import ReportAnalysisDependen
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _run_validation_regeneration_loop,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.verified_facts import build_verified_authority_context
 from tests._test_report_analysis_generator._shared import (
@@ -24,7 +27,7 @@ from tests._test_report_analysis_generator._shared import (
 )
 
 
-def _run_draft_scenario(tmp_path, scenario):
+def _run_draft_scenario(tmp_path, scenario, caplog=None):
     if os.environ.get("MARKETLENSE_ACTIVATE_DRAFT_REPLAY") != "1":
         pytest.skip(
             "Set MARKETLENSE_ACTIVATE_DRAFT_REPLAY=1 to use retained Activate inputs"
@@ -97,6 +100,19 @@ def _run_draft_scenario(tmp_path, scenario):
         classification="analyst_interpretation",
         violation_type="editorial_quality",
     )
+    if scenario == "projection_failure":
+        compact = original["summary"]["card_tldr_compact"]
+        issue = replace(
+            issue,
+            rule_id="grounding",
+            affected_section="summary.card_tldr_compact",
+            entity_id=(
+                "soft_copy:summary:"
+                + hashlib.sha256(compact.encode()).hexdigest()[:16]
+            ),
+            classification="factual_claim",
+            violation_type="not_established",
+        )
     if scenario in {"sibling", "sibling_missing", "sibling_acceptance"}:
         issue = replace(
             issue,
@@ -167,6 +183,12 @@ def _run_draft_scenario(tmp_path, scenario):
                 )
             if request.artifact_family == "summary":
                 assert canonical_path.read_bytes() == original_bytes
+                if scenario == "retryable_provider_failure":
+                    raise AppError(
+                        code="provider_unavailable",
+                        message="Provider temporarily unavailable",
+                        retryable=True,
+                    )
                 self.repair_prompts.append(request.user_prompt)
                 value = (
                     "Among U.S. adults watching sports weekly, sports fans "
@@ -180,6 +202,12 @@ def _run_draft_scenario(tmp_path, scenario):
                     value = (
                         "Among weekly U.S. adult sports viewers, sports fans "
                         "represent 90% of the audience."
+                    )
+                if scenario == "projection_failure":
+                    value = (
+                        "In 2017, among adults age eighteen and older in the "
+                        "United States who reported watching sports content "
+                        "during a given week, ninety percent were sports fans."
                     )
                 decision = {
                     "schema_version": "1.0",
@@ -434,7 +462,45 @@ def _run_draft_scenario(tmp_path, scenario):
             verified_authority_context=authority,
         )
     except AppError as exc:
+        if scenario == "retryable_provider_failure":
+            assert exc.code == "provider_unavailable"
+            assert exc.retryable
+            assert canonical_path.read_bytes() == original_bytes
+            assert caplog is not None
+            assert not any(
+                "validation_regen_pre_candidate_failure" in record.message
+                for record in caplog.records
+            )
+            assert not list(
+                Path(runtime.settings.output_dir).rglob(
+                    "validation_regen_pre_candidate_failure_*.json"
+                )
+            )
+            return
+        if scenario == "projection_failure":
+            assert exc.code == "regeneration_deterministic_projection_failed"
+            assert canonical_path.read_bytes() == original_bytes
+            assert caplog is not None
+            events = [
+                record.message for record in caplog.records
+                if "validation_regen_pre_candidate_failure" in record.message
+            ]
+            assert len(events) == 1
+            event = json.loads(events[0])
+            assert event["fields"]["projection"] == "summary_status_content"
+            assert event["fields"]["error_code"] == exc.code
+            assert event["fields"]["input_sha256"] == sha256_json(original)
+            assert event["fields"]["attempt_index"] == 1
+            assert event["fields"]["candidate_persisted"] is False
+            assert not list(
+                Path(runtime.settings.output_dir).rglob(
+                    "artifacts_regen_candidate_1.json"
+                )
+            )
+            return
         pytest.fail(f"Workflow failed before draft assertion: {exc.code} {exc.context}")
+    if scenario in {"projection_failure", "retryable_provider_failure"}:
+        pytest.fail("Expected regeneration failure was not propagated")
     promoted, validation, attempts, _, _, _ = result
     assert original == snapshot
     audits = [
@@ -648,6 +714,16 @@ def _run_draft_scenario(tmp_path, scenario):
 
 def test_editorial_failure_can_be_refined_as_private_draft(tmp_path):
     _run_draft_scenario(tmp_path, "promotion")
+
+
+def test_pre_candidate_summary_projection_failure_is_recorded(tmp_path, caplog):
+    caplog.set_level(logging.WARNING)
+    _run_draft_scenario(tmp_path, "projection_failure", caplog)
+
+
+def test_retryable_provider_failure_is_not_reclassified_as_projection(tmp_path, caplog):
+    caplog.set_level(logging.WARNING)
+    _run_draft_scenario(tmp_path, "retryable_provider_failure", caplog)
 
 
 def test_factual_failure_is_not_retained_as_draft(tmp_path):

@@ -145,6 +145,41 @@ def test_summary_repair_prompt_limits_claim_map_repairs_to_the_named_leaf() -> N
     assert "never return null" in prompt_set.user.text
 
 
+def test_summary_claim_repair_receives_compact_card_length_contract() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/regenerate/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    variables = dict.fromkeys(
+        (
+            "current_section_json",
+            "claim_repair_scope_json",
+            "failure_reasons_json",
+            "fix_checklist_json",
+            "grounding_package_json",
+            "editorial_plan_json",
+            "repair_context_json",
+            "prior_repair_memory_json",
+        ),
+        "{}",
+    )
+    variables.update(target_section="summary", attempt_index="1")
+    prompt = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0", template=prompt_set.user, variables=variables
+        ),
+        _ctx(),
+    ).text
+
+    assert "card_tldr_compact" in prompt
+    assert "18 words or fewer" in prompt
+    assert "cohort, denominator, and period" in prompt
+
+
 def test_insight_candidate_repair_prompt_uses_explicit_evidence_whitelist() -> None:
     prompt_set = load_prompt_set(
         PromptLoadRequest(

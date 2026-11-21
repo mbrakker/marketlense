@@ -4982,28 +4982,54 @@ def _run_validation_regeneration_loop(
             dependencies.regenerate_artifacts, "openai_client"
         ):
             regeneration_kwargs["openai_client"] = regeneration_openai_client
-        regeneration_response = dependencies.regenerate_artifacts(
-            ArtifactRegenerationRequest(
-                report_id=ReportId(runtime.file.file_id),
-                report_name=runtime.report_name,
-                attempt_index=attempt_index,
-                plan=plan,
-                current_artifacts=working_artifacts,
-                doc_map=context_doc_map,
-                evidence_packs=evidence_packs,
-                settings=runtime.settings,
-                ctx=attempt_ctx,
-                source_status=source_status,
-                categories=category_labels,
-                vector_store_id=vector_store_id,
-                md5=runtime.md5,
-                publisher_name=runtime.publisher_name,
-                source_url=runtime.source_url,
-                source_title_resolution=source_title_resolution,
-                repair_memory=list(repair_memory),
-            ),
-            **regeneration_kwargs,
-        )
+        try:
+            regeneration_response = dependencies.regenerate_artifacts(
+                ArtifactRegenerationRequest(
+                    report_id=ReportId(runtime.file.file_id),
+                    report_name=runtime.report_name,
+                    attempt_index=attempt_index,
+                    plan=plan,
+                    current_artifacts=working_artifacts,
+                    doc_map=context_doc_map,
+                    evidence_packs=evidence_packs,
+                    settings=runtime.settings,
+                    ctx=attempt_ctx,
+                    source_status=source_status,
+                    categories=category_labels,
+                    vector_store_id=vector_store_id,
+                    md5=runtime.md5,
+                    publisher_name=runtime.publisher_name,
+                    source_url=runtime.source_url,
+                    source_title_resolution=source_title_resolution,
+                    repair_memory=list(repair_memory),
+                ),
+                **regeneration_kwargs,
+            )
+        except AppError as exc:
+            if (
+                exc.code != "regeneration_deterministic_projection_failed"
+                or exc.retryable
+                or exc.context.get("projection") != "summary_status_content"
+            ):
+                raise
+            logger.warning(
+                log_event(
+                    attempt_ctx,
+                    role="orchestrator",
+                    event="validation_regen_pre_candidate_failure",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "attempt_index": attempt_index,
+                        "error_code": exc.code,
+                        "projection": "summary_status_content",
+                        "input_sha256": sha256_json(artifacts_before),
+                        "target_count": len(plan.targets),
+                        "candidate_persisted": False,
+                    },
+                )
+            )
+            raise
         candidate_artifacts = regeneration_response.updated_artifacts
         if verified_source_identity:
             try:

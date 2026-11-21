@@ -1627,6 +1627,71 @@ first and last entries span 243 seconds, not total end-to-end runtime. This was
 a retained-input validation replay, not fresh ingestion, final HTML inspection,
 or publication-readiness acceptance. E13/E18 remain active.
 
+Independent source review used the original Activate PDF with SHA-256
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`.
+Physical page 82 (printed 81) states U.S. adults age 18+ in 2017, defines
+the sports-viewer cohort, and labels 90% as Sports Fans. The retained claim
+states U.S. adults and the same viewer definition; the validator's assertion
+that this necessarily broadens the population appears overly literal, although
+one model verdict cannot establish repeatability. Physical pages 17 and 47
+confirm the retained audio time/spend comparison and AR sector forecasts.
+The reviewed audio and AR implication/action pairs repeat their central point,
+so the editorial feedback is substantive. The source facts were available and
+no evidence of a missing binding was found. Existing prompts already request
+semantic paraphrase and distinct analytical actions; the available artifacts
+do not establish why this particular model response failed to follow them.
+No prompt, validator, or canonical claim was changed on this evidence alone.
+The frozen benchmark's historical-fingerprint guard explains the zero-attempt
+outcome; evaluating repair of the new findings requires a separately identified
+current-failure run, not alteration of the frozen comparison.
+
+A separate provider-backed diagnostic reconstructed the six retained current
+failure fingerprints and invoked the production repair loop without changing
+the frozen benchmark. It made three provider usage entries (87,469 input and
+1,989 output tokens, estimated $0.009741), but no candidate was persisted:
+summary finalization raised `regeneration_deterministic_projection_failed`
+because an abstained summary would otherwise retain public copy or provenance.
+The guard prevented an inconsistent candidate from being promoted. The model
+response was not retained, so the exact trigger for abstention is unknown;
+the candidate could not be audited because it was never persisted. The repair
+orchestrator now emits a structured pre-candidate failure event with the input
+hash and attempt identity, then propagates the original non-retryable error. It
+does not fabricate a candidate, promote copy, suppress the failure, or add
+retries. A retained-input regression using an overlong compact replacement
+failed before the change because the event was absent; afterward it passes and
+the canonical artifact stays byte-identical. Event retention depends on the
+configured log sink; this is not a durable candidate audit or an automatic
+recovery, and the unknown cause of the earlier live response remains open.
+Independently, the summary-repair prompt omitted the compact card's enforced
+18-word maximum even though the initial summary prompt includes it. The
+repair prompt now communicates that existing limit while retaining source
+qualifiers and the independent-TLDR instruction. This resolves a demonstrated
+prompt/validation contract mismatch, but does not establish that length caused
+this diagnostic failure or that a new provider-backed repair succeeds.
+
+A second separately identified current-failure diagnostic used the same retained
+six-fingerprint baseline, production repair loop, and authority snapshot with
+the revised summary-repair prompt (base commit `e9f2b5c2`, modified prompt
+SHA-256 `6df98af8a20c39c01a7ce1a1750ae55fb40e6426dbb5ba46a9d71253535bea27`).
+Its first candidate persisted, passed factual validation (44 semantic claims;
+zero unsupported or unresolved factual claims), passed independent editorial
+review, and passed scope and evidence-lineage checks before isolated atomic
+promotion. The compact sentence explicitly retained age 18+; the audio and AR
+implication/action pairs were rewritten. The attempt took 508.810 seconds;
+the isolated ledger records 45 usage entries, 1,022,927 input, 134,335 output,
+334,511 cached input tokens, eight structured-output-repair entries, and an
+estimated $0.139353. A quote-family warning and two informational grounding
+observations remained. The earlier diagnostic's raw provider response was not
+retained, and model outputs vary, so the difference cannot be attributed solely
+to the prompt. This is a retained-input repair result, not a frozen benchmark
+comparison, new ingestion, HTML review, or end-to-end readiness pass.
+The initially tested prompt put the fixture gate one publishing-family token
+over tolerance. A wording-only consolidation retained the compact limit,
+independent authoring and non-clipping requirements; the unchanged fixture
+gate then passed at 120,232 total tokens, estimated $0.025677. No threshold or
+baseline was changed. The live diagnostic used the preceding prompt wording,
+not this final wording, so it is not a byte-identical live verification.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus

@@ -46,7 +46,7 @@ text: |
   - Preserve per-group versus across-group scope exactly as stated in linked evidence; a scope-only repair keeps its value and subject.
   - Copy the linked evidence ID and its exact page number(s) from the grounding package. Do not add, reorder, or infer adjacent pages.
   - Keep `claim_evidence_map` brief and fully grounded.
-  - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
+  - Author independent TLDRs from the same evidence. `card_tldr_compact`: complete, 18 words or fewer, not clipped from `tldr`.
   - Target 20-30 words for `tldr` (hard limit: 45). Use one simple complete sentence and exactly one terminal punctuation mark; never use an ellipsis or attach a second topic to fill space.
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - Do not use mechanical lead-ins or labels such as "Answer:", "Observation:", or "Implication:"; write direct public prose throughout the executive summary.
