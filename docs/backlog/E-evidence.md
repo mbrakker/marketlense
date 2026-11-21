@@ -1561,14 +1561,27 @@ the retained initial model output nevertheless contained generic implications,
 so a deterministic missing-input cause has not been established. Atomic
 insight repair serializes the full current insight, but its prompt does not
 explicitly require the replacement to be distinct from the unchanged sibling,
-whereas the independent reviewer assesses the pair. The exact rendered repair
-request was not retained, so delivery of every contextual byte is unproven.
-Clarifying that mismatch is a hypothesis requiring a controlled model-backed
-comparison, not proof of improved first-repair success. The existing frozen
-repair benchmark requires hash-pinned pre-repair inputs and revalidates before
-planning; this run has no verified benchmark manifest or confirmed lossless
-pre-repair payload reconstruction. A replay must not silently substitute a
-different input or claim to reproduce the historical first repair.
+whereas the independent reviewer assesses the pair. The exact rendered
+historical request was not retained, so delivery of every contextual byte is
+unproven. The retained hidden analysis checkpoint matches the audited baseline
+artifact hash and first repair scope, but was written after the repair loop;
+it does not prove an identical historical request.
+
+An isolated component experiment used that checkpoint, matching configuration
+and policy hashes and the original verified authority, to repair the retained
+video-superuser implication with an explicit paired-distinctness instruction.
+The generated candidate passed existing source-lineage and mutation-scope
+checks, but the existing independent LLM editorial reviewer still identified
+the unchanged action as repeating the new implication. This one sample does
+not establish a general success rate; the experimental instruction was removed
+because it did not fix the observed case. The generation and review made one
+provider operation each, with 40,037/840 and 120,141/15,144 input/output tokens,
+respectively, costing an estimated $0.024010 combined. No candidate was
+promoted and no publication write occurred. Retained candidate and review:
+`C:/ml-activate-replay-scratch/run-2_v4p25q` and
+`C:/ml-activate-replay-scratch/review-3w65g828`. This was a component experiment,
+not an end-to-end or first-repair acceptance run; current full-report readiness
+and the cause of the generic first-pass output remain unresolved.
 
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
