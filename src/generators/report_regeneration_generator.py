@@ -3364,6 +3364,7 @@ _EXPECTED_PROVIDER_REJECTION_REASONS = frozenset(
         "claim_proposal_replacement_missing",
         "claim_proposal_removal_not_permitted",
         "evidence_not_retained_or_quarantined",
+        "evidence_not_bound_to_repair_leaf",
         "decision_missing",
         "planner_metadata_in_provider_decision",
         "decision_contract_invalid",
@@ -3660,6 +3661,38 @@ def _validated_repair_decision(
         decision.evidence_ids_used
     ).intersection(quarantined):
         raise _repair_decision_error(execution, "evidence_not_retained_or_quarantined")
+    # A grouped provider response has one evidence list, not an evidence list
+    # per patch.  Each selected ID must therefore be authorized for every
+    # nominated insight leaf that the response changes.
+    nomination_evidence: Dict[str, set[str]] = {}
+    for issue in target.issues:
+        if (
+            issue.rule_id
+            != "public_editorial_quality.semantic_collective_editorial_repair"
+        ):
+            continue
+        insight_id = failed_insight_id(issue.entity_id, issue.affected_section)
+        leaf = _insight_issue_field(issue.entity_id, issue.affected_section)
+        if not insight_id or leaf not in {"so_what", "now_what"}:
+            continue
+        path = f"insights_final[item={insight_id}].{leaf}"
+        nomination_evidence.setdefault(path, set()).update(
+            _normalized_evidence_id(value)
+            for value in issue.evidence_ids
+            if _normalized_evidence_id(value)
+        )
+    if nomination_evidence:
+        used_ids = {
+            _normalized_evidence_id(value) for value in decision.evidence_ids_used
+        }
+        for operation in decision.minimal_patch:
+            if operation.path in nomination_evidence and (
+                not used_ids
+                or not used_ids.issubset(nomination_evidence[operation.path])
+            ):
+                raise _repair_decision_error(
+                    execution, "evidence_not_bound_to_repair_leaf"
+                )
     for operation in decision.minimal_patch:
         if operation.path not in target.allowed_paths:
             raise _repair_decision_error(

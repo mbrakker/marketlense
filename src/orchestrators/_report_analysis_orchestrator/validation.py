@@ -110,6 +110,8 @@ from src.orchestrators._report_analysis_orchestrator.payload import (
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
     _build_target,
+    _issue_insight_allowed_paths,
+    _normalize_regeneration_issue,
     _soft_copy_claim_paths,
     _stable_target_strategy_fingerprint,
 )
@@ -176,8 +178,8 @@ def _verified_structural_report_code(
 
 _PUBLIC_EDITORIAL_REVIEW_NAMESPACE = "report_vs/validate/public_editorial_quality"
 _PUBLIC_EDITORIAL_REVIEW_SCHEMA = "public_editorial_quality_review"
-_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v29"
-_PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.2"
+_PUBLIC_EDITORIAL_REVIEW_VALIDATOR = "public-editorial-quality:v30"
+_PUBLIC_EDITORIAL_REVIEW_SCHEMA_VERSION = "3.3"
 _PUBLIC_EDITORIAL_REVIEW_OUTPUT_SCHEMA_IDENTITY = "public_editorial_quality_review_v5"
 _PUBLIC_EDITORIAL_REPORT_DIMENSIONS = (
     "material_coverage",
@@ -287,7 +289,8 @@ def _unbound_editorial_failure_allowed(
         and normalize_claim_classification(classification)
         in {"analyst_interpretation", "prescriptive_recommendation"}
         and _PUBLIC_EDITORIAL_SEMANTIC_RULE_ID.fullmatch(rule_id)
-        and str(hard_fail_class or "").strip().casefold() == "editorial_quality"
+        and str(hard_fail_class or "").strip().casefold()
+        in {"editorial_quality", "editorial_only"}
     )
 
 
@@ -906,6 +909,17 @@ def _validate_public_editorial_review_payload(
         rule_id = str(verdict.get("rule_id") or "").strip()
         hard_fail_class = str(verdict.get("hard_fail_class") or "").strip()
         repair_target = str(verdict.get("repair_target") or "").strip()
+        if hard_fail_class == "editorial_only" and (
+            status != "fail"
+            or normalize_claim_classification(classification)
+            not in {"analyst_interpretation", "prescriptive_recommendation"}
+        ):
+            raise AppError(
+                code="public_editorial_quality_review_status_conflict",
+                message="Editorial-only disposition conflicts with the item verdict",
+                retryable=False,
+                context={"item_id": item_id},
+            )
         if status == "pass" and (
             severity == "error" or rule_id or hard_fail_class or repair_target
         ):
@@ -1131,6 +1145,17 @@ def _validate_public_editorial_review_payload(
         )
         if dimension_status != "pass"
     }
+    if report_hard_fail_class == "editorial_only" and (
+        report_status != "fail"
+        or not failed_dimensions
+        or not failed_dimensions <= _PUBLIC_EDITORIAL_ONLY_DIMENSIONS
+        or "unresolved" in dimension_statuses
+    ):
+        raise AppError(
+            code="public_editorial_quality_report_review_status_conflict",
+            message="Editorial-only disposition conflicts with report dimensions",
+            retryable=False,
+        )
     if report_status == "pass" and any(
         status != "pass" for status in dimension_statuses
     ):
@@ -1164,8 +1189,13 @@ def _validate_public_editorial_review_payload(
     report_editorial_only = bool(
         report_status in {"fail", "unresolved"}
         and not report_evidence_ids
-        and report_rule_id.startswith("public_editorial_quality.report_")
-        and report_hard_fail_class.casefold() == "report_editorial_acceptance"
+        and (
+            report_hard_fail_class.casefold() == "editorial_only"
+            or (
+                report_hard_fail_class.casefold() == "report_editorial_acceptance"
+                and report_rule_id.startswith("public_editorial_quality.report_")
+            )
+        )
         and failed_dimensions
         and failed_dimensions <= _PUBLIC_EDITORIAL_ONLY_DIMENSIONS
     )
@@ -1198,7 +1228,11 @@ def _validate_public_editorial_review_payload(
         if (
             report_status not in {"fail", "unresolved"}
             or report_hard_fail_class
-            not in {"editorial_quality", "report_editorial_acceptance"}
+            not in {
+                "editorial_quality",
+                "report_editorial_acceptance",
+                "editorial_only",
+            }
             or not failed_dimensions.intersection({"analytical_depth", "distinctness"})
             or affected_item_id
             or repair_target
@@ -1232,7 +1266,8 @@ def _validate_public_editorial_review_payload(
                 not in {"analyst_interpretation", "prescriptive_recommendation"}
                 or (
                     actual[item_id].get("status") != "pass"
-                    and actual[item_id].get("hard_fail_class") != "editorial_quality"
+                    and actual[item_id].get("hard_fail_class")
+                    not in {"editorial_quality", "editorial_only"}
                 )
                 or not str(
                     item.get("repair_field") or item.get("field") or ""
@@ -4699,6 +4734,12 @@ def _run_validation_regeneration_loop(
     promoted_artifacts = deepcopy(current_artifacts)
     promoted_validation_report = current_validation_report
     working_artifacts = deepcopy(current_artifacts)
+    # An editorially incomplete candidate may be refined privately once.  It
+    # is never the canonical artifact and cannot authorize a wider repair.
+    draft_plan: RegenerationPlan | None = None
+    draft_path = ""
+    draft_prompt_namespaces: tuple[str, ...] = ()
+    draft_used = False
     promoted_claim_validation_package = _load_promoted_claim_validation_for_reuse(
         runtime=runtime,
         dependencies=dependencies,
@@ -4725,11 +4766,10 @@ def _run_validation_regeneration_loop(
             break
         current_validation_report = _with_retained_claim_repair_diagnostics(
             current_validation_report,
-            promoted_artifacts,
+            working_artifacts,
             evidence_packs,
         )
-        # Strategy memory describes rejected candidates; only the promoted
-        # artifacts and their validation report define current planner state.
+        # The working report always describes the matching private artifact.
         planning_issues = [*current_validation_report.issues, *candidate_claim_issues]
         plan = _build_regeneration_plan(
             issues=planning_issues,
@@ -4750,6 +4790,58 @@ def _run_validation_regeneration_loop(
             repair_memory=(),
             verified_mode=verified_mode,
         )
+        original_draft_paths = (
+            {path for target in draft_plan.targets for path in target.allowed_paths}
+            if draft_plan is not None
+            else set()
+        )
+        nominated_draft_paths: set[str] = set()
+        if draft_plan is not None:
+            for issue in current_validation_report.issues:
+                if (
+                    issue.rule_id
+                    != "public_editorial_quality.semantic_collective_editorial_repair"
+                    or issue.severity != "error"
+                    or issue.violation_type != "editorial_only"
+                    or normalize_claim_classification(issue.classification)
+                    not in {"analyst_interpretation", "prescriptive_recommendation"}
+                    or not issue.evidence_ids
+                ):
+                    continue
+                normalized_issue = _normalize_regeneration_issue(
+                    issue, working_artifacts
+                )
+                nominated_draft_paths.update(
+                    path
+                    for path in _issue_insight_allowed_paths(
+                        normalized_issue, working_artifacts
+                    )
+                    if path.startswith("insights_final[item=")
+                    and path.endswith((".so_what", ".now_what"))
+                )
+        if draft_plan is not None and (
+            plan.mode != "targeted"
+            or any(target.repair_action != "REGENERATE_ITEM" for target in plan.targets)
+            or not (
+                {path for target in plan.targets for path in target.allowed_paths}
+                - original_draft_paths
+            ).issubset(nominated_draft_paths)
+            or any(
+                not target.issues
+                or any(
+                    issue.severity != "error"
+                    or issue.violation_type != "editorial_only"
+                    or normalize_claim_classification(issue.classification)
+                    not in {"analyst_interpretation", "prescriptive_recommendation"}
+                    or not issue.evidence_ids
+                    for issue in target.issues
+                )
+                for target in plan.targets
+            )
+        ):
+            # Only explicit, evidence-bound editorial review targets may add
+            # paths to the private repair; no removal, rebind, or warning plan.
+            plan = replace(plan, mode="skip")
         if empty_grounding_strategies:
             logger.info(
                 log_event(
@@ -4883,7 +4975,7 @@ def _run_validation_regeneration_loop(
         )
         validation_before_status = current_validation_report.status
         artifacts_before = deepcopy(working_artifacts)
-        candidate_parent_path = current_artifacts_path
+        candidate_parent_path = draft_path or current_artifacts_path
         attempt_started = perf_counter()
         regeneration_kwargs = {}
         if regeneration_openai_client is not None and _accepts_keyword(
@@ -5091,6 +5183,54 @@ def _run_validation_regeneration_loop(
             evidence_packs=evidence_packs,
             repair_decisions=repair_decisions,
         )
+        if draft_plan is not None:
+            # Per-attempt scope is checked above.  Cumulative scope contains
+            # only the original targets and the newly reviewed draft targets.
+            cumulative_plan = replace(
+                draft_plan, targets=[*draft_plan.targets, *plan.targets]
+            )
+            cumulative_result = validate_regeneration_candidate(
+                current_artifacts=promoted_artifacts,
+                candidate_artifacts=candidate_artifacts,
+                evidence_packs=evidence_packs,
+                ctx=attempt_ctx,
+                planned_prompt_namespaces=tuple(
+                    namespace
+                    for target in cumulative_plan.targets
+                    for namespace in target.prompt_namespaces
+                ),
+                actual_prompt_namespaces=tuple(
+                    dict.fromkeys(
+                        (
+                            *draft_prompt_namespaces,
+                            *regeneration_response.prompt_namespaces,
+                        )
+                    )
+                ),
+                baseline_retained_claim_severities=(
+                    _retained_claim_severity_by_fingerprint(promoted_validation_report)
+                ),
+                verified_facts_only=True,
+            )
+            candidate_result = CandidateIntegrityResult(
+                issues=[*candidate_result.issues, *cumulative_result.issues],
+                evidence_lineage=[
+                    *candidate_result.evidence_lineage,
+                    *cumulative_result.evidence_lineage,
+                ],
+                verified_derived_roots=candidate_result.verified_derived_roots,
+            )
+            cumulative_scope = _scope_validation_report(
+                before=promoted_artifacts,
+                after=candidate_artifacts,
+                plan=cumulative_plan,
+                verified_derived_roots=cumulative_result.verified_derived_roots,
+                doc_map=context_doc_map,
+                evidence_packs=evidence_packs,
+            )
+            scope_validation = _merge_public_editorial_quality(
+                scope_validation, cumulative_scope
+            )
         payload_completeness_issue = None
         try:
             _ensure_report_payload_complete(
@@ -5128,9 +5268,14 @@ def _run_validation_regeneration_loop(
             )
             or payload_completeness_issue is not None
             or abstained_noop_candidate
+            or (
+                draft_plan is not None
+                and bool(payload_overrides or deterministic_mutation_paths)
+            )
         )
         claim_reuse_eligible = bool(
             candidate_enforced
+            and draft_plan is None
             and plan.mode == "targeted"
             and candidate_result.passed
             and not any(
@@ -5459,11 +5604,81 @@ def _run_validation_regeneration_loop(
             else:
                 promotion_outcome = "rolled_back"
                 artifacts_path = current_artifacts_path
-                # A rejected candidate has never become canonical.  Retrying
-                # from it would turn rollback into an untracked mutation and
-                # compound the original failure on every later attempt.
-                working_artifacts = deepcopy(promoted_artifacts)
-                current_validation_report = promoted_validation_report
+                blocking_issues = [
+                    issue
+                    for issue in candidate_validation_report.issues
+                    if str(issue.severity or "").strip().lower() == "error"
+                ]
+                retain_draft = bool(
+                    draft_plan is None
+                    and not draft_used
+                    and verified_source_identity
+                    and verified_fact_digest
+                    and verified_authority_context is not None
+                    and candidate_enforced
+                    and attempt_index < max_attempts
+                    and plan.mode == "targeted"
+                    and plan.targets
+                    and all(
+                        target.repair_action == "REGENERATE_ITEM"
+                        for target in plan.targets
+                    )
+                    and not deterministic_candidate_rejection
+                    and not deterministic_mutation_paths
+                    and not payload_overrides
+                    and candidate_changed
+                    and not repeated_candidate_hash
+                    and editorial_validation is not None
+                    and candidate_provider_validation.status == "pass"
+                    and blocking_issues
+                    and all(
+                        str(issue.violation_type or "") == "editorial_only"
+                        and str(issue.entailment_outcome or "").strip().casefold()
+                        not in {"contradicted", "not_established"}
+                        and (
+                            normalize_claim_classification(issue.classification)
+                            in {"analyst_interpretation", "prescriptive_recommendation"}
+                            or (
+                                not str(issue.classification or "").strip()
+                                and issue.affected_section == "public_items"
+                                and not issue.entity_id
+                                and not issue.repair_target
+                            )
+                        )
+                        for issue in blocking_issues
+                    )
+                )
+                if retain_draft:
+                    # The generator stores before downstream reconciliation.
+                    # A private draft's recorded parent must describe exactly
+                    # the artifact subsequently used by the planner.
+                    try:
+                        stored_candidate = dependencies.read_json(
+                            ReadJsonRequest(
+                                schema_version="1.0", path=candidate_artifacts_path
+                            ),
+                            attempt_ctx,
+                        ).payload
+                    except AppError:
+                        retain_draft = False
+                    else:
+                        retain_draft = sha256_json(stored_candidate) == candidate_sha256
+                if retain_draft:
+                    draft_plan = deepcopy(plan)
+                    draft_used = True
+                    draft_path = candidate_artifacts_path
+                    draft_prompt_namespaces = tuple(
+                        regeneration_response.prompt_namespaces
+                    )
+                    working_artifacts = deepcopy(candidate_artifacts)
+                    current_validation_report = candidate_validation_report
+                    promotion_outcome = "candidate"
+                else:
+                    working_artifacts = deepcopy(promoted_artifacts)
+                    current_validation_report = promoted_validation_report
+                    draft_plan = None
+                    draft_path = ""
+                    draft_prompt_namespaces = ()
                 # The attempt fingerprint describes the actual strategy and
                 # evidence used.  Re-detecting it here means the attempt
                 # repeated an already-rejected combination under another
@@ -5471,8 +5686,9 @@ def _run_validation_regeneration_loop(
                 repeated_rejected_strategy = strategy_fingerprint in (
                     rejected_strategy_keys
                 )
-                rejected_strategy_keys.add(strategy_fingerprint)
-                rejected_strategy_keys.update(planned_strategy_keys)
+                if not retain_draft:
+                    rejected_strategy_keys.add(strategy_fingerprint)
+                    rejected_strategy_keys.update(planned_strategy_keys)
                 repair_memory.append(repair_delta)
                 candidate_claim_issues = (
                     _unchanged_candidate_claim_issues(
@@ -5480,7 +5696,9 @@ def _run_validation_regeneration_loop(
                         candidate_artifacts,
                         candidate_validation_report.issues,
                     )
-                    if verified_mode and not deterministic_candidate_rejection
+                    if verified_mode
+                    and not deterministic_candidate_rejection
+                    and not retain_draft
                     else []
                 )
                 if candidate_changed:
@@ -5536,7 +5754,11 @@ def _run_validation_regeneration_loop(
             validation_snapshot_path=validation_snapshot_path,
             candidate_artifacts_path=candidate_artifacts_path,
             candidate_audit_path=candidate_audit_path,
-            promotion_outcome=promotion_outcome,
+            promotion_outcome=(
+                "not_attempted"
+                if promotion_outcome == "candidate"
+                else promotion_outcome
+            ),
             failure_fingerprints=[
                 _failure_fingerprint(issue).key
                 for issue in current_validation_report.issues

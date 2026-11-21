@@ -1583,6 +1583,31 @@ promoted and no publication write occurred. Retained candidate and review:
 not an end-to-end or first-repair acceptance run; current full-report readiness
 and the cause of the generic first-pass output remain unresolved.
 
+The regeneration loop now permits one private continuation of an evaluated,
+verified-authority candidate whose only blocking failures are editorial. It
+does not reuse the promoted claim-validation package for that draft; the final
+candidate must pass both per-attempt checks and lineage/scope checks against
+the original authority and the combined original and newly reviewed plans.
+New insight leaves require explicit evidence-bound collective nominations from
+the draft review; other newly targeted paths remain ineligible.
+Removal, rebinding, identity overrides,
+and unverified candidate snapshots are not admitted to this continuation.
+The existing reviewer now supplies an explicit editorial_only failure class;
+free-form diagnostic rule IDs no longer authorize the draft. Legacy or
+contradictory review dispositions fail closed, and reviewer cache identities
+are versioned forward. For grouped insight-leaf nominations, the existing
+repair-decision validator now rejects evidence not authorized for every changed
+nominated leaf. Because the provider decision has only one shared evidence
+list, otherwise-valid paired edits with disjoint bindings must abstain until
+the contract can represent per-leaf attribution. The provider-free transaction
+cases require retained local inputs and skip in the default suite.
+An opt-in provider-free replay of retained Activate inputs covers successful
+refinement, rejection of a factual-review failure, and rollback after a second
+editorial failure. The provider responses are test doubles: this establishes
+the handover behavior, not live model quality, first-repair acceptance, or
+end-to-end publication readiness. A fresh provider-backed evaluation remains
+open.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus

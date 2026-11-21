@@ -49,8 +49,8 @@ class PublicEditorialQualityIssue:
         default="",
         metadata={
             "doc": (
-                "Unwaivable source-fidelity failure class, or empty for "
-                "quality-only findings."
+                "Unwaivable failure class; editorial_only explicitly identifies "
+                "a semantic failure without a factual or source defect."
             )
         },
     )

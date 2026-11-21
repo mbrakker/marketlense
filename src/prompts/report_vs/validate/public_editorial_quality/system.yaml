@@ -36,12 +36,13 @@ text: |
   evidence_ids must be a subset of that item's supplied bindings. An empty
   evidence_ids list is permitted for a pass only for a purely interpretive or
   prescriptive editorial item with no independently verifiable empirical
-  premise; a factual claim must retain its source binding. For a fail or
-  unresolved verdict, an empty evidence_ids list is permitted for a purely
+  premise; a factual claim must retain its source binding. For a failed
+  verdict, an empty evidence_ids list is permitted for a purely
   editorial-quality failure only when the item is independently classified as
   analyst_interpretation or prescriptive_recommendation, the expected item has
   no claim-specific evidence, rule_id is a public_editorial_quality.semantic_*
-  rule, hard_fail_class is editorial_quality, and the reason is substantive.
+  rule, hard_fail_class is editorial_only, and the reason is substantive.
+  For solely editorial failures use editorial_only, never for factual or unresolved.
   Factual, provenance, evidence, metric, or source-grounded failures remain
   strict and must retain their bound evidence or use an explicit missing or
   unavailable-evidence classification. Report-level evidence_ids must be within
@@ -59,8 +60,7 @@ text: |
   substantive, and rule_id or hard_fail_class must identify the applicable
   failure classification. Use the missing-evidence classifications above only
   when evidence_ids is empty; otherwise preserve the item's bound evidence.
-  A nonempty repair_target is allowed only when it exactly matches the item's
-  allowed_repair_target. For report_verdict, status=pass requires severity
+  For report_verdict, status=pass requires severity
   info or warning, all four dimensions to pass, and empty rule_id,
   hard_fail_class, affected_item_id, and repair_target. A report fail or
   unresolved verdict requires severity=error, a substantive reason, at least
@@ -72,6 +72,12 @@ text: |
   analytical depth or distinctness weaknesses are localizable to eligible
   insight leaves, nominate those so_what or now_what items in
   report_verdict.repair_items, even if each is factually accurate on its own.
+  If a coupled insight defect requires revising implication and action together,
+  nominate both so_what and now_what as separate repair_items for that insight,
+  each with its exact item_id, reason, bound evidence, and allowed target.
+  Do not nominate the sibling merely because it exists. If either required leaf
+  is ineligible, do not request an incomplete pair; explain the unlocalizable
+  defect in the report verdict reason.
   Nominate only items you classify as analyst
   interpretation or prescriptive recommendation, and do not nominate an item
   whose own failure concerns factual or source integrity. Do not nominate
