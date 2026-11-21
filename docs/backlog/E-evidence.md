@@ -1608,6 +1608,25 @@ the handover behavior, not live model quality, first-repair acceptance, or
 end-to-end publication readiness. A fresh provider-backed evaluation remains
 open.
 
+A provider-backed replay of the frozen Activate repair manifest at committed
+producer `e9f2b5c237444382a76db2352337cb22464e9f67` completed in an isolated
+checkout and output directory (`C:/ml-activate-e9f2b5c2-repair-results`), with
+no publication write. The current baseline failed with six blocking finding
+fingerprints, none matching the three historical fingerprints. The benchmark's
+existing reproducibility guard therefore recorded `no_longer_reproducible` and
+ran **zero repair attempts**; first-repair success remains unmeasured. Current
+findings comprise a grounding verdict that the sports-viewer claim omitted an
+age-18+ qualification and five editorial-review findings, including four
+evidence-bound collective nominations. Whether the grounding verdict is a
+semantic false positive requires source and claim review; it is not evidence
+that the repair implementation succeeded or failed. Configuration identities
+also differ from the historical baseline, so the scorecard labels the comparison
+incompatible. The isolated usage ledger records 27 entries, 543,202 input,
+94,296 output and 38,571 cached input tokens, and an estimated $0.097995; its
+first and last entries span 243 seconds, not total end-to-end runtime. This was
+a retained-input validation replay, not fresh ingestion, final HTML inspection,
+or publication-readiness acceptance. E13/E18 remain active.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
