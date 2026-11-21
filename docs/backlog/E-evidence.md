@@ -1692,6 +1692,16 @@ gate then passed at 120,232 total tokens, estimated $0.025677. No threshold or
 baseline was changed. The live diagnostic used the preceding prompt wording,
 not this final wording, so it is not a byte-identical live verification.
 
+Subsequent first-repair review found that the summary-repair prompt requested
+the source's exact cohort while also saying not to add a qualifier to the
+reported base. That wording could discourage restoring a source-supported
+qualification such as the retained Activate age boundary. The prompt now
+forbids only unsupported added qualifiers while preserving source cohort,
+denominator and period. A rendered-prompt regression failed before the change
+and passes afterward; the unchanged fixture gate passes at 120,229 total tokens
+and an estimated $0.025676. The historical model response does not prove this
+wording caused its particular failure, and no new live success is implied.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus

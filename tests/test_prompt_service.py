@@ -178,6 +178,7 @@ def test_summary_claim_repair_receives_compact_card_length_contract() -> None:
     assert "card_tldr_compact" in prompt
     assert "18 words or fewer" in prompt
     assert "cohort, denominator, and period" in prompt
+    assert "do not add unsupported qualifiers to the reported base" in prompt
 
 
 def test_insight_candidate_repair_prompt_uses_explicit_evidence_whitelist() -> None:
