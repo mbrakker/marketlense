@@ -222,10 +222,21 @@ def _verified_editorial_obligation_context(
                     if evidence_id.startswith("verified-fact:"):
                         fact_id = evidence_id.removeprefix("verified-fact:")
                         break
-            if fact_id and fact_id in fact_by_id:
-                theme_fact_ids.append(fact_id)
-                if fact_id not in fact_ids_in_order:
-                    fact_ids_in_order.append(fact_id)
+            bound_fact_ids = list(
+                dict.fromkeys(
+                    [fact_id]
+                    + [
+                        value.removeprefix("verified-fact:")
+                        for value in evidence_ids
+                        if value.startswith("verified-fact:")
+                    ]
+                )
+            )
+            for bound_fact_id in bound_fact_ids:
+                if bound_fact_id in fact_by_id:
+                    theme_fact_ids.append(bound_fact_id)
+                    if bound_fact_id not in fact_ids_in_order:
+                        fact_ids_in_order.append(bound_fact_id)
             candidate_bindings[candidate_id] = {
                 "candidate_id": candidate_id,
                 "evidence_ids": evidence_ids,
@@ -286,27 +297,36 @@ def _verified_editorial_obligation_context(
                 if evidence_id.startswith("verified-fact:"):
                     fact_id = evidence_id.removeprefix("verified-fact:")
                     break
-        if (
-            not candidate_id
-            or not primary_evidence_id
-            or not fact_id
-            or fact_id in theme_fact_id_set
-            or fact_id in additional_fact_ids
-            or fact_id not in fact_by_id
-        ):
+        if not candidate_id or not primary_evidence_id or not fact_id:
             continue
-        fact = fact_by_id[fact_id]
-        additional_admitted_facts.append(
-            {
-                "fact_id": fact_id,
-                "candidate_id": candidate_id,
-                "evidence_id": primary_evidence_id,
-                "statement": _s(fact.get("statement")).strip(),
-                "metric": deepcopy(fact.get("metric") or {}),
-                "qualifiers": deepcopy(fact.get("qualifiers") or []),
-            }
-        )
-        additional_fact_ids.add(fact_id)
+        evidence_ids = [
+            primary_evidence_id,
+            *(_s(value).strip() for value in candidate.get("evidence_ids", [])),
+        ]
+        fact_bindings = [(fact_id, primary_evidence_id)] + [
+            (value.removeprefix("verified-fact:"), value)
+            for value in evidence_ids
+            if value.startswith("verified-fact:")
+        ]
+        for bound_fact_id, bound_evidence_id in fact_bindings:
+            if (
+                bound_fact_id in theme_fact_id_set
+                or bound_fact_id in additional_fact_ids
+                or bound_fact_id not in fact_by_id
+            ):
+                continue
+            fact = fact_by_id[bound_fact_id]
+            additional_admitted_facts.append(
+                {
+                    "fact_id": bound_fact_id,
+                    "candidate_id": candidate_id,
+                    "evidence_id": bound_evidence_id,
+                    "statement": _s(fact.get("statement")).strip(),
+                    "metric": deepcopy(fact.get("metric") or {}),
+                    "qualifiers": deepcopy(fact.get("qualifiers") or []),
+                }
+            )
+            additional_fact_ids.add(bound_fact_id)
     return {
         "themes": themes,
         "candidate_bindings": list(candidate_bindings.values()),

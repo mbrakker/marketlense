@@ -1779,6 +1779,17 @@ projection excludes protected factual fields. The missing live responses mean
 the original schema mismatch's contribution to the Activate outcome is unknown.
 These changes do not establish live first-repair or end-to-end success.
 
+A separate provider-free regression found that initial verified editorial
+obligations included only one fact per candidate even when that candidate
+explicitly bound multiple canonical verified-fact IDs. Initial obligations
+now include each bound canonical fact, its metric and qualifiers; additional
+admitted facts retain their matching evidence IDs. Unknown IDs do not create
+facts. The changed prompt variables participate in the existing family-input
+hash, and verified mode bypasses composite artifact-cache reuse. This fixes a
+demonstrated multi-fact context omission, but the historical Activate gap was
+single-fact and its missing reviewer text prevents attributing that failure to
+this defect. No fresh full-report acceptance follows from the regression.
+
 Verified-authority validation now rejects malformed snapshot entries, missing
 retained verified-fact packs and duplicate packed fact identities instead of
 silently filtering or reconstructing them. Visual admission also fails closed
