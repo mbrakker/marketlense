@@ -410,8 +410,18 @@ def test_promoted_claim_reuse_is_restart_safe_for_partial_promotion(tmp_path) ->
 
 
 @pytest.mark.parametrize("previous_package_kind", ["valid", "non_reusable"])
+@pytest.mark.parametrize("interrupt", [False, True])
+@pytest.mark.parametrize(
+    "failure_pack",
+    [
+        "artifacts",
+        "validation_retained_claim_validation_candidate",
+        "validation",
+        "regeneration_candidate_audit_1",
+    ],
+)
 def test_promotion_rollback_restores_existing_claim_package_exactly(
-    tmp_path, previous_package_kind: str
+    tmp_path, previous_package_kind: str, interrupt: bool, failure_pack: str
 ) -> None:
     """Rollback restores prior bytes even when the old package cannot be reused."""
 
@@ -504,8 +514,10 @@ def test_promotion_rollback_restores_existing_claim_package_exactly(
     def _store_with_failure(request, ctx):
         nonlocal injected
         result = base_dependencies.analysis_store_pack(request, ctx)
-        if request.pack_name == "validation" and not injected:
+        if request.pack_name == failure_pack and not injected:
             injected = True
+            if interrupt:
+                raise KeyboardInterrupt()
             raise AppError(
                 code="injected_after_validation_write",
                 message="Injected failure after validation replacement.",
@@ -534,7 +546,7 @@ def test_promotion_rollback_restores_existing_claim_package_exactly(
         promotion_outcome="promoted",
     )
 
-    with pytest.raises(AppError) as exc_info:
+    with pytest.raises(KeyboardInterrupt if interrupt else AppError) as exc_info:
         _promote_validated_regeneration_candidate(
             runtime=runtime,
             dependencies=dependencies,
@@ -556,7 +568,12 @@ def test_promotion_rollback_restores_existing_claim_package_exactly(
             ctx=runtime.ctx,
         )
 
-    assert exc_info.value.code == "injected_after_validation_write"
+    if not interrupt:
+        assert exc_info.value.code == (
+            "retained_claim_candidate_promotion_failed"
+            if failure_pack == "validation_retained_claim_validation_candidate"
+            else "injected_after_validation_write"
+        )
     assert injected is True
     assert {path: Path(path).read_bytes() for path in prior_bytes} == prior_bytes
 

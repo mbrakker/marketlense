@@ -6165,7 +6165,7 @@ def _promote_validated_regeneration_candidate(
             audit=promotion_audit,
             ctx=ctx,
         )
-    except Exception as promotion_error:
+    except BaseException as promotion_error:
         try:
             _restore_promotion_file_snapshots(
                 dependencies=dependencies,

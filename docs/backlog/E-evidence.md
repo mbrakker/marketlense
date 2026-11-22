@@ -1753,6 +1753,17 @@ workflow. Results are retained under the isolated temporary directories
 not evidence of general visual accuracy, historical causality, coverage repair,
 or end-to-end readiness. No canonical artifact or publication was changed.
 
+The first correction in that probe used the full 4,096-token output cap,
+including 3,964 reasoning tokens, and its response did not parse. The
+visual-correction cap is now 8,192; model, reasoning effort and retry limits
+are unchanged. A fresh isolated replay of the same reconstructed candidate
+produced the correct source-bound fact with one correction and one independent
+verification. Its two calls used 20,189 input and 4,313 output tokens at an
+estimated $0.004175, with 39.259 seconds of recorded provider time. The result
+is retained at `marketlense-activate-page6-y7iqsac1` in the temporary output
+directory. A single stochastic replay cannot establish a causal improvement
+or a general success rate; this is not a full-report acceptance run.
+
 A provider-free reproduction exposed a separate multi-fact repair-context
 defect: candidates were matched against the union of all gap evidence IDs,
 so candidate order could associate a fact's statement with another fact's
@@ -1790,6 +1801,10 @@ not establish that the entire promotion completed. Claim reuse still passes
 through the existing validation workflow; this observation alone does not
 establish a publication bypass. Crash-consistent promotion remains open and
 requires a durable transaction/recovery design, not an in-memory rollback.
+Catchable interruptions during promotion now use the existing snapshot
+rollback before propagating, with tests after each canonical write. This does
+not cover process termination, concurrent readers, or a second interruption
+during rollback; those guarantees remain unimplemented.
 
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-

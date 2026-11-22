@@ -221,7 +221,7 @@ def test_visual_claim_correction_has_budget_for_complete_structured_json() -> No
     assert decision.policy_source == "report_vs/validate/visual_claim_correction"
     assert decision.policy.model == "gpt-6-luna"
     assert decision.policy.reasoning_effort == "high"
-    assert decision.policy.max_output_tokens == 4096
+    assert decision.policy.max_output_tokens == 8192
 
     verification = resolve_execution_policy(
         "report_vs/validate/visual_claim_verification",
