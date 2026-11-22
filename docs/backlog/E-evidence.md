@@ -1711,13 +1711,29 @@ The recorded operations include a structured-output recovery during the
 rewrite. The run used 468 provider calls, 1,328,928 input and 277,402 output
 tokens, an estimated $0.303959 and 3,162.86 seconds; it made no publication
 write. The workflow-level automatic repair count is zero and does not include
-the in-generation rewrite. The retained visual verification supports the
-upstream fact, but the coverage explanations and rewritten text were not
-retained, so neither the semantic judgment nor its root cause can be checked
-from this run. The missing final verified-facts artifact is a downstream
+the in-generation rewrite. Correction: visual inspection of the original
+PDF's physical page 6 shows that the retained visual correction and verification
+both reversed two segment bindings. Internet access is $128B / 5.7%, and paid
+content is $66B / 2.3%; advertising is $108B / 4.7%. The verified fact
+incorrectly swapped the first and third pairs. The same reversal already
+appears in the retained `growth_segment_revenue` finding and report context;
+visual correction failed to correct it and visual verification falsely
+accepted it. The first upstream source of the erroneous mapping is not known.
+The coverage explanations and rewritten text were not retained, so the cause
+of the later coverage failure cannot be established from this run. The missing
+final verified-facts artifact is a downstream
 consequence of the failed generation, not evidence that visual verification
 did not occur. The result is not a first-pass, first-repair, or readiness pass;
 no semantic gate was relaxed and E18 remains active.
+
+The visual prompts previously warned against assigning chart values by color
+without distinguishing unsupported color guesses from an explicit chart
+legend. Correction and verification prompts now direct the model to trace a
+labeled color through the associated chart step, value and rate, and to
+abstain when the relationship is ambiguous. This addresses an observed prompt
+ambiguity; it does not prove the prompt caused the model's mistake or that
+the changed prompts eliminate it. Fresh source-grounded provider evaluation
+is required before claiming the false verification is fixed.
 
 A provider-free reproduction exposed a separate multi-fact repair-context
 defect: candidates were matched against the union of all gap evidence IDs,
@@ -1727,11 +1743,35 @@ evidence binding, including an explicitly linked secondary fact. Regressions
 cover both candidate orders and secondary bindings. This defect is not shown
 to have caused the single-fact Activate gap above. The scoped repair prompt
 also no longer asks for full candidate-shaped entries after requesting a
-minimal patch. A separate unresolved contract issue remains: the provider's
-strict schema requires all projected properties, whereas scoped patch merge
-uses omission to preserve unchanged fields. The missing live responses mean
-its contribution to the Activate outcome is unknown. These changes do not
-establish live first-repair or end-to-end success.
+minimal patch. The scoped repair provider projection now represents unchanged
+optional editorial fields as null transport sentinels, which are removed before
+canonical validation and merge; intentional empty strings remain edits. The
+projection excludes protected factual fields. The missing live responses mean
+the original schema mismatch's contribution to the Activate outcome is unknown.
+These changes do not establish live first-repair or end-to-end success.
+
+Verified-authority validation now rejects malformed snapshot entries, missing
+retained verified-fact packs and duplicate packed fact identities instead of
+silently filtering or reconstructing them. Visual admission also fails closed
+when a submitted candidate lacks an identity. These are provider-free boundary
+regressions, not evidence that a historical false claim passed those boundaries.
+The later evidence-ID audit found that duplicate finding IDs could resolve to
+different source records, missing fidelity could enter verified-mode candidate
+selection, and visual evaluation and admission ordered IDs differently.
+Finding selection and span indexing now exclude conflicting duplicate bindings;
+verified-mode discovery requires recorded fidelity approval; visual evaluation
+uses primary-first declared IDs and rejects undeclared span identities. The
+selection cache identity is `evidence_backed_shortlisting:36`. Malformed
+artifact and soft-copy evidence IDs now raise the existing typed snapshot error.
+These are local regression results; no fresh provider-backed or end-to-end
+report establishes current live factual or editorial performance.
+An independent review also confirmed that promotion rolls back caught write
+errors but cannot roll back an abrupt process termination between its separate
+canonical writes. The restart reuse loader checks the artifact hash but does
+not establish that the entire promotion completed. Claim reuse still passes
+through the existing validation workflow; this observation alone does not
+establish a publication bypass. Crash-consistent promotion remains open and
+requires a durable transaction/recovery design, not an in-memory rollback.
 
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-

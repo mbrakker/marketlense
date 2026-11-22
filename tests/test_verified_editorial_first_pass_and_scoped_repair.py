@@ -403,8 +403,14 @@ def test_partial_repair_scope_replaces_only_the_authorized_existing_entry() -> N
     assert merged[1] == current[1]
 
 
+@pytest.mark.parametrize(
+    ("so_what_patch", "expected_implication"),
+    [(None, "Preserved implication."), ("", "")],
+)
 def test_localized_repair_keeps_complete_family_materialization_and_audits_patch(
     tmp_path,
+    so_what_patch,
+    expected_implication,
 ) -> None:
     candidates = [
         _insight(f"f{index}", score=1.0 - index / 100) for index in range(1, 6)
@@ -416,17 +422,24 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
         }
         for candidate in candidates
     ]
+    initial[1]["so_what"] = "Preserved implication."
+    initial[1]["now_what"] = "Preserved action."
     responses = _generation_responses(candidates, plan_evidence_ids=["f2", "f1"])
     responses["insights_final"] = [
         {"insights_final": initial},
         {
             "insights_final": [
                 {
-                    **deepcopy(initial[1]),
+                    "id": initial[1]["id"],
+                    "evidence_id": initial[1]["evidence_id"],
                     "text": (
-                        "The second source signal is developed without changing the "
-                        "rest."
+                        "The second source signal is developed without changing "
+                        "the rest."
                     ),
+                    "evidence_ids": None,
+                    "so_what": so_what_patch,
+                    "now_what": None,
+                    "metric_public_copy": None,
                 }
             ]
         },
@@ -455,6 +468,7 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
         }
     ]
     prompt_client = CapturingPromptClient()
+    model_client = FakeOpenAI(responses)
     payload = generate_artifacts(
         report_id="verified-transient-editorial-repair",
         report_name="Verified transient editorial repair",
@@ -462,7 +476,7 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
         evidence_packs=_generation_evidence(5),
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAI(responses),
+        openai_client=model_client,
         prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
         visual_authority_admitter=lambda shortlisted: _verified_admission(
@@ -474,6 +488,34 @@ def test_localized_repair_keeps_complete_family_materialization_and_audits_patch
     cached_family = payload["_cache"]["family_outputs"][family]
     final_by_id = {item["id"]: item for item in payload["insights_final"]}
     assert cached_family[1]["text"] != final_by_id[cached_family[1]["id"]]["text"]
+    assert final_by_id[initial[1]["id"]]["so_what"] == expected_implication
+    assert final_by_id[initial[1]["id"]]["now_what"] == "Preserved action."
+    repair_requests = [
+        request
+        for kind, request, _step in model_client.requests
+        if kind == "chat"
+        and request.structured_output_schema_identity.endswith("scoped_patch_v1")
+    ]
+    assert len(repair_requests) == 1
+    schema = repair_requests[0].structured_output_schema
+    from jsonschema import Draft202012Validator
+
+    strict_patch = {
+        "insights_final": [
+            {
+                "id": initial[1]["id"],
+                "text": "Corrected.",
+                "evidence_id": initial[1]["evidence_id"],
+                "evidence_ids": None,
+                "so_what": None,
+                "now_what": None,
+                "metric_public_copy": None,
+            }
+        ]
+    }
+    assert not list(Draft202012Validator(schema).iter_errors(strict_patch))
+    strict_patch["insights_final"][0]["metric"] = {}
+    assert list(Draft202012Validator(schema).iter_errors(strict_patch))
     repair = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"][
         "final_selected_theme_coverage"
     ]["semantic_repair"]

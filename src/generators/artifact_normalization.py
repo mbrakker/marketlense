@@ -32,7 +32,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 from src.utils.verified_facts import PROTECTED_METRIC_FIELDS
 
 EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_editorial_plan:4.4"
-ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:35"
+ARTIFACT_INSIGHT_SELECTION_VERSION = "evidence_backed_shortlisting:36"
 VERIFIED_FACT_CONTEXT_VERSION = "verified_fact_context:1.0"
 
 EDITORIAL_PLAN_IMPORTANCE_VALUES = {"essential", "optional"}
@@ -170,6 +170,8 @@ _SOURCE_RANGE_DISPLAY_RE = re.compile(
 def artifact_base_variables(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
+    *,
+    require_fidelity: bool = False,
 ) -> Dict[str, str]:
     known_evidence_ids, _ = _collect_known_evidence_ids(
         doc_map=doc_map or {}, evidence_packs=evidence_packs or {}
@@ -181,13 +183,17 @@ def artifact_base_variables(
             sorted(known_evidence_ids, key=str.casefold)
         ),
         "candidate_allowed_evidence_ids_json": _dump_json(
-            artifact_candidate_allowed_evidence_ids(evidence_packs or {})
+            artifact_candidate_allowed_evidence_ids(
+                evidence_packs or {}, require_fidelity=require_fidelity
+            )
         ),
     }
 
 
 def artifact_candidate_allowed_evidence_ids(
     evidence_packs: Dict[str, Any],
+    *,
+    require_fidelity: bool = False,
 ) -> List[str]:
     """Return the direct, eligible evidence vocabulary for insight candidates.
 
@@ -215,6 +221,7 @@ def artifact_candidate_allowed_evidence_ids(
             findings_pack,
             limit=len(raw_findings),
             evidence_fidelity=evidence_packs.get("evidence_fidelity"),
+            require_fidelity=require_fidelity,
         )
         for finding in eligible_findings:
             evidence_id = _s(finding.get("evidence_id")).strip()
@@ -4875,6 +4882,32 @@ def _fallback_evidence_key(value: Any) -> str:
     return normalize_text(value).removeprefix("evidence:findings:")
 
 
+def conflicting_finding_ids(findings: list[Any]) -> set[str]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for finding in findings:
+        if isinstance(finding, dict):
+            key = _fallback_evidence_key(
+                finding.get("id") or finding.get("evidence_id")
+            )
+            if key:
+                groups.setdefault(key, []).append(finding)
+    return {
+        key
+        for key, group in groups.items()
+        if len(group) > 1
+        and (
+            len(
+                {
+                    _s(item.get("text") or item.get("statement")).strip()
+                    for item in group
+                }
+            )
+            > 1
+            or _candidate_group_has_factual_conflict(group)
+        )
+    }
+
+
 def _finding_section_ids(source_findings: Any) -> dict[str, set[str]]:
     """Index original finding IDs by their unambiguous source section."""
 
@@ -5036,6 +5069,7 @@ def fallback_artifact_insights_from_findings(
     editorial_plan: Dict[str, Any] | None = None,
     evidence_fidelity: Any = None,
     covered_evidence_ids: List[str] | None = None,
+    require_fidelity: bool = False,
 ) -> List[Dict[str, Any]]:
     """Build a bounded insight candidate set from addressable findings.
 
@@ -5049,6 +5083,7 @@ def fallback_artifact_insights_from_findings(
     raw_findings = findings_pack.get("findings")
     if not isinstance(raw_findings, list):
         return []
+    conflicting_ids = conflicting_finding_ids(raw_findings)
     raw_candidates: List[Dict[str, Any]] = []
     fidelity_results = (
         evidence_fidelity.get("results")
@@ -5060,6 +5095,8 @@ def fallback_artifact_insights_from_findings(
     fidelity_ids = supported_fidelity_evidence_ids(
         {"results": fidelity_results} if isinstance(fidelity_results, list) else None
     )
+    if require_fidelity and fidelity_ids is None:
+        return []
     finding_section_ids = _finding_section_ids(findings_pack)
     finding_sections = {
         finding_id: next(iter(sections)) if len(sections) == 1 else ""
@@ -5121,6 +5158,8 @@ def fallback_artifact_insights_from_findings(
         if not pages:
             continue
         normalized_evidence_id = _fallback_evidence_key(evidence_id)
+        if normalized_evidence_id in conflicting_ids:
+            continue
         if (
             fidelity_ids is not None
             and normalized_evidence_id.casefold() not in fidelity_ids
@@ -5246,6 +5285,7 @@ def fallback_artifact_insights_from_evidence(
     editorial_plan: Dict[str, Any] | None = None,
     evidence_fidelity: Any = None,
     covered_evidence_ids: List[str] | None = None,
+    require_fidelity: bool = False,
 ) -> List[Dict[str, Any]]:
     """Build replacement candidates from fidelity-approved findings and quotes.
 
@@ -5261,6 +5301,7 @@ def fallback_artifact_insights_from_evidence(
         editorial_plan=editorial_plan,
         evidence_fidelity=evidence_fidelity,
         covered_evidence_ids=covered_evidence_ids,
+        require_fidelity=require_fidelity,
     )
     seen_evidence_ids = {
         _fallback_evidence_key(item.get("evidence_id"))
@@ -6537,6 +6578,8 @@ def _build_evidence_span_index(
         findings_pack = evidence_packs.get("findings")
         if isinstance(findings_pack, dict):
             fidelity = evidence_packs.get("evidence_fidelity")
+            if fidelity is None:
+                fidelity = findings_pack.get("evidence_fidelity")
             supported_findings: dict[str, tuple[str, set[int]]] = {}
             ambiguous_findings: set[str] = set()
             fidelity_results = (
@@ -6593,10 +6636,14 @@ def _build_evidence_span_index(
             finding_source_pack = (
                 "verified_facts" if family_source == "verified_facts" else "findings"
             )
-            for item in findings_pack.get("findings") or []:
+            finding_items = findings_pack.get("findings") or []
+            conflicting_ids = conflicting_finding_ids(finding_items)
+            for item in finding_items:
                 if not isinstance(item, dict):
                     continue
                 finding_id = _s(item.get("id") or item.get("evidence_id")).strip()
+                if _fallback_evidence_key(finding_id) in conflicting_ids:
+                    continue
                 if finding_source_pack == "verified_facts":
                     verified_facts_pack = evidence_packs.get("verified_facts")
                     canonical_fact_present = isinstance(

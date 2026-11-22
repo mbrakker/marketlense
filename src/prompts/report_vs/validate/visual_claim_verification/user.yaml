@@ -12,8 +12,9 @@ text: |
   pagination, not the physical PDF page; if it conflicts with the mapping,
   ignore the printed number and cite the mapped one-based physical PDF page.
   For chart values and rates, trace each value to its exact label and named
-  population; do not transfer a value or rate between categories by visual
-  order or color.
+  population. For color-coded charts, trace the source's explicit color legend
+  or labeled segment through each matching step, value and rate; never infer category from position alone.
+  If the relationship is ambiguous, reject or mark it unresolved.
 
   Original claim (analytical direction only; not factual authority):
   {{ original_claim | default("") }}

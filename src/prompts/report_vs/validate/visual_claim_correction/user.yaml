@@ -11,8 +11,9 @@ text: |
   The mapping is authoritative. A printed footer or header number is publisher
   pagination, not the physical PDF page; if it conflicts with the mapping,
   ignore the printed number. Trace every chart value or rate to its exact label
-  and named population; do not transfer values between categories by visual
-  order or color.
+  and named population. For color-coded charts, trace the source's explicit color legend
+  or labeled segment through each matching step, value and rate; never infer category from position alone.
+  If the relationship is ambiguous, narrow the claim or return unresolved.
 
   This is correction attempt {{ attempt }}. If present, the independent verifier
   rejected the previous attempt for these source-based reasons. Repair only what

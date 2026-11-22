@@ -42,9 +42,12 @@ text: |
   and commercial implications may pass when they are defensible extensions of
   what the page shows and do not contradict or overstate the source. The
   original direction remains a relevance signal, not factual authority.
-  For every chart value or rate, trace it to the exact adjacent or legend
-  label and named population; do not transfer a value or rate between
-  categories based on visual order or color. If that relationship is
+  For every chart value or rate, trace it to its exact source label and named
+  population; do not transfer a value or rate between categories. For a chart
+  with color-coded segments or waterfall steps, trace the source's explicit color legend
+  or labeled segment to each matching step, value and rate; never infer category from position alone.
+  Check the full label-to-color-to-value relationship, including both endpoints.
+  If that relationship is
   ambiguous, reject or mark the claim unresolved rather than guessing.
   Treat footnotes, superscripts, captions, exclusions, and named cohorts as
   binding qualifiers for the reported metric. If the final claim drops or

@@ -609,25 +609,6 @@ def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
 
     assert fallback == [
         {
-            "id": "finding_1",
-            "text": "Brand tracking identifies funnel drop-offs.",
-            "evidence_id": "finding_1",
-            "evidence": "The report identifies where audiences drop off.",
-            "evidence_spans": [],
-            "metric": {
-                "label": "",
-                "value": "",
-                "unit": "",
-                "trend": "",
-                "timeframe": "",
-                "geography": "",
-                "segment": "",
-                "sample_size": "",
-                "confidence": "",
-            },
-            "pages": [4],
-        },
-        {
             "id": "finding_2",
             "text": "Harmonized data supports cross-market comparison.",
             "evidence_id": "finding_2",

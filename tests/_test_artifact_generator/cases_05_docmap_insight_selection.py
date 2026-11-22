@@ -520,6 +520,21 @@ def test_generate_artifacts_keeps_bounded_opportunities_above_final_target(tmp_p
 
 def _generation_evidence(section_count: int) -> dict[str, object]:
     evidence = _section_linked_findings(max(section_count, 2))
+    evidence["evidence_fidelity"] = {
+        "results": [
+            {
+                "status": "supported",
+                "candidate": {
+                    "claim_id": f"evidence:findings:f{index}",
+                    "text": f"Finding {index}",
+                    "evidence_references": [
+                        {"source_pack": "source_pdf", "page": index + 1}
+                    ],
+                },
+            }
+            for index in range(1, max(section_count, 2) + 1)
+        ]
+    }
     evidence["quote_candidates"] = {
         "quote_candidates": [
             {

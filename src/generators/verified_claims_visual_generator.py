@@ -344,6 +344,8 @@ def _binding_conflict_reason(claim: Mapping[str, Any], source_identity: str) -> 
         and top_evidence_id not in span_evidence_ids
     ):
         return "evidence_id_conflict"
+    if not span_evidence_ids.issubset(set(_evidence_ids(claim))):
+        return "evidence_id_conflict"
     return ""
 
 
@@ -351,18 +353,10 @@ def _evidence_ids(claim: Mapping[str, Any]) -> list[str]:
     values: list[str] = []
     raw_plural = claim.get("evidence_ids")
     plural_values = raw_plural if isinstance(raw_plural, list) else []
-    for value in [*plural_values, _text(claim.get("evidence_id"))]:
+    for value in [_text(claim.get("evidence_id")), *plural_values]:
         value = _text(value)
         if value and value not in values:
             values.append(value)
-    spans = claim.get("evidence_spans")
-    if isinstance(spans, list):
-        for span in spans:
-            if not isinstance(span, dict):
-                continue
-            value = _text(span.get("evidence_id"))
-            if value and value not in values:
-                values.append(value)
     return values
 
 

@@ -238,6 +238,50 @@ def test_stale_verified_authority_digest_fails_closed():
     assert raised.value.code == "verified_fact_snapshot_invalid"
 
 
+@pytest.mark.parametrize("bad_ids", [[{}], [42], "not-a-list"])
+def test_malformed_artifact_evidence_ids_fail_with_typed_error(bad_ids):
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "insight-1",
+                "evidence_id": "verified-fact:fact-1",
+                "evidence_ids": bad_ids,
+            }
+        ]
+    }
+    with pytest.raises(AppError) as raised:
+        validate_verified_artifact_bindings(artifacts, {"fact-1": _fact()})
+    assert raised.value.code == "verified_fact_snapshot_invalid"
+
+
+def test_malformed_soft_copy_evidence_ids_fail_with_typed_error():
+    artifacts = {"soft_copy_claim_provenance": {"claims": [{"evidence_ids": [{}]}]}}
+    with pytest.raises(AppError) as raised:
+        validate_verified_artifact_bindings(artifacts, {"fact-1": _fact()})
+    assert raised.value.code == "verified_fact_snapshot_invalid"
+
+
+@pytest.mark.parametrize(
+    "corruption", ["malformed_fact", "missing_pack", "duplicate_packed_fact"]
+)
+def test_corrupt_verified_authority_snapshot_fails_closed(corruption: str) -> None:
+    artifacts = _authority_artifacts()
+    if corruption == "malformed_fact":
+        artifacts["verified_facts"].append("corrupt")
+    elif corruption == "missing_pack":
+        artifacts["_cache"]["visual_authority_canary"]["verified_evidence_packs"] = {}
+    else:
+        packed = artifacts["_cache"]["visual_authority_canary"][
+            "verified_evidence_packs"
+        ]["verified_facts"]["verified_facts"]
+        packed.append(deepcopy(packed[0]))
+    with pytest.raises(AppError) as raised:
+        build_verified_authority_context(
+            artifacts, expected_source_identity=SOURCE_IDENTITY
+        )
+    assert raised.value.code == "verified_fact_snapshot_invalid"
+
+
 def test_verified_materialization_retains_authoritative_composite_observations():
     fact = _fact(
         metric={

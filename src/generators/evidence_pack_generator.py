@@ -35,6 +35,7 @@ from src.generators.analysis_store_adapter import (
 from src.generators.analysis_store_adapter import (
     store_pack as store_analysis_pack,
 )
+from src.generators.artifact_normalization import conflicting_finding_ids
 from src.generators.claim_validation_generator import (
     _evidence_fidelity_candidates,
     _has_printed_page_label,
@@ -84,6 +85,7 @@ from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
 from src.utils.structured_output import StructuredOutputFailure
+from src.utils.text_normalization import normalize_text
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
@@ -668,11 +670,12 @@ def _attach_verified_finding_pages(
     excluded.
     """
 
-    findings_by_id = {
-        str(finding.get("id") or "").strip(): finding
-        for finding in findings
-        if str(finding.get("id") or "").strip()
-    }
+    findings_by_id: dict[str, list[dict[str, object]]] = {}
+    conflicting_ids = conflicting_finding_ids(list(findings))
+    for finding in findings:
+        finding_id = str(finding.get("id") or "").strip()
+        if finding_id:
+            findings_by_id.setdefault(finding_id, []).append(finding)
     supported_ids: set[str] = set()
     for result in fidelity.results:
         claim_id = str(result.candidate.claim_id)
@@ -684,8 +687,16 @@ def _attach_verified_finding_pages(
         ):
             continue
         finding_id = claim_id.removeprefix("evidence:findings:")
-        finding = findings_by_id.get(finding_id)
-        if finding is None:
+        if (
+            normalize_text(finding_id).removeprefix("evidence:findings:")
+            in conflicting_ids
+        ):
+            continue
+        matches = findings_by_id.get(finding_id, [])
+        if not matches or any(
+            str(finding.get("text") or "").strip() != result.candidate.text.strip()
+            for finding in matches
+        ):
             continue
         pages = sorted(
             {
@@ -697,7 +708,8 @@ def _attach_verified_finding_pages(
             }
         )
         if pages:
-            finding["pages"] = pages
+            for finding in matches:
+                finding["pages"] = pages
             supported_ids.add(finding_id)
     return supported_ids
 

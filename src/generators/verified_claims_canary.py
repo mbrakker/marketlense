@@ -302,6 +302,8 @@ def admit_visual_authority_candidates(
         )
     audit["coverage_complete"] = (
         bool(expected_ids)
+        and len(raw_candidate_list) == len(candidates)
+        and all(_candidate_id(candidate) for candidate in raw_candidate_list)
         and not missing_ids
         and not extra_ids
         and not duplicate_result_ids

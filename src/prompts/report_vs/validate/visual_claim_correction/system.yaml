@@ -54,9 +54,12 @@ text: |
   header is publisher pagination, not the physical PDF page; if it conflicts
   with the mapping, ignore the printed footer and cite the mapped one-based
   physical PDF page. Never infer a page from image order or a filename. For
-  every chart value or rate, trace it to the exact adjacent or legend label and
-  named population; do not transfer a value or rate between categories based
-  on visual order or color. If that relationship is ambiguous, narrow the
+  every chart value or rate, trace it to its exact source label and named
+  population; do not transfer a value or rate between categories. For a chart
+  with color-coded segments or waterfall steps, trace the source's explicit color legend
+  or labeled segment to each matching step, value and rate; never infer category from position alone.
+  Check the full label-to-color-to-value relationship, including both endpoints.
+  If that relationship is ambiguous, narrow the
   claim or return unresolved. Before combining chart totals with component
   percentages, reconcile the arithmetic and labels. If a chart's displayed
   aggregate conflicts with its component totals, do not present them as one

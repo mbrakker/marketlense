@@ -489,7 +489,8 @@ def _verified_semantic_repair_focal_facts(
                 candidate
                 for candidate in candidates
                 if _s(candidate.get("evidence_id")).strip()
-                and fact_evidence_identity in {
+                and fact_evidence_identity
+                in {
                     _repair_evidence_identity(value)
                     for value in (
                         candidate.get("evidence_id"),
@@ -2550,7 +2551,11 @@ def generate_artifacts(
             },
         )
 
-    base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
+    base_vars = artifact_base_variables(
+        safe_doc_map,
+        safe_evidence,
+        require_fidelity=visual_authority_admitter is not None,
+    )
     canonical_evidence_ids_json = base_vars.pop("canonical_evidence_ids_json", "[]")
     candidate_allowed_evidence_ids_json = base_vars.pop(
         "candidate_allowed_evidence_ids_json", "[]"
@@ -2650,6 +2655,7 @@ def generate_artifacts(
         limit=candidate_pool_target,
         editorial_plan=editorial_plan,
         evidence_fidelity=safe_evidence.get("evidence_fidelity"),
+        require_fidelity=visual_authority_admitter is not None,
     )
     candidate_evidence_sufficient = (
         len(eligible_candidate_findings) >= MIN_FINAL_ARTIFACT_INSIGHTS
@@ -2952,6 +2958,7 @@ def generate_artifacts(
             editorial_plan=editorial_plan,
             evidence_fidelity=safe_evidence.get("evidence_fidelity"),
             covered_evidence_ids=covered_candidate_evidence_ids,
+            require_fidelity=visual_authority_admitter is not None,
         )
     if primary_selection_adequate and not fallback_candidates:
         insights_candidates = primary_selected_candidates

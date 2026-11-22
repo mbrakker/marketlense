@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Callable
+from copy import deepcopy
 from typing import Any, Dict, Optional
 
 from src.contracts.config import AppSettings
@@ -60,6 +61,12 @@ _ARTIFACT_ABSTAINABLE_ROOTS = {
     "linkedin_post",
 }
 _SOFT_COPY_ROOTS = {"summary", "expert_comment", "linkedin_post"}
+_SCOPED_INSIGHT_OPTIONAL_FIELDS = (
+    "evidence_ids",
+    "so_what",
+    "now_what",
+    "metric_public_copy",
+)
 
 
 def _soft_copy_provider_output_schema(root_key: str) -> dict[str, Any]:
@@ -224,6 +231,11 @@ def render_artifact_json_model(
             retryable=False,
             context={"namespace": namespace},
         )
+    scoped_insight_patch = (
+        root_key == "insights_final"
+        and bool(variables.get("semantic_theme_repair_scope_json"))
+        and not response_contract_name
+    )
     output_schema = (
         provider_output_schema(response_contract_name)
         if response_contract_name
@@ -233,6 +245,19 @@ def render_artifact_json_model(
             else provider_output_schema("artifacts", root_key)
         )
     )
+    if scoped_insight_patch:
+        item_schema = output_schema["properties"]["insights_final"]["items"]
+        properties = item_schema["properties"]
+        allowed = ("id", "text", "evidence_id", *_SCOPED_INSIGHT_OPTIONAL_FIELDS)
+        item_schema["properties"] = {
+            name: (
+                {"anyOf": [deepcopy(properties[name]), {"type": "null"}]}
+                if name in _SCOPED_INSIGHT_OPTIONAL_FIELDS
+                else properties[name]
+            )
+            for name in allowed
+        }
+        item_schema["required"] = list(allowed)
     resolved_report_id = str(report_id or getattr(ctx, "report_id", "") or report_name)
     candidate_evidence_sufficient = (
         str(variables.get("_candidate_evidence_sufficient") or "").strip().lower()
@@ -275,7 +300,10 @@ def render_artifact_json_model(
             output_schema_identity=(
                 f"{response_contract_name}_{response_contract_identity_version}"
                 if response_contract_name
-                else f"artifact_{root_key}_v1"
+                else (
+                    f"artifact_{root_key}_"
+                    f"{'scoped_patch_v1' if scoped_insight_patch else 'v1'}"
+                )
             ),
             repair_attempt=(
                 repair_attempt
@@ -362,7 +390,14 @@ def render_artifact_json_model(
         normalize_payload=(
             (lambda payload: dict(payload) if isinstance(payload, dict) else payload)
             if response_contract_name
-            else (lambda payload: _normalize_artifact_response(payload, root_key))
+            else (
+                lambda payload: _normalize_artifact_response(
+                    _omit_scoped_insight_nulls(payload)
+                    if scoped_insight_patch
+                    else payload,
+                    root_key,
+                )
+            )
         ),
         validate_payload=validate_payload,
         is_substantive=(
@@ -414,6 +449,26 @@ def render_artifact_json_model(
         )
         result["_soft_copy_generation_attempt"] = recovery.attempts
     return result
+
+
+def _omit_scoped_insight_nulls(payload: object) -> object:
+    if not isinstance(payload, dict) or not isinstance(
+        payload.get("insights_final"), list
+    ):
+        return payload
+    return {
+        **payload,
+        "insights_final": [
+            {
+                key: value
+                for key, value in item.items()
+                if not (key in _SCOPED_INSIGHT_OPTIONAL_FIELDS and value is None)
+            }
+            if isinstance(item, dict)
+            else item
+            for item in payload["insights_final"]
+        ],
+    }
 
 
 def _artifact_response_substantive(payload: object, root_key: str) -> bool:

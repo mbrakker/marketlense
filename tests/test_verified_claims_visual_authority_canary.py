@@ -322,6 +322,19 @@ def test_unchanged_verified_claim_is_admitted_with_authoritative_candidate_field
     assert admission.audit["admitted_count"] == 1
 
 
+def test_missing_candidate_id_cannot_count_as_complete_visual_coverage():
+    candidate = _candidate()
+    admission = admit_visual_authority_candidates(
+        candidates=[candidate, {"text": "Untracked claim"}],
+        evaluation=_response(_result(candidate)),
+        source_identity=SOURCE_IDENTITY,
+        doc_map={},
+        evidence_packs=_evidence_packs(candidate),
+    )
+    assert not admission.audit["coverage_complete"]
+    assert not admission.admitted_candidates
+
+
 def test_material_correction_without_independent_binding_is_quarantined():
     candidate = _candidate()
     result = _result(

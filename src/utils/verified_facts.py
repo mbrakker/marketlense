@@ -100,7 +100,13 @@ def verified_source_identity_matches_runtime(
 def _raw_facts(artifacts: object, evidence_packs: object) -> list[Mapping[str, Any]]:
     del evidence_packs
     values = artifacts.get("verified_facts") if isinstance(artifacts, Mapping) else None
-    return [item for item in values or [] if isinstance(item, Mapping)]
+    if values is None:
+        return []
+    if not isinstance(values, list) or any(
+        not isinstance(item, Mapping) for item in values
+    ):
+        raise _invalid("verified_facts snapshot contains malformed entries")
+    return values
 
 
 def _positive_pages(value: object, *, field: str, fact_id: str) -> list[int]:
@@ -268,7 +274,9 @@ def build_verified_authority_context(
     if not isinstance(metadata, Mapping) or metadata.get("enabled") is not True:
         raise _invalid("verified authority canary metadata is missing")
     retained_packs = metadata.get("verified_evidence_packs")
-    if not isinstance(retained_packs, Mapping):
+    if not isinstance(retained_packs, Mapping) or not isinstance(
+        retained_packs.get("verified_facts"), Mapping
+    ):
         raise _invalid("verified authority evidence packs are missing")
     facts = validated_verified_facts(
         artifacts,
@@ -322,7 +330,7 @@ def _validate_verified_pack_consistency(
         for item in pack_facts
         if isinstance(item, Mapping)
     }
-    if set(by_id) != set(facts):
+    if len(by_id) != len(pack_facts) or set(by_id) != set(facts):
         raise _invalid("verified_facts evidence pack does not match the snapshot")
     for fact_id, fact in facts.items():
         packed = by_id[fact_id]
@@ -394,9 +402,15 @@ def _artifact_evidence_ids(item: Mapping[str, Any]) -> list[object]:
     values: list[object] = []
     primary = item.get("evidence_id")
     if primary is not None:
+        if not isinstance(primary, str):
+            raise _invalid("artifact evidence_id must be a string")
         values.append(primary)
     additional = item.get("evidence_ids")
+    if additional is not None and not isinstance(additional, list):
+        raise _invalid("artifact evidence_ids must be a list")
     if isinstance(additional, list):
+        if any(not isinstance(value, str) for value in additional):
+            raise _invalid("artifact evidence_ids must contain only strings")
         values.extend(additional)
     return list(dict.fromkeys(values))
 
@@ -410,6 +424,11 @@ def _validate_artifact_binding(
     evidence_ids: object,
     spans: object,
 ) -> None:
+    if evidence_ids is not None and (
+        not isinstance(evidence_ids, list)
+        or any(not isinstance(value, str) for value in evidence_ids)
+    ):
+        raise _invalid(f"{family}[{index}] contains malformed evidence IDs")
     raw_ids = evidence_ids if isinstance(evidence_ids, list) else [evidence_ids]
     verified_ids = [
         str(value).strip()

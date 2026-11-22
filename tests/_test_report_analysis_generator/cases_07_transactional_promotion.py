@@ -741,8 +741,10 @@ def test_executed_decision_metadata_overrides_planner_response_fields(tmp_path) 
 
 
 __all__ = [
+    "test_verified_promotion_requires_current_persisted_validation_artifact",
     "test_promotion_persistence_failures_do_not_authorize_partial_state",
     "test_promoted_claim_reuse_is_restart_safe_for_partial_promotion",
     "test_promotion_rollback_restores_existing_claim_package_exactly",
     "test_candidate_audit_records_executed_evidence_without_planner_fallback",
+    "test_executed_decision_metadata_overrides_planner_response_fields",
 ]
