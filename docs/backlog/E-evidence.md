@@ -1702,6 +1702,23 @@ and passes afterward; the unchanged fixture gate passes at 120,229 total tokens
 and an estimated $0.025676. The historical model response does not prove this
 wording caused its particular failure, and no new live success is implied.
 
+A fresh isolated Activate ingestion-to-HTML attempt at commit `2d93bba1`
+failed before HTML or final validation with
+`artifact_final_insight_coverage_invalid`. Seven insights were selected,
+including `global-revenue-outlook`; independent coverage reported that fact
+as a material gap after one targeted rewrite and a subsequent assessment.
+The recorded operations include a structured-output recovery during the
+rewrite. The run used 468 provider calls, 1,328,928 input and 277,402 output
+tokens, an estimated $0.303959 and 3,162.86 seconds; it made no publication
+write. The workflow-level automatic repair count is zero and does not include
+the in-generation rewrite. The retained visual verification supports the
+upstream fact, but the coverage explanations and rewritten text were not
+retained, so neither the semantic judgment nor its root cause can be checked
+from this run. The missing final verified-facts artifact is a downstream
+consequence of the failed generation, not evidence that visual verification
+did not occur. The result is not a first-pass, first-repair, or readiness pass;
+no semantic gate was relaxed and E18 remains active.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
