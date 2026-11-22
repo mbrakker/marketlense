@@ -119,8 +119,12 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "do not transfer a value or rate between" in verification.system.text.lower()
     assert "verified_fact" in verification.user.text
     assert "original evidence and metric" in verification.user.text.lower()
-    for prompt in (correction.system.text, correction.user.text,
-                   verification.system.text, verification.user.text):
+    for prompt in (
+        correction.system.text,
+        correction.user.text,
+        verification.system.text,
+        verification.user.text,
+    ):
         assert "trace the source's explicit color legend" in prompt.lower()
         assert "never infer category from position alone" in prompt.lower()
     assert "printed footer" in editorial.system.text.lower()
