@@ -1735,6 +1735,24 @@ ambiguity; it does not prove the prompt caused the model's mistake or that
 the changed prompts eliminate it. Fresh source-grounded provider evaluation
 is required before claiming the false verification is fixed.
 
+A bounded source-grounded probe at `ec7d72f9` reconstructed a candidate from
+the retained `growth_segment_revenue` finding and used the hash-matched original
+PDF, physical page 6. This is not the missing historical request. The current
+shadow correction and verification path produced a verified fact with the
+correct category/value/CAGR relationships and the forecast and access-footnote
+qualifiers. Its first correction response was invalid; the second was accepted
+and one independent verification succeeded. A separate call to the existing
+verifier, given the original swapped finding as the claim to check, rejected
+it and identified the internet-access/paid-content reversal. Advertising was
+correct in the retained finding. The probes used four provider calls, 40,276
+input and 9,716 output tokens and an estimated $0.008885; the latter verifier
+probe directly exercised the verification component rather than the full
+workflow. Results are retained under the isolated temporary directories
+`marketlense-activate-page6-rd9_bi97` and
+`marketlense-activate-verifier-7up56lxl`. This is a single-case observation,
+not evidence of general visual accuracy, historical causality, coverage repair,
+or end-to-end readiness. No canonical artifact or publication was changed.
+
 A provider-free reproduction exposed a separate multi-fact repair-context
 defect: candidates were matched against the union of all gap evidence IDs,
 so candidate order could associate a fact's statement with another fact's
