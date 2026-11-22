@@ -466,11 +466,6 @@ def _verified_semantic_repair_focal_facts(
         )
         if not gap_identities:
             continue
-        gap_evidence_identities = {
-            _repair_evidence_identity(value)
-            for value in evidence_ids
-            if _repair_evidence_identity(value)
-        }
         affected_final_ids = [
             _s(value).strip()
             for value in gap.get("final_insight_ids", [])
@@ -479,20 +474,31 @@ def _verified_semantic_repair_focal_facts(
         for fact_identity, matching_fact in facts_by_identity.items():
             if fact_identity not in gap_identities:
                 continue
+            fact_evidence_identity = _repair_evidence_identity(fact_identity)
+            fact_evidence_id = next(
+                (
+                    _s(value).strip()
+                    for value in evidence_ids
+                    if _repair_evidence_identity(value) == fact_evidence_identity
+                ),
+                "",
+            )
+            if not fact_evidence_id:
+                continue
             matching_candidates = [
                 candidate
                 for candidate in candidates
-                if _scoped_candidate_binding_ids(candidate).intersection(
-                    {fact_identity, *gap_evidence_identities}
-                )
-                and _s(candidate.get("evidence_id")).strip()
-                and _repair_evidence_identity(candidate.get("evidence_id"))
-                in gap_evidence_identities
+                if _s(candidate.get("evidence_id")).strip()
+                and fact_evidence_identity in {
+                    _repair_evidence_identity(value)
+                    for value in (
+                        candidate.get("evidence_id"),
+                        *(candidate.get("evidence_ids") or []),
+                    )
+                }
             ]
             if not matching_candidates:
                 continue
-            primary_candidate = matching_candidates[0]
-            primary_evidence_id = _s(primary_candidate.get("evidence_id")).strip()
             exact_candidate_ids = [
                 _s(candidate.get("id")).strip() for candidate in matching_candidates
             ]
@@ -505,7 +511,7 @@ def _verified_semantic_repair_focal_facts(
                     "statement": _s(matching_fact.get("statement")).strip(),
                     "metric": deepcopy(matching_fact.get("metric")),
                     "qualifiers": deepcopy(matching_fact.get("qualifiers")),
-                    "evidence_id": primary_evidence_id,
+                    "evidence_id": fact_evidence_id,
                     "authorized_candidate_ids": exact_candidate_ids,
                     "affected_final_insight_ids": affected_final_ids,
                     "gap_explanation": explanation,

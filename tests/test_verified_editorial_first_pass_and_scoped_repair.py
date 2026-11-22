@@ -11,6 +11,7 @@ from src.generators._artifact_generator.generation import (
     _merge_scoped_insight_repair,
     _validate_scoped_insight_patch,
     _verified_editorial_obligation_context,
+    _verified_semantic_repair_focal_facts,
     generate_artifacts,
 )
 from src.generators.artifact_normalization import (
@@ -105,6 +106,62 @@ def _plan() -> dict:
             },
         ]
     }
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_multifact_repair_context_binds_each_fact_to_its_own_evidence(
+    reverse: bool,
+) -> None:
+    candidates = [_candidate("candidate-1", "f1"), _candidate("candidate-2", "f2")]
+    if reverse:
+        candidates.reverse()
+    facts = [
+        _fact("f1", "First fact.", qualifier=""),
+        _fact("f2", "Second fact.", qualifier=""),
+    ]
+    focal = _verified_semantic_repair_focal_facts(
+        material_gaps=[
+            {
+                "verified_fact_ids": ["f1", "f2"],
+                "evidence_ids": ["verified-fact:f1", "verified-fact:f2"],
+                "final_insight_ids": ["candidate-1", "candidate-2"],
+                "explanation": "Both facts need complete treatment.",
+            }
+        ],
+        repair_scope={"authorized_candidate_ids": ["candidate-1", "candidate-2"]},
+        verified_facts=facts,
+        candidate_insights=candidates,
+        current_insights=candidates,
+    )
+    assert [
+        (item["fact_id"], item["evidence_id"], item["authorized_candidate_ids"])
+        for item in focal
+    ] == [
+        ("f1", "verified-fact:f1", ["candidate-1"]),
+        ("f2", "verified-fact:f2", ["candidate-2"]),
+    ]
+
+
+def test_multifact_repair_context_retains_explicit_secondary_fact_binding() -> None:
+    candidate = _candidate("candidate-1", "f1")
+    candidate["evidence_ids"].append("verified-fact:f2")
+    focal = _verified_semantic_repair_focal_facts(
+        material_gaps=[
+            {
+                "verified_fact_ids": ["f2"],
+                "evidence_ids": ["verified-fact:f2"],
+                "final_insight_ids": ["candidate-1"],
+                "explanation": "The secondary proposition is missing.",
+            }
+        ],
+        repair_scope={"authorized_candidate_ids": ["candidate-1"]},
+        verified_facts=[_fact("f2", "Second fact.", qualifier="")],
+        candidate_insights=[candidate],
+        current_insights=[candidate],
+    )
+    assert [
+        (item["evidence_id"], item["authorized_candidate_ids"]) for item in focal
+    ] == [("verified-fact:f2", ["candidate-1"])]
 
 
 def test_verified_obligations_bind_complete_essential_source_context() -> None:
@@ -845,6 +902,8 @@ def test_scoped_final_prompt_omits_full_roster_requirements() -> None:
     assert "Minimum final insight target:" not in scoped_prompt
     assert "Select at least" not in scoped_prompt
     assert "every essential theme" not in scoped_prompt
+    assert "candidate-shaped entries containing scores" in full_prompt
+    assert "candidate-shaped entries containing scores" not in scoped_prompt
 
 
 def test_final_insight_prompt_does_not_allow_null_optional_arrays() -> None:

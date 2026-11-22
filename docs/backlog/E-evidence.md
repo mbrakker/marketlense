@@ -1719,6 +1719,20 @@ consequence of the failed generation, not evidence that visual verification
 did not occur. The result is not a first-pass, first-repair, or readiness pass;
 no semantic gate was relaxed and E18 remains active.
 
+A provider-free reproduction exposed a separate multi-fact repair-context
+defect: candidates were matched against the union of all gap evidence IDs,
+so candidate order could associate a fact's statement with another fact's
+evidence. The focal context now matches the individual fact's exact canonical
+evidence binding, including an explicitly linked secondary fact. Regressions
+cover both candidate orders and secondary bindings. This defect is not shown
+to have caused the single-fact Activate gap above. The scoped repair prompt
+also no longer asks for full candidate-shaped entries after requesting a
+minimal patch. A separate unresolved contract issue remains: the provider's
+strict schema requires all projected properties, whereas scoped patch merge
+uses omission to preserve unchanged fields. The missing live responses mean
+its contribution to the Activate outcome is unknown. These changes do not
+establish live first-repair or end-to-end success.
+
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-
 provenance cache gates now bypass vector-backed reuse until actual corpus
