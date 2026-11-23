@@ -1810,6 +1810,23 @@ proof of improved provider behavior. The unchanged prompt fixture gate passed
 with 120,615 total tokens versus 120,430 baseline and estimated $0.025715
 versus $0.025696; 86 visual and authority tests passed.
 
+The same reconstructed finding was then replayed at `93e87038` using the
+same original PDF and production fallback, visual and admission boundaries.
+One candidate was evaluated and admitted without quarantine. Its admitted
+fact retained the correct access/ad/paid-content contributions and CAGR
+pairs ($128B/5.7%, $108B/4.7%, $66B/2.3%), the 2017E–2021E forecast status,
+source identity, physical page and footnote qualifications. The isolated
+result is
+`C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-admission-93e87038-y5po_7cp/admission.json`.
+Two calls used 20,405 input and 3,696 output tokens, an estimated $0.003889,
+and 34.441 seconds wall time. A separate current-prompt verifier probe against
+the same original page rejected the retained swapped claim; it used one call,
+10,447 input and 788 output tokens, estimated $0.001439, with the result at
+`C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-verifier-knuray16/result.json`.
+These are bounded stochastic component observations, not proof the prompt
+change caused the difference, an actual full-roster admission, or end-to-end
+editorial acceptance. No publication was performed.
+
 A provider-free reproduction exposed a separate multi-fact repair-context
 defect: candidates were matched against the union of all gap evidence IDs,
 so candidate order could associate a fact's statement with another fact's
