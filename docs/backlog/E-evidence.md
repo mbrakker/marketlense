@@ -1790,6 +1790,14 @@ demonstrated multi-fact context omission, but the historical Activate gap was
 single-fact and its missing reviewer text prevents attributing that failure to
 this defect. No fresh full-report acceptance follows from the regression.
 
+Follow-up regression tests found that an explicitly named fact could be paired
+with a different primary evidence ID in the additional-fact projection. It now
+uses each canonical fact's own evidence ID and fails closed if an explicit fact
+ID conflicts with the candidate's canonical bindings. Failure records also
+retain a bounded per-theme decision projection without source or reviewer
+prose. This helps diagnose future failures but cannot reconstruct the missing
+historical explanation or independently establish the model's raw response.
+
 Verified-authority validation now rejects malformed snapshot entries, missing
 retained verified-fact packs and duplicate packed fact identities instead of
 silently filtering or reconstructing them. Visual admission also fails closed

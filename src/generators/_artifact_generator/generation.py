@@ -222,16 +222,19 @@ def _verified_editorial_obligation_context(
                     if evidence_id.startswith("verified-fact:"):
                         fact_id = evidence_id.removeprefix("verified-fact:")
                         break
-            bound_fact_ids = list(
-                dict.fromkeys(
-                    [fact_id]
-                    + [
-                        value.removeprefix("verified-fact:")
-                        for value in evidence_ids
-                        if value.startswith("verified-fact:")
-                    ]
+            canonical_ids = [
+                value.removeprefix("verified-fact:")
+                for value in evidence_ids
+                if value.startswith("verified-fact:")
+            ]
+            if canonical_ids and fact_id not in canonical_ids:
+                raise AppError(
+                    code="verified_editorial_candidate_binding_conflict",
+                    message="Editorial candidate fact does not match its evidence IDs",
+                    retryable=False,
+                    context={"candidate_id": candidate_id},
                 )
-            )
+            bound_fact_ids = list(dict.fromkeys([fact_id] + canonical_ids))
             for bound_fact_id in bound_fact_ids:
                 if bound_fact_id in fact_by_id:
                     theme_fact_ids.append(bound_fact_id)
@@ -303,11 +306,20 @@ def _verified_editorial_obligation_context(
             primary_evidence_id,
             *(_s(value).strip() for value in candidate.get("evidence_ids", [])),
         ]
-        fact_bindings = [(fact_id, primary_evidence_id)] + [
+        fact_bindings = [
             (value.removeprefix("verified-fact:"), value)
             for value in evidence_ids
             if value.startswith("verified-fact:")
         ]
+        if fact_bindings and fact_id not in {item[0] for item in fact_bindings}:
+            raise AppError(
+                code="verified_editorial_candidate_binding_conflict",
+                message="Editorial candidate fact does not match its evidence IDs",
+                retryable=False,
+                context={"candidate_id": candidate_id},
+            )
+        if not fact_bindings:
+            fact_bindings = [(fact_id, primary_evidence_id)]
         for bound_fact_id, bound_evidence_id in fact_bindings:
             if (
                 bound_fact_id in theme_fact_id_set

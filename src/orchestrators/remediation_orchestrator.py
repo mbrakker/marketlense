@@ -164,6 +164,127 @@ _COVERAGE_DIAGNOSTIC_ENUM_VALUES = {
 }
 
 
+def _coverage_verdict_projection(
+    value: dict[str, Any], bounded: dict[str, object]
+) -> dict[str, object]:
+    """Retain only plan-bound decisions, without theme or explanation text."""
+    incomplete: dict[str, object] = {
+        "schema_version": "1.0",
+        "status": "incomplete",
+        "verdicts": [],
+    }
+    previous = value.get("theme_verdict_projection")
+    if previous is not None and (
+        not isinstance(previous, dict)
+        or previous.get("schema_version") != "1.0"
+        or previous.get("status") != "complete"
+    ):
+        return incomplete
+    if "current_plan_identity" not in bounded:
+        return incomplete
+    facts = bounded.get("planned_theme_ids", [])
+    selected = bounded.get("selected_candidate_ids", [])
+    if not isinstance(facts, list) or not isinstance(selected, list):
+        return incomplete
+    # Reject truncated or sanitized rosters: a subset must never look complete.
+    for key, safe in (
+        ("planned_theme_ids", facts),
+        ("selected_candidate_ids", selected),
+    ):
+        raw = value.get(key, [])
+        if not isinstance(raw, list) or raw != safe:
+            return incomplete
+    allowed_facts, allowed_insights = set(facts), set(selected)
+    if previous is None:
+        themes = value.get("planned_themes")
+        raw_verdicts = value.get("theme_verdicts")
+        if not isinstance(themes, list) or not 0 < len(themes) <= 32:
+            return incomplete
+        if not isinstance(raw_verdicts, list) or len(raw_verdicts) != len(themes):
+            return incomplete
+        theme_positions: dict[str, tuple[int, object]] = {}
+        for theme_index, theme in enumerate(themes):
+            if not isinstance(theme, dict) or not isinstance(theme.get("theme"), str):
+                return incomplete
+            name = theme["theme"]
+            if not name or name != name.strip() or name in theme_positions:
+                return incomplete
+            theme_positions[name] = (theme_index, theme.get("fact_ids"))
+        candidates: list[Any] = []
+        for verdict in raw_verdicts:
+            if not isinstance(verdict, dict) or not isinstance(
+                verdict.get("theme"), str
+            ):
+                return incomplete
+            position = theme_positions.get(verdict["theme"])
+            if position is None:
+                return incomplete
+            candidates.append(
+                {**verdict, "plan_index": position[0], "fact_ids": position[1]}
+            )
+    else:
+        retained_verdicts = previous.get("verdicts")
+        if (
+            not isinstance(retained_verdicts, list)
+            or not 0 < len(retained_verdicts) <= 32
+        ):
+            return incomplete
+        candidates = retained_verdicts
+
+    verdicts: list[dict[str, object]] = []
+    indices: set[int] = set()
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            return incomplete
+        index = candidate.get("plan_index")
+        fact_ids = candidate.get("fact_ids")
+        supporting = candidate.get("supporting_insight_ids")
+        if (
+            type(index) is not int
+            or index < 0
+            or index >= len(candidates)
+            or index in indices
+            or not isinstance(fact_ids, list)
+            or len(fact_ids) > 32
+            or any(
+                not isinstance(item, str) or item not in allowed_facts
+                for item in fact_ids
+            )
+            or len(set(fact_ids)) != len(fact_ids)
+            or not isinstance(supporting, list)
+            or len(supporting) > 32
+            or any(
+                not isinstance(item, str) or item not in allowed_insights
+                for item in supporting
+            )
+            or len(set(supporting)) != len(supporting)
+            or candidate.get("status") not in ("covered", "partial", "uncovered")
+            or candidate.get("resolution")
+            not in ("retained", "merged", "omitted", "unresolved", "quarantined")
+            or candidate.get("importance") not in ("essential", "optional")
+        ):
+            return incomplete
+        indices.add(index)
+        verdicts.append(
+            {
+                "plan_index": index,
+                "fact_ids": fact_ids,
+                "status": candidate["status"],
+                "resolution": candidate["resolution"],
+                "importance": candidate["importance"],
+                "supporting_insight_ids": supporting,
+            }
+        )
+    projection: dict[str, object] = {
+        "schema_version": "1.0",
+        "status": "complete",
+        "verdicts": verdicts,
+    }
+    if len(json.dumps(projection, ensure_ascii=True)) > 8192:
+        return incomplete
+    return projection
+
+
 def _bounded_coverage_diagnostics(value: object) -> dict[str, object]:
     """Project coverage failure lineage without retaining theme prose."""
 
@@ -208,6 +329,8 @@ def _bounded_coverage_diagnostics(value: object) -> dict[str, object]:
             ]
             if identifiers:
                 result[key] = list(dict.fromkeys(identifiers))[:32]
+    if "theme_verdicts" in value or "theme_verdict_projection" in value:
+        result["theme_verdict_projection"] = _coverage_verdict_projection(value, result)
     return result
 
 

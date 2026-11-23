@@ -198,6 +198,13 @@ usage and latency totals. Prompt identity is namespace plus hash only. The
 artifact does not
 retain source text, rendered prompts, or provider responses.
 
+Coverage-failure records may also include a bounded, versioned projection of
+normalized per-theme decisions, linked to the plan identity and approved fact
+and insight IDs. Theme names and reviewer explanations are not retained in this
+projection. Missing, malformed, or unbound inputs produce an explicit
+incomplete projection rather than a fabricated decision. Resolution is the
+workflow's normalized field, not necessarily a verbatim model response.
+
 Current candidate audits also separate introduced hard failures into unknown
 or hallucinated evidence identity, unsupported claim/evidence support, and
 provenance/lineage. A generic retained-claim rule does not establish an
