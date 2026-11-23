@@ -599,13 +599,6 @@ def _build_semantic_repair_scope(
         for item in assessments
         if isinstance(item, dict) and normalize_text(item.get("theme"))
     }
-    gap_insight_ids = {
-        _s(value).strip()
-        for gap in error_context.get("material_gaps", [])
-        if isinstance(gap, dict)
-        for value in gap.get("final_insight_ids", [])
-        if _s(value).strip()
-    }
     context_target_ids: set[str] = set()
     for key in (
         "affected_insight_ids",
@@ -617,7 +610,6 @@ def _build_semantic_repair_scope(
             context_target_ids.update(
                 _s(value).strip() for value in values if _s(value).strip()
             )
-    context_target_ids.update(gap_insight_ids)
     omitted_themes = {
         normalize_text(value)
         for value in error_context.get("omitted_themes", [])
@@ -636,7 +628,12 @@ def _build_semantic_repair_scope(
     affected_themes: list[str] = []
     theme_scopes: list[Dict[str, Any]] = []
     planned_theme_identity_sets: list[set[str]] = []
-    for binding in editorial_plan_theme_bindings(editorial_plan):
+    raw_themes = [
+        theme for theme in editorial_plan.get("themes", []) if isinstance(theme, dict)
+    ]
+    for binding, raw_theme in zip(
+        editorial_plan_theme_bindings(editorial_plan), raw_themes, strict=True
+    ):
         theme = _s(binding.get("theme")).strip()
         theme_key = normalize_text(theme)
         theme_identity_set = {
@@ -729,7 +726,7 @@ def _build_semantic_repair_scope(
         affected_themes.append(theme)
         binding_evidence_ids = [
             _s(value).strip()
-            for value in binding.get("reference_keys", set())
+            for value in raw_theme.get("evidence_ids", [])
             if _s(value).strip()
         ]
         for candidate_id in binding_candidate_ids:
@@ -784,8 +781,13 @@ def _build_semantic_repair_scope(
             for candidate in eligible_by_id.values()
             if _scoped_candidate_binding_ids(candidate).intersection(gap_ids)
             and _s(candidate.get("evidence_id")).strip()
-            and _repair_evidence_identity(candidate.get("evidence_id"))
-            in gap_evidence_ids
+            and any(
+                _repair_evidence_identity(value) in gap_evidence_ids
+                for value in (
+                    candidate.get("evidence_id"),
+                    *(candidate.get("evidence_ids") or []),
+                )
+            )
         ]
         exact_candidate_ids = [
             _s(candidate.get("id")).strip()
@@ -807,10 +809,14 @@ def _build_semantic_repair_scope(
         ]
         gap_authorized_ids = list(dict.fromkeys(gap_target_ids + gap_additions))
         gap_authorized_evidence_ids = [
-            _s(candidate.get("evidence_id")).strip()
+            _s(value).strip()
             for candidate in exact_candidates
             if _s(candidate.get("id")).strip() in gap_authorized_ids
-            and _s(candidate.get("evidence_id")).strip()
+            for value in (
+                candidate.get("evidence_id"),
+                *(candidate.get("evidence_ids") or []),
+            )
+            if _s(value).strip()
         ]
         targeted_ids.extend(gap_target_ids)
         additions.extend(gap_additions)

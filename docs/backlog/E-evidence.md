@@ -1834,6 +1834,19 @@ change the coverage verdict, establish why the rewrite failed, or prove a live
 readiness improvement; the original model prose and explanation remain
 unavailable. E18 remains active.
 
+Follow-up provider-free repair-scope regression identified a separate
+multi-fact handover defect: a material gap on an explicitly bound secondary
+fact could not target the existing insight because the gap mapper required the
+gap evidence to be the candidate's primary ID. Repair now recognizes explicitly
+bound secondary IDs, retains the candidate's original primary-first evidence,
+and offers any eligible alternative without forcing a duplicate. The same
+boundary now passes exact theme evidence IDs instead of prose-normalized IDs,
+and no longer treats a gap's insight ID as authorization without its evidence
+binding. Focused tests cover valid secondary-fact repair, preserved bindings and
+rejection of unrelated evidence. The Activate run did not retain enough
+information to show that this defect caused its coverage failure; no live
+first-pass or repair improvement is claimed.
+
 An independent review also confirmed that promotion rolls back caught write
 errors but cannot roll back an abrupt process termination between its separate
 canonical writes. The restart reuse loader checks the artifact hash but does

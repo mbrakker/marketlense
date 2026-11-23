@@ -108,6 +108,130 @@ def _plan() -> dict:
     }
 
 
+def test_material_gap_on_secondary_fact_targets_bound_existing_insight() -> None:
+    candidate = _candidate("candidate-1", "f1")
+    candidate["evidence_ids"] = ["verified-fact:f1", "verified-fact:f2"]
+    alternative = _candidate("candidate-2", "f2")
+    gap = {
+        "verified_fact_ids": ["f2"],
+        "evidence_ids": ["verified-fact:f2"],
+        "final_insight_ids": ["candidate-1"],
+        "explanation": "The second source-backed comparison is incomplete.",
+    }
+    plan = {
+        "themes": [
+            {
+                "theme": "First finding",
+                "evidence_ids": ["verified-fact:f1"],
+                "feasible_candidate_ids": ["candidate-1"],
+            }
+        ]
+    }
+    assessment = {
+        "theme_coverage": [
+            {
+                "theme": "First finding",
+                "status": "covered",
+                "supporting_insight_ids": ["candidate-1"],
+            }
+        ],
+        "diagnosis": "material_report_comteness",
+        "recovery_action": "targeted_rewrite",
+    }
+    scope = _build_semantic_repair_scope(
+        editorial_plan=plan,
+        assessment=assessment,
+        error_context={"material_gaps": [gap]},
+        current_insights=[candidate],
+        candidate_insights=[candidate, alternative],
+    )
+    assert scope["mode"] == "targeted_rewrite"
+    assert scope["targeted_insight_ids"] == ["candidate-1"]
+    assert scope["allowed_addition_candidate_ids"] == ["candidate-2"]
+    assert scope["authorized_evidence_ids"] == ["verified-fact:f1", "verified-fact:f2"]
+    focal = _verified_semantic_repair_focal_facts(
+        material_gaps=[gap],
+        repair_scope=scope,
+        verified_facts=[_fact("f2", "A second finding.", qualifier="Survey only.")],
+        candidate_insights=[candidate, alternative],
+        current_insights=[candidate],
+    )
+    assert [(item["fact_id"], item["evidence_id"]) for item in focal] == [
+        ("f2", "verified-fact:f2")
+    ]
+    patch = {
+        "insights_final": [
+            {
+                "id": "candidate-1",
+                "text": "The source-backed comparison retains both findings.",
+                "evidence_id": "verified-fact:f1",
+                "evidence_ids": ["verified-fact:f1", "verified-fact:f2"],
+            }
+        ]
+    }
+    _validate_scoped_insight_patch(
+        patch, repair_scope=scope, candidate_insights=[candidate, alternative]
+    )
+    merged = _merge_scoped_insight_repair(
+        current_insights=[candidate],
+        repaired_insights=patch["insights_final"],
+        raw_repaired_insights=patch["insights_final"],
+        repair_scope=scope,
+    )
+    assert merged[0]["evidence_ids"] == ["verified-fact:f1", "verified-fact:f2"]
+    bad_patch = deepcopy(patch)
+    bad_patch["insights_final"][0]["evidence_ids"].append("verified-fact:f3")
+    with pytest.raises(AppError):
+        _validate_scoped_insight_patch(
+            bad_patch, repair_scope=scope, candidate_insights=[candidate, alternative]
+        )
+    unrelated = {
+        **gap,
+        "verified_fact_ids": ["f3"],
+        "evidence_ids": ["verified-fact:f3"],
+    }
+    unrelated_candidate = _candidate("candidate-3", "f3")
+    rejected = _build_semantic_repair_scope(
+        editorial_plan=plan,
+        assessment=assessment,
+        error_context={"material_gaps": [unrelated]},
+        current_insights=[candidate],
+        candidate_insights=[candidate, alternative, unrelated_candidate],
+    )
+    assert rejected["targeted_insight_ids"] == []
+    assert rejected["authorized_candidate_ids"] == ["candidate-3"]
+
+
+def test_theme_repair_scope_preserves_exact_evidence_identity() -> None:
+    candidate = _candidate("candidate-1", "f1")
+    scope = _build_semantic_repair_scope(
+        editorial_plan={
+            "themes": [
+                {
+                    "theme": "First finding",
+                    "evidence_ids": ["verified-fact:f1"],
+                    "feasible_candidate_ids": ["candidate-1"],
+                }
+            ]
+        },
+        assessment={
+            "theme_coverage": [
+                {
+                    "theme": "First finding",
+                    "status": "partial",
+                    "supporting_insight_ids": ["candidate-1"],
+                }
+            ],
+            "recovery_action": "targeted_rewrite",
+        },
+        error_context={},
+        current_insights=[candidate],
+        candidate_insights=[candidate],
+    )
+    assert scope["authorized_evidence_ids"] == ["verified-fact:f1"]
+    assert scope["theme_scopes"][0]["evidence_ids"] == ["verified-fact:f1"]
+
+
 @pytest.mark.parametrize("reverse", [False, True])
 def test_multifact_repair_context_binds_each_fact_to_its_own_evidence(
     reverse: bool,
