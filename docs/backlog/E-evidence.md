@@ -1763,6 +1763,52 @@ estimated $0.004175, with 39.259 seconds of recorded provider time. The result
 is retained at `marketlense-activate-page6-y7iqsac1` in the temporary output
 directory. A single stochastic replay cannot establish a causal improvement
 or a general success rate; this is not a full-report acceptance run.
+Subsequent source-to-admission inspection identified the earliest retained
+inversion in the generated `growth_segment_revenue` finding from the
+`2d93bba1` run; its evidence-fidelity result also marked the inverted mapping
+supported, before a later visual result repeated it. The upstream model
+response that first introduced the inversion was not retained. An in-memory
+replay of the saved corrected shadow result through the current admission
+boundary failed closed with `evaluation_candidate_snapshot_mismatch`: the
+saved result lacks the candidate's required original metric snapshot. The
+result is explicitly `not_approved`; neither this replay nor the earlier
+probe demonstrates canonical admission of the corrected source fact. A fresh
+production-path evaluation with the actual complete candidate snapshot is
+still required.
+
+A fresh single-candidate component probe at `843e6f45` passed the retained
+finding through the existing fidelity-eligible finding fallback, visual
+correction and independent verification, and production admission callback.
+It used the SHA-256-matched original PDF, physical page 6, and retained its
+isolated result at
+`C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-admission-843e6f45-ef0izydr/admission.json`.
+Admission recorded one verified fact, one evaluated candidate, complete
+candidate coverage, and no quarantine. Independent comparison with the page
+confirmed the forecast period and the correct access/ad/paid-content CAGR
+relationships of 5.7% / 4.7% / 2.3%. However, the admitted proposition and
+metric omitted the chart's corresponding $128B / $108B / $66B growth
+contributions. The finding-to-fact component therefore did not retain the
+complete material chart relationships requested by the acceptance brief; an
+admission pass is not a complete chart-fidelity pass. This single reconstructed
+candidate is not an actual full-roster or end-to-end report. The probe used
+two provider calls, 20,268 input and 5,376 output tokens, an estimated $0.004714,
+and 55.554 seconds of wall time; no publication occurred.
+Inspection of the two retained structured responses shows the monetary
+contributions were already absent from the correction response, and remained
+absent from the independent verification response. The correction prompt
+already instructs preservation of material values and relationships. This
+one response establishes the stage of information loss, not why the model
+omitted those values or that a specific prompt change would correct it.
+The existing correction prompt now explicitly asks the model to correct,
+rather than discard, a clearly source-supported material relationship when
+the original category binding is wrong. The existing independent verifier is
+also instructed to identify a necessary, clearly supported material measure
+omitted from the same analytical direction. Both instructions preserve
+abstention on ambiguous data and allow justified replacement; the original
+claim is not factual authority. This is a targeted contract correction, not
+proof of improved provider behavior. The unchanged prompt fixture gate passed
+with 120,615 total tokens versus 120,430 baseline and estimated $0.025715
+versus $0.025696; 86 visual and authority tests passed.
 
 A provider-free reproduction exposed a separate multi-fact repair-context
 defect: candidates were matched against the union of all gap evidence IDs,
@@ -1858,6 +1904,17 @@ Catchable interruptions during promotion now use the existing snapshot
 rollback before propagating, with tests after each canonical write. This does
 not cover process termination, concurrent readers, or a second interruption
 during rollback; those guarantees remain unimplemented.
+At `843e6f45`, the local, non-gating process-termination diagnostic
+`python -m pytest -q -p no:cacheprovider tmp/test_promotion_process_recovery.py`
+reported 6 failed and 1 passed. After termination at each of the four writes,
+the diagnostic's independent read did not restore the previous artifact;
+its concurrent-reader and corrupt-journal expectations also failed. The
+diagnostic expects automatic rollback, whereas this outcome also permits a
+correct fail-closed quarantine. Neither alternative has been demonstrated.
+These results do not establish that every observed new artifact is itself
+inconsistent, or that a publication bypass occurred. Durable recovery,
+concurrent access and restart safety remain open prerequisites to the requested
+two-report acceptance.
 When rollback itself fails, both promotion callers now propagate the existing
 `regeneration_promotion_inconsistent` error without writing a misleading
 `rolled_back` audit. A focused store-boundary regression exercises the normal

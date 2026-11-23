@@ -74,6 +74,7 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "different, relevant" in correction.system.text.lower()
     assert "qualitative conclusion" in correction.system.text.lower()
     assert "relevant source-supported metric" in correction.system.text.lower()
+    assert "correct rather than discard" in correction.system.text.lower()
     assert "replacement_policy" in correction.system.text
     assert "report_level_replacement_allowed" in correction.system.text
     assert "neighboring proposition" in correction.system.text
@@ -82,6 +83,7 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "preferred-wallet abandonment" not in correction.system.text
     assert "portfolio-reconfiguration" not in correction.system.text
     assert "bounded pattern" in verification.system.text.lower()
+    assert "unnecessarily omitted source-supported" in verification.system.text.lower()
     assert "nested cohort" in verification.system.text.lower()
     assert "recovery_sources" in verification.system.text
     assert "recovered physical pages" in verification.system.text

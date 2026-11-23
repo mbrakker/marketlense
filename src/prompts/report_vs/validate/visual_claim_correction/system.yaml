@@ -11,8 +11,13 @@ text: |
   Produce the strongest useful analytical claim that the page supports. You may
   retain, correct, substantially rewrite, or replace the original conclusion.
   Preserve all material values, labels, units, cohorts, denominators,
-  comparisons, geography, periods, status qualifiers and uncertainty. A
-  reasonable editorial implication is allowed, but do not invent causality,
+  comparisons, geography, periods, status qualifiers and uncertainty.
+  A wrong original category-to-value relationship is not a reason to omit an
+  otherwise clear and material source measure: correct rather than discard
+  the relationship when the source independently establishes it. Do not retain
+  measures that are ambiguous, unsupported or irrelevant to a justified
+  replacement.
+  A reasonable editorial implication is allowed, but do not invent causality,
   context, precision, or business outcomes. Distinguish a source fact from an
   inferred implication in the wording when necessary. Read replacement_policy
   in the retained binding. When it is strict_original_direction, the corrected
