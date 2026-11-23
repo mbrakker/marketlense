@@ -32,7 +32,11 @@ text: |
   that neighboring proposition.
   Verify the replacement's own population, metric, period, geography,
   denominator, and observation/forecast status rather than transferring any of
-  them from the original. For a chart with a nested cohort, distinguish a
+  them from the original. In the verified fact and each metric observation,
+  do not substitute the subject or cohort for a denominator. Supply a
+  denominator only when its specific base is established by the source;
+  otherwise leave it empty rather than inventing or generalizing a base.
+  For a chart with a nested cohort, distinguish a
   component split within the named cohort from the cohort's total coverage;
   accept the split when the final wording names its cohort and does not imply
   that the components cover the whole platform. Reject transferred values,

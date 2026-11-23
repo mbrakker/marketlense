@@ -531,14 +531,17 @@ def _strict_physical_page_list(
 
 
 def _supporting_page_notes(
-    payload: Mapping[str, Any], inspected_physical_pages: list[int]
+    payload: Mapping[str, Any],
+    inspected_physical_pages: list[int],
+    *,
+    require_support: bool,
 ) -> tuple[list[int], dict[str, str], list[str]]:
     supporting_pages = _strict_physical_page_list(payload, "supporting_physical_pages")
     raw_notes = payload.get("source_truth_notes_by_page")
     diagnostics: list[str] = []
     if (
         supporting_pages is None
-        or not supporting_pages
+        or (require_support and not supporting_pages)
         or any(page not in inspected_physical_pages for page in supporting_pages)
     ):
         diagnostics.append("verification_supporting_pages_invalid")
@@ -1081,7 +1084,7 @@ def _verification_attempt(
         diagnostics = _strict_string_list(payload, "diagnostics")
         notes = _text(payload.get("source_truth_notes"))
         supporting_pages, notes_by_page, support_diagnostics = _supporting_page_notes(
-            payload, inspected_physical_pages
+            payload, inspected_physical_pages, require_support=outcome == "verified"
         )
         diagnostics = (
             [*diagnostics, *support_diagnostics] if diagnostics is not None else None

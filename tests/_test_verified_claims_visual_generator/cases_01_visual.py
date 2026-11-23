@@ -84,6 +84,9 @@ def test_visual_prompts_require_complete_page_and_separate_source_authority():
     assert "portfolio-reconfiguration" not in correction.system.text
     assert "bounded pattern" in verification.system.text.lower()
     assert "unnecessarily omitted source-supported" in verification.system.text.lower()
+    assert "do not substitute the subject or cohort for a denominator" in (
+        verification.system.text.lower()
+    )
     assert "nested cohort" in verification.system.text.lower()
     assert "recovery_sources" in verification.system.text
     assert "recovered physical pages" in verification.system.text

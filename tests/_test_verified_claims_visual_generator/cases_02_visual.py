@@ -8,6 +8,45 @@ from src.utils.errors import AppError
 from .cases_01_visual import _claim, _ctx, _dependencies, _request, _settings
 
 
+def test_rejected_claim_does_not_require_supporting_pages(tmp_path):
+    responses = iter(
+        [
+            {"claim": "Swapped chart values", "status": "corrected", "issues": []},
+            {
+                "outcome": "rejected",
+                "diagnostics": ["The category and value are swapped."],
+                "source_truth_notes": "The chart assigns the value elsewhere.",
+                "supporting_physical_pages": [],
+                "source_truth_notes_by_page": {},
+            },
+            {"claim": "Still swapped", "status": "corrected", "issues": []},
+            {
+                "outcome": "rejected",
+                "diagnostics": ["The category and value are swapped."],
+                "source_truth_notes": "The chart assigns the value elsewhere.",
+                "supporting_physical_pages": [],
+                "source_truth_notes_by_page": {},
+            },
+        ]
+    )
+    requests = []
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [_claim("candidate-1", "Original claim")]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=_dependencies(responses, [], requests),
+    )
+
+    assert result.claims[0].outcome == "failed_verification"
+    assert len(result.claims[0].verification_attempts) == 2
+    assert all(
+        attempt.diagnostics == ["The category and value are swapped."]
+        for attempt in result.claims[0].verification_attempts
+    )
+    assert "The category and value are swapped." in requests[2].user_prompt
+    assert "verification_supporting_pages_invalid" not in requests[2].user_prompt
+
+
 def test_verified_outcome_requires_structural_source_truth_notes(tmp_path):
     claims = [_claim("candidate-1", "Original claim")]
     responses = iter(

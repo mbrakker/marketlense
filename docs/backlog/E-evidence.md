@@ -1827,6 +1827,62 @@ These are bounded stochastic component observations, not proof the prompt
 change caused the difference, an actual full-roster admission, or end-to-end
 editorial acceptance. No publication was performed.
 
+Follow-up review found that the `93e87038` fact's overall metric and each
+observation incorrectly used the revenue subject as a denominator. The
+original page does not establish that denominator. The earlier assessment of
+the numeric pairs was correct but incomplete: this structured field was not
+source-supported. The historical result remains unchanged and must not be
+treated as an entirely source-supported canonical fact. The existing visual
+verifier prompt now distinguishes a source-established base from a subject or
+cohort and requests an empty denominator when the base is not established.
+One isolated replay of the same reconstructed finding with that prompt
+retained the three correct value/CAGR pairs and left all denominator fields
+empty. Its retained result is
+`C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-denominator-review-xlfi_fv9/admission.json`.
+The two calls used 20,454 input and 4,777 output tokens, estimated $0.004434,
+and 44.880 seconds wall time. This is one stochastic component observation,
+not an independent semantic validator or an end-to-end acceptance result.
+
+The earlier swapped-claim verifier response correctly rejected the mismatched
+values, but its empty supporting-pages list also triggered the misleading
+`verification_supporting_pages_invalid` diagnostic. Supporting pages are
+mandatory for verified results, not for rejected claims. The verifier now
+avoids that diagnostic for an otherwise well-formed rejected result while
+retaining the existing page checks for verified outcomes.
+
+The upstream fidelity semantic fallback was also inspected: it submits a
+finding's full text as `insight_text` with empty metric fields, but its prompt
+asks primarily about the metric value. A trial prompt requested assessment of
+the complete proposition and evidence for each material relationship. In a
+bounded replay using newly extracted text from the original
+PDF's physical page 6 (text SHA-256
+`dd543855681ec8430638b682610fda4177d346ed035a854a30013f6e72b39d4c`), the
+model rejected both the retained swapped claim and the source-correct chart
+claim because flattened text did not establish the color-to-value mapping;
+it accepted the directly stated access-growth heading. This is an appropriate
+fail-closed result for that text, but it demonstrates a material coverage
+limitation: the correct chart finding may be excluded before the later visual
+stage. With the existing prompt on the same reconstructed text, one separate
+call rejected the swapped claim and accepted both the correct mapping and the
+heading; the text alone does not establish the chart's color mapping, so this
+does not demonstrate that its correct judgment was grounded. The trial prompt
+was not retained because the current binary fidelity decision cannot route
+visual ambiguity to the existing visual stage without risking coverage. This
+reconstructed extraction is not the missing original fidelity
+request, and the replay does not prove prior causation or full-report recall.
+The retained result is
+`C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-fidelity-review-3nl2gt8v/result.json`;
+the trial replay used one call, 1,066 input and 968 output tokens,
+estimated $0.000495 and 9.891 seconds. The existing-prompt comparison used
+one call, 993 input and 591 output tokens, estimated $0.000395 and 7.517 seconds;
+its result is at
+`C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-fidelity-review-4fcxmkip/result.json`.
+An earlier attempt made two calls
+(2,155 input, 2,370 output tokens, estimated $0.001401) but its result-capture
+script failed after the model returned; no verdict is claimed for it. The
+normal verified-facts validation registry does not run this legacy semantic
+rule: its relevant production use here is the evidence-fidelity fallback.
+
 A provider-free reproduction exposed a separate multi-fact repair-context
 defect: candidates were matched against the union of all gap evidence IDs,
 so candidate order could associate a fact's statement with another fact's
