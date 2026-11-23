@@ -1739,7 +1739,12 @@ def _resume_prompt_family_repair(
                 promotion_audit=promotion_audit,
                 ctx=repair_ctx,
             )
-        except Exception:
+        except Exception as promotion_error:
+            if (
+                isinstance(promotion_error, AppError)
+                and promotion_error.code == "regeneration_promotion_inconsistent"
+            ):
+                raise
             _store_regeneration_candidate_audit(
                 runtime=runtime,
                 dependencies=dependencies.analysis,

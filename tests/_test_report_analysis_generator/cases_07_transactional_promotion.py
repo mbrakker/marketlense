@@ -97,6 +97,7 @@ def test_verified_promotion_requires_current_persisted_validation_artifact(
         "promoted_claim_validation",
         "canonical_validation",
         "final_promotion_audit",
+        "rollback_inconsistent",
     ],
 )
 def test_promotion_persistence_failures_do_not_authorize_partial_state(
@@ -172,7 +173,7 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
             and request.payload == candidate
             or failure_stage == "promoted_claim_validation"
             and request.pack_name == "validation_retained_claim_validation_candidate"
-            or failure_stage == "canonical_validation"
+            or failure_stage in {"canonical_validation", "rollback_inconsistent"}
             and request.pack_name == "validation"
             and request.payload.get("status") == "pass"
             or failure_stage == "final_promotion_audit"
@@ -228,12 +229,18 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
             repair_decisions=[decision],
         )
 
+    def _write_bytes(request, ctx):
+        if failure_stage == "rollback_inconsistent" and injected:
+            raise AppError(code="injected_rollback_failure", message="restore failed")
+        return file_service.write_bytes(request, ctx)
+
     dependencies = _deps(
         analysis_pack_path=_analysis_pack_path,
         analysis_store_pack=_analysis_store_pack,
         read_json=_read_json,
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
+        write_bytes=_write_bytes,
     )
 
     try:
@@ -281,7 +288,17 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
 
     assert caught.retryable is False
     assert injected is True
-    if failure_stage == "candidate_audit":
+    if failure_stage == "rollback_inconsistent":
+        assert caught.code == "regeneration_promotion_inconsistent"
+        audit = stored.get("regeneration_candidate_audit_1")
+        assert audit is None or audit["promotion_outcome"] != "rolled_back"
+        audit_path = tmp_path / "packs" / "regeneration_candidate_audit_1.json"
+        if audit_path.exists():
+            assert (
+                json.loads(audit_path.read_text(encoding="utf-8"))["promotion_outcome"]
+                != "rolled_back"
+            )
+    elif failure_stage == "candidate_audit":
         assert "artifacts" not in writes
     else:
         assert (

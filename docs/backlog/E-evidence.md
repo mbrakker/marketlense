@@ -1824,6 +1824,12 @@ Catchable interruptions during promotion now use the existing snapshot
 rollback before propagating, with tests after each canonical write. This does
 not cover process termination, concurrent readers, or a second interruption
 during rollback; those guarantees remain unimplemented.
+When rollback itself fails, both promotion callers now propagate the existing
+`regeneration_promotion_inconsistent` error without writing a misleading
+`rolled_back` audit. A focused store-boundary regression exercises the normal
+regeneration route; this audit correction does not recover the files or resolve
+the crash-consistency gap. The prompt-family resume route has the same guard
+but has not been independently fault-injected.
 
 The report-analysis workflow no longer labels a hash of provider store/file
 identifiers and timestamps as verified vector content. Its existing missing-

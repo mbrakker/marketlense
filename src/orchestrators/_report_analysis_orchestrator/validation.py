@@ -5563,7 +5563,13 @@ def _run_validation_regeneration_loop(
                         promotion_audit=promotion_audit,
                         ctx=attempt_ctx,
                     )
-                except Exception:
+                except Exception as promotion_error:
+                    if (
+                        isinstance(promotion_error, AppError)
+                        and promotion_error.code
+                        == "regeneration_promotion_inconsistent"
+                    ):
+                        raise
                     try:
                         _store_regeneration_candidate_audit(
                             runtime=runtime,
