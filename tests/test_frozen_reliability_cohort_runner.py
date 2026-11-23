@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -24,6 +26,79 @@ from tests._test_validation_queue_lineage._shared import (
     _full_chain_chat_response_factory,
     _full_chain_response_factory,
 )
+
+
+def test_preflight_cli_limits_admission_to_requested_report(tmp_path: Path) -> None:
+    source_pdf = Path(
+        "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"
+    ).read_bytes()
+    members = []
+    for index in range(5):
+        content = source_pdf + f"\n% fixture {index}\n".encode()
+        source = tmp_path / f"report-{index}.pdf"
+        source.write_bytes(content)
+        members.append(
+            {
+                "source_path": source.name,
+                "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+                "source_domain": "publisher.example",
+                "report_name": f"Report {index}",
+                "landing_page_url": "https://publisher.example/report",
+                "source_page_url": "https://publisher.example/report",
+                "publisher_name": "Publisher",
+                "downloaded_at_utc": "2026-01-01T00:00:00+00:00",
+            }
+        )
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
+    selected_id = f"cohort-{members[2]['content_md5'][:20]}"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/quality/run_frozen_reliability_cohort.py",
+            "--sources-manifest",
+            str(manifest),
+            "--sources-root",
+            str(tmp_path),
+            "--runs-root",
+            str(tmp_path / "runs"),
+            "--report-ids",
+            selected_id,
+            "--preflight-only",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    payload = json.loads(result.stdout)
+    assert payload["cohort_size"] == 1
+    assert [report["report_id"] for report in payload["reports"]] == [selected_id]
+
+    unknown = subprocess.run(
+        [
+            sys.executable,
+            "scripts/quality/run_frozen_reliability_cohort.py",
+            "--sources-manifest",
+            str(manifest),
+            "--sources-root",
+            str(tmp_path),
+            "--runs-root",
+            str(tmp_path / "unknown"),
+            "--report-ids",
+            "cohort-unknown",
+            "--preflight-only",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert unknown.returncode != 0
+    assert json.loads(unknown.stdout)["terminal_failure_code"] == (
+        "frozen_cohort_input_invalid"
+    )
+    assert not (tmp_path / "unknown").exists()
 
 
 def test_verified_architecture_rejects_a_legacy_artifact_snapshot(

@@ -3745,17 +3745,31 @@ def generate_artifacts(
                 }
             )
 
+        admitted_fact_ids = {
+            _s(fact.get("fact_id")).strip()
+            for fact in relevant_verified_facts
+            if _s(fact.get("fact_id")).strip()
+        }
+        raw_themes = editorial_plan.get("themes", [])
         planned_themes: List[_ThemeCoverageDiagnostic] = [
             {
                 "theme": _s(binding.get("theme")).strip(),
                 "priority": binding.get("priority"),
                 "fact_ids": sorted(
-                    _s(value).strip()
-                    for value in binding.get("coverage_keys", set())
-                    if _s(value).strip()
+                    {
+                        evidence_id.removeprefix(VERIFIED_FACT_EVIDENCE_PREFIX)
+                        for value in theme.get("evidence_ids", [])
+                        if (evidence_id := _s(value).strip()).startswith(
+                            VERIFIED_FACT_EVIDENCE_PREFIX
+                        )
+                        and evidence_id.removeprefix(VERIFIED_FACT_EVIDENCE_PREFIX)
+                        in admitted_fact_ids
+                    }
                 ),
             }
-            for binding in editorial_plan_theme_bindings(editorial_plan)
+            for binding, theme in zip(
+                editorial_plan_theme_bindings(editorial_plan), raw_themes, strict=True
+            )
         ]
         planned_theme_ids = sorted(
             {
@@ -3817,10 +3831,13 @@ def generate_artifacts(
         )
         essential_fact_ids = {
             fact_id
-            for binding in editorial_plan_theme_bindings(editorial_plan)
+            for binding, planned in zip(
+                editorial_plan_theme_bindings(editorial_plan),
+                planned_themes,
+                strict=True,
+            )
             if _s(binding.get("importance")).strip().casefold() == "essential"
-            for fact_id in binding.get("coverage_keys", set())
-            if _s(fact_id).strip()
+            for fact_id in planned["fact_ids"]
         }
         omitted_essential_fact_ids = sorted(
             fact_id for fact_id in omitted_theme_ids if fact_id in essential_fact_ids

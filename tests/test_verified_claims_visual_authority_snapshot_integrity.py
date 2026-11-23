@@ -7,6 +7,7 @@ import pytest
 
 from src.generators._artifact_generator.generation import generate_artifacts
 from src.generators.verified_claims_canary import admit_visual_authority_candidates
+from src.orchestrators.remediation_orchestrator import _bounded_failure_context
 from src.utils.errors import AppError
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
@@ -363,6 +364,11 @@ def test_verified_generation_fails_closed_without_authored_theme_repair(tmp_path
     diagnostics = error.value.context["coverage_diagnostics"]
     assert diagnostics["terminal_classification"] == "semantic_theme_repair_exhausted"
     assert diagnostics["planned_themes"][0]["fact_ids"]
+    assert diagnostics["planned_theme_ids"] == ["insight-f1-0.99", "insight-f2-0.98"]
+    projected = _bounded_failure_context(error.value.context)
+    assert projected["coverage_diagnostics"]["theme_verdict_projection"]["status"] == (
+        "complete"
+    )
     assert diagnostics["final_roster_count"] == 5
     assert diagnostics["theme_verdicts"][0]["status"] == "uncovered"
     assert len([r for r in openai_client.requests if r[2] == "insights_final"]) == 2

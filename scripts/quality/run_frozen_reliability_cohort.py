@@ -567,10 +567,16 @@ def _aggregate_per_report_metrics(
 
 
 def preflight_frozen_reliability_cohort(
-    *, sources_manifest: Path, runs_root: Path, sources_root: Path | None = None
+    *,
+    sources_manifest: Path,
+    runs_root: Path,
+    sources_root: Path | None = None,
+    report_ids: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     """Validate frozen provenance and production admission before live work."""
-    members = _load_members(sources_manifest, sources_root=sources_root)
+    members = _select_members(
+        _load_members(sources_manifest, sources_root=sources_root), report_ids
+    )
     runs_root.mkdir(parents=True, exist_ok=True)
     root = Path(tempfile.mkdtemp(prefix="frozen-reliability-preflight-", dir=runs_root))
     results = [
@@ -671,6 +677,7 @@ def main() -> int:
                 sources_manifest=args.sources_manifest,
                 runs_root=args.runs_root,
                 sources_root=args.sources_root,
+                report_ids=(tuple(args.report_ids) if args.report_ids else None),
             )
             if args.preflight_only
             else run_frozen_reliability_cohort(

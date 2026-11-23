@@ -1813,6 +1813,27 @@ selection cache identity is `evidence_backed_shortlisting:36`. Malformed
 artifact and soft-copy evidence IDs now raise the existing typed snapshot error.
 These are local regression results; no fresh provider-backed or end-to-end
 report establishes current live factual or editorial performance.
+An isolated single-report Activate run at `908662cb` stopped before HTML
+with `artifact_final_insight_coverage_invalid` after one targeted in-generation
+rewrite. Its bounded failure record identifies material gaps associated with
+`podcasting_business_value_and_uses` and
+`web_video_concentration_and_platform_mix`; it does not retain the final prose
+or reviewer explanations. It used 471 provider calls, 1,232,488 input tokens,
+287,847 output tokens, an estimated $0.282052 and 3,604.982 seconds; no
+publication occurred. The result is retained under
+`C:/ml-activate-one-908662cb-results/frozen-reliability-u0x898y9`.
+
+The failure record's per-theme projection was incomplete. Review found two
+independent diagnostic contract defects: the producer normalized evidence IDs
+as prose before recording fact identities, and the bounded projection required
+`resolution` and `importance` fields absent from the coverage-response schema.
+The diagnostic now uses exact admitted fact IDs and accepts the schema's
+`redundant_optional` status without inventing absent fields. Regression tests
+exercise generation through bounded failure projection. These changes do not
+change the coverage verdict, establish why the rewrite failed, or prove a live
+readiness improvement; the original model prose and explanation remain
+unavailable. E18 remains active.
+
 An independent review also confirmed that promotion rolls back caught write
 errors but cannot roll back an abrupt process termination between its separate
 canonical writes. The restart reuse loader checks the artifact hash but does

@@ -245,6 +245,7 @@ def _coverage_verdict_projection(
             or index >= len(candidates)
             or index in indices
             or not isinstance(fact_ids, list)
+            or not fact_ids
             or len(fact_ids) > 32
             or any(
                 not isinstance(item, str) or item not in allowed_facts
@@ -258,23 +259,32 @@ def _coverage_verdict_projection(
                 for item in supporting
             )
             or len(set(supporting)) != len(supporting)
-            or candidate.get("status") not in ("covered", "partial", "uncovered")
+            or candidate.get("status")
+            not in ("covered", "partial", "uncovered", "redundant_optional")
             or candidate.get("resolution")
-            not in ("retained", "merged", "omitted", "unresolved", "quarantined")
-            or candidate.get("importance") not in ("essential", "optional")
+            not in (
+                None,
+                "",
+                "retained",
+                "merged",
+                "omitted",
+                "unresolved",
+                "quarantined",
+            )
+            or candidate.get("importance") not in (None, "", "essential", "optional")
         ):
             return incomplete
         indices.add(index)
-        verdicts.append(
-            {
-                "plan_index": index,
-                "fact_ids": fact_ids,
-                "status": candidate["status"],
-                "resolution": candidate["resolution"],
-                "importance": candidate["importance"],
-                "supporting_insight_ids": supporting,
-            }
-        )
+        projected_verdict: dict[str, object] = {
+            "plan_index": index,
+            "fact_ids": fact_ids,
+            "status": candidate["status"],
+            "supporting_insight_ids": supporting,
+        }
+        for key in ("resolution", "importance"):
+            if candidate.get(key):
+                projected_verdict[key] = candidate[key]
+        verdicts.append(projected_verdict)
     projection: dict[str, object] = {
         "schema_version": "1.0",
         "status": "complete",

@@ -77,6 +77,28 @@ def test_bound_decisions_survive_reprojection_without_prose():
     assert _bounded_failure_context(projected) == projected
 
 
+def test_schema_valid_verdicts_do_not_require_fields_absent_from_response():
+    context = _context()
+    for verdict in context["coverage_diagnostics"]["theme_verdicts"]:
+        # The producer projects absent response fields as empty strings.
+        verdict["resolution"] = ""
+        verdict["importance"] = ""
+    context["coverage_diagnostics"]["theme_verdicts"][0]["status"] = (
+        "redundant_optional"
+    )
+    projected = _bounded_failure_context(context)
+    projection = projected["coverage_diagnostics"]["theme_verdict_projection"]
+    assert projection["status"] == "complete"
+    assert projection["verdicts"][0] == {
+        "plan_index": 1,
+        "fact_ids": ["fact-2"],
+        "status": "redundant_optional",
+        "supporting_insight_ids": ["insight-2"],
+    }
+    assert _bounded_failure_context(projected) == projected
+    assert "private" not in str(projected)
+
+
 @pytest.mark.parametrize(
     "defect",
     [
@@ -88,6 +110,7 @@ def test_bound_decisions_survive_reprojection_without_prose():
         "missing_verdict",
         "too_many",
         "missing_plan_hash",
+        "empty_fact_binding",
     ],
 )
 def test_invalid_verdicts_are_explicitly_incomplete_and_never_exported(defect):
@@ -108,6 +131,8 @@ def test_invalid_verdicts_are_explicitly_incomplete_and_never_exported(defect):
         verdicts.pop()
     elif defect == "too_many":
         verdicts.extend(deepcopy(verdicts) * 17)
+    elif defect == "empty_fact_binding":
+        diagnostic["planned_themes"][0]["fact_ids"] = []
     else:
         diagnostic.pop("current_plan_identity")
     projected = _bounded_failure_context(context)
