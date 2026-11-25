@@ -14,6 +14,7 @@ class SemanticSupport:
     supported: bool
     confidence: float
     reason: str
+    disposition: str | None = None
 
 
 @dataclass(frozen=True)

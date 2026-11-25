@@ -12,6 +12,7 @@ from src.contracts.cover_images import (
     CoverImageReport,
 )
 from src.contracts.files import ReadTextRequest
+from src.contracts.report_analysis import AnalysisGenerationReadRequest
 from src.contracts.report_cards import CoverFingerprintProjectionRequest
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
@@ -20,12 +21,12 @@ from src.contracts.report_store import (
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
 from src.generators.report_card_projection import build_cover_fingerprint
-from src.services import file_service
+from src.services import file_service, report_analysis_store_service
 from src.services.report_store_service import get_metadata, list_metadata
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
-from src.utils.slugify import slugify
 from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.cover_image_orchestrator")
 
@@ -54,30 +55,44 @@ def _load_cover_fingerprint(
         Path(output_dir) / report_slug / "report_analysis" / "artifacts.json"
     )
     try:
-        response = file_service.read_text(
-            ReadTextRequest(schema_version="1.0", path=str(artifact_path)),
+        generation = report_analysis_store_service.read_generation(
+            AnalysisGenerationReadRequest(
+                schema_version="1.0",
+                output_dir=output_dir,
+                report_id=metadata.file_id,
+                report_slug=report_slug,
+            ),
             ctx,
         )
     except AppError as exc:
-        if exc.code != "file_not_found":
+        if exc.code != "analysis_generation_missing":
             raise
-        raise AppError(
-            code="cover_artifacts_missing",
-            message=f"Artifacts are required for cover generation: {artifact_path}",
-            cause=exc,
-            retryable=False,
-            context={"file_id": metadata.file_id, "path": str(artifact_path)},
-        ) from exc
-    try:
-        payload = json.loads(response.content)
-    except json.JSONDecodeError as exc:
-        raise AppError(
-            code="cover_artifacts_invalid",
-            message=f"Artifacts JSON is invalid: {artifact_path}",
-            cause=exc,
-            retryable=False,
-            context={"file_id": metadata.file_id, "path": str(artifact_path)},
-        ) from exc
+        try:
+            response = file_service.read_text(
+                ReadTextRequest(schema_version="1.0", path=str(artifact_path)), ctx
+            )
+        except AppError as read_error:
+            if read_error.code != "file_not_found":
+                raise
+            raise AppError(
+                code="cover_artifacts_missing",
+                message=f"Artifacts are required for cover generation: {artifact_path}",
+                cause=read_error,
+                retryable=False,
+                context={"file_id": metadata.file_id, "path": str(artifact_path)},
+            ) from read_error
+        try:
+            payload = json.loads(response.content)
+        except json.JSONDecodeError as parse_error:
+            raise AppError(
+                code="cover_artifacts_invalid",
+                message=f"Artifacts JSON is invalid: {artifact_path}",
+                cause=parse_error,
+                retryable=False,
+                context={"file_id": metadata.file_id, "path": str(artifact_path)},
+            ) from parse_error
+    else:
+        payload = generation.packs.get("artifacts")
     if not isinstance(payload, dict) or payload.get("schema_version") != "3.0":
         raise AppError(
             code="cover_artifacts_invalid",

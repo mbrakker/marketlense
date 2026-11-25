@@ -1736,6 +1736,7 @@ def _resume_prompt_family_repair(
                 expected_source_id=factual_source_identity,
                 expected_source_md5=str(runtime.md5 or ""),
                 require_execution_identity=authority_context is not None,
+                evidence_packs=factual_evidence_packs,
                 promotion_audit=promotion_audit,
                 ctx=repair_ctx,
             )

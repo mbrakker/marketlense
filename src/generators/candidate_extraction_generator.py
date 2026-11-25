@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -61,9 +62,7 @@ def _candidate_payload(
                 "caption": cand.caption or "",
                 "thumb_path": cand.thumb_path or "",
                 "crop_path": crop_map.get(cand.id, ""),
-                "crop_qa_accepted": bool(
-                    _outcome_value(outcome, "accepted", False)
-                )
+                "crop_qa_accepted": bool(_outcome_value(outcome, "accepted", False))
                 if outcome is not None
                 else False,
                 "crop_qa_score": float(_outcome_value(outcome, "score", 0.0) or 0.0)
@@ -99,9 +98,15 @@ def _candidates_path(output_dir: str, report_name: str, subdir: str) -> str:
     return str(base / "candidates.json")
 
 
+def candidate_artifact_name(report_id: str) -> str:
+    """Return the shared, source-specific candidate artifact namespace."""
+    return "candidate-" + hashlib.sha256(report_id.encode("utf-8")).hexdigest()
+
+
 def generate_candidate_pack(
     request: CandidateExtractRequest, ctx: RunContext
 ) -> CandidateExtractOutcome:
+    artifact_name = candidate_artifact_name(request.report_id)
     logger.info(
         log_event(
             ctx,
@@ -144,7 +149,7 @@ def generate_candidate_pack(
                 schema_version="1.0",
                 pdf_path=request.pdf_path,
                 out_dir=request.output_dir,
-                report_name=request.report_name,
+                report_name=artifact_name,
                 pdf_context=pdf_context,
             ),
             ctx,
@@ -189,7 +194,7 @@ def generate_candidate_pack(
                     schema_version="1.0",
                     pdf_path=request.pdf_path,
                     out_dir=request.output_dir,
-                    report_name=request.report_name,
+                    report_name=artifact_name,
                     subdir=request.subdir,
                     items=items,
                     mode="publication_strict",
@@ -245,7 +250,7 @@ def generate_candidate_pack(
             ),
         }
         output_path = _candidates_path(
-            request.output_dir, request.report_name, request.subdir
+            request.output_dir, artifact_name, request.subdir
         )
         file_service.write_bytes(
             WriteBytesRequest(

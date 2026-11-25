@@ -387,8 +387,24 @@ def test_candidate_promotion_obeys_semantic_candidate_outcome(
                 {
                     "schema_version": "1.4",
                     "artifact_hash": sha256_json(req.artifacts),
-                    "package_hash": "candidate-package-1",
+                    "package_hash": "",
+                    "results": [],
+                    "readiness_status": "awaiting_review",
+                    "unsupported_factual_count": 0,
+                    "unresolved_factual_count": 0,
+                    "deterministic_pass_count": 0,
+                    "semantic_validation_count": 0,
+                    "semantic_execution_identities": [],
+                    "validation_identity": None,
+                    "lineage": None,
                 }
+            )
+            from src.generators.claim_validation_generator import (
+                claim_validation_package_hash,
+            )
+
+            candidate_package_payload["package_hash"] = claim_validation_package_hash(
+                candidate_package_payload
             )
         if candidate_outcome == "rejected" and pack_name == (
             "validation_regen_candidate_1"
@@ -457,7 +473,14 @@ def test_candidate_promotion_obeys_semantic_candidate_outcome(
     assert validation_calls == ["validation", "validation_regen_candidate_1"]
     assert state.regeneration_attempts[0].promotion_outcome == expected_outcome
     assert len(candidate_package_reads) == int(expected_outcome == "promoted")
-    assert len(promoted_candidate_packages) == int(expected_outcome == "promoted")
+    if expected_outcome == "promoted":
+        promoted_path = state.evidence_paths[
+            "validation_retained_claim_validation_candidate"
+        ]
+        assert (
+            json.loads(Path(promoted_path).read_text(encoding="utf-8"))
+            == candidate_package_payload
+        )
     assert state.artifacts_payload["summary"]["tldr"] == (
         "Repaired summary" if expected_outcome == "promoted" else "Broken summary"
     )

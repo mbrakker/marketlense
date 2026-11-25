@@ -1870,6 +1870,35 @@ was not retained because the current binary fidelity decision cannot route
 visual ambiguity to the existing visual stage without risking coverage. This
 reconstructed extraction is not the missing original fidelity
 request, and the replay does not prove prior causation or full-report recall.
+The follow-up adds an explicit model-classified visual
+ambiguity route to the existing visual admission stage, with source-identity,
+physical-page and source-text-hash checks. Provider-free tests exercise the
+handoff and reject contradictions, missing bindings and mismatched sources;
+they do not establish that either live report is publication-ready. In a
+bounded page-6 replay, an initial prompt incorrectly claimed the flattened
+text established both chart mappings. After explicitly identifying the input
+as flattened text and prohibiting inferred chart-label associations, one
+subsequent GPT-6 Luna High call classified both the swapped and the correct
+mapping as `visual_ambiguity` and the directly stated heading as supported.
+The second call used 1,109 input and 403 output tokens, cost an estimated
+$0.000312, and took 5.564 seconds; its result is retained at
+`C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-visual-ambiguity-5bxbn2ju/result.json`.
+The initial call used 1,046 input and 917 output tokens, cost $0.000563,
+and took 10.170 seconds. A subsequent component replay sent both quarantined
+candidates through existing visual admission on physical page 6: both terminal
+outcomes were verified after the swapped claim was corrected. Manual inspection
+of that page confirmed the access $128B/5.7%, advertising $108B/4.7%, paid
+content $66B/2.3% and 2017E-2021E forecast relationships. The replay made four
+provider calls (40,748 input, 8,812 output, including 5,769 reasoning tokens),
+cost an estimated $0.008481 and took 70.574 seconds. Its result is retained at
+`C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-visual-quarantine-h34d_r9t/result.json`.
+The harness exited nonzero when printing a non-ASCII character after saving
+the result; it did not retry or repeat the calls. Both resulting facts describe
+overlapping source content, so full-report selection still needs inspection.
+These single component observations do not prove stable model classification
+or end-to-end readiness. The quarantine is in-memory and findings reuse and
+materialization are bypassed in this mode. A verified-vector regression confirms
+that its filtered findings cannot be written under ordinary-mode reuse identity.
 The retained result is
 `C:/Users/Михаил/AppData/Local/Temp/marketlense-activate-fidelity-review-3nl2gt8v/result.json`;
 the trial replay used one call, 1,066 input and 968 output tokens,
@@ -1988,6 +2017,29 @@ These results do not establish that every observed new artifact is itself
 inconsistent, or that a publication bypass occurred. Durable recovery,
 concurrent access and restart safety remain open prerequisites to the requested
 two-report acceptance.
+Follow-up process-kill tests cover an exclusive pending marker and fail-closed
+retained-claim reuse after each canonical write. This is partial hardening,
+not a durable transaction: the check does not coordinate every reader or
+publication and has a read-to-use race. An interrupted promotion still needs
+operator recovery of a consistent file set; E13 remains open.
+The versioned immutable-generation store is now wired into the regeneration
+promotion, selected production readers, and new generation-bound publication
+packages. Local process-termination, compare-and-swap and corruption tests pass;
+the repair loop also pins the parent generation observed at analysis start,
+and rejects a concurrent replacement. An absent retained-claim pack cannot fall
+back to a legacy file. These are partial integration results, not an end-to-end
+crash-safety or publication guarantee: reader coverage and concurrent access
+through the full production workflow still require verification, and the
+Activate and Capgemini acceptance runs remain open. Existing approval package
+identities are not migrated.
+Further local regressions exposed mismatched evidence at render and package
+boundaries, a stale checkpoint artifact projection, and adoption of a historical
+generation without report identity. New generation commits retain factual
+evidence, rendering compares it with the committed mapping and uses pinned
+artifacts, and new publication packages require matching evidence hashes.
+Historical identity-unbound generations remain readable but cannot be advanced.
+These checks have not yet been validated by the two requested live reports;
+the verified prompt-family route still requires a production-route regression.
 When rollback itself fails, both promotion callers now propagate the existing
 `regeneration_promotion_inconsistent` error without writing a misleading
 `rolled_back` audit. A focused store-boundary regression exercises the normal

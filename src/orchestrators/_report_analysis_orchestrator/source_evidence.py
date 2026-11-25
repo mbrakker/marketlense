@@ -134,15 +134,17 @@ def build_findings_source_spans(
                     continue
                 if page.text.strip():
                     pages_by_number[page.page_number] = page.text
-                if getattr(page, "layout_evidence", None):
-                    layout_evidence_by_page[page.page_number] = list(
-                        page.layout_evidence
-                    )
-                if getattr(page, "layout_analysis_complete", False):
-                    layout_analysis_complete_by_page[page.page_number] = True
+                layout_evidence_by_page[page.page_number] = list(
+                    getattr(page, "layout_evidence", ()) or ()
+                )
+                layout_analysis_complete_by_page[page.page_number] = bool(
+                    getattr(page, "layout_analysis_complete", False)
+                )
                 chart_identity = getattr(page, "chart_identity_evidence", None)
                 if chart_identity is not None:
                     chart_identity_by_page[page.page_number] = chart_identity
+                else:
+                    chart_identity_by_page.pop(page.page_number, None)
                 chart_identity_status_by_page[page.page_number] = str(
                     getattr(page, "chart_identity_status", "not_applicable")
                 )

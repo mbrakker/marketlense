@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from pathlib import Path
 
 from src.contracts.artifact_lineage import (
     ARTIFACT_LINEAGE_SCHEMA_VERSION,
@@ -16,17 +17,21 @@ from src.contracts.files import (
     PipelineStageCheckpoint,
     ReadJsonRequest,
 )
+from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.report_artifacts import artifact_registry_from_payload
 from src.contracts.report_card_remediation import (
     ReportCardCheckpointRemediationRequest,
     ReportCardCheckpointRemediationResponse,
     ReportCardPublicationDateRemediationRequest,
 )
-from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
 from src.generators.report_card_date_remediation_generator import (
     apply_report_card_publication_date_remediation,
     remediate_report_card_publication_date,
+)
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_input_checksum,
 )
 from src.services.file_service import (
     file_stat,
@@ -37,10 +42,6 @@ from src.services.file_service import (
 )
 from src.services.report_store_service import record_artifact_lineage
 from src.utils.errors import AppError
-from src.orchestrators.remediation_orchestrator import (
-    record_workflow_failure,
-    remediation_input_checksum,
-)
 
 _PIPELINE_NAME = "report_generation"
 _STAGE_NAME = "analysis_complete"
@@ -95,6 +96,16 @@ def _remediate_report_card_date_checkpoint(
             message="Publication-date remediation is missing required registry refs",
             retryable=False,
             context={"file_id": request.file_id, "missing_refs": missing},
+        )
+    artifact_path = Path(ref_paths["artifacts"])
+    if artifact_path.parent.parent.name == ".generations":
+        raise AppError(
+            code="report_card_generation_remediation_unsupported",
+            message=(
+                "Report-card remediation cannot overwrite an immutable generation"
+            ),
+            retryable=False,
+            context={"file_id": request.file_id},
         )
     artifacts_payload = _read_object(ref_paths["artifacts"], ctx)
     doc_map_payload = _read_object(ref_paths["doc_map"], ctx)

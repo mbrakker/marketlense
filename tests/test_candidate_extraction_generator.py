@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
+
+from pypdf import PdfWriter
 
 from src.contracts.candidate_extraction import CandidateExtractRequest
 from src.contracts.candidates import Candidate
@@ -13,6 +17,8 @@ from src.contracts.report_assets import (
 )
 from src.contracts.run_context import RunContext
 from src.generators import candidate_extraction_generator as gen
+from src.generators import report_selection_generator as selection
+from src.generators.report_generation_dependencies import ReportSelectionDependencies
 
 
 class _FakePdfContext:
@@ -58,6 +64,156 @@ def _candidates() -> list[Candidate]:
             preview_text="candidate two",
         ),
     ]
+
+
+def test_same_name_reports_write_distinct_candidate_artifacts(tmp_path):
+    pdf_path = tmp_path / "report.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=600, height=800)
+    with pdf_path.open("wb") as stream:
+        writer.write(stream)
+    request = _request(tmp_path, save_crops=False)
+    first = gen.generate_candidate_pack(request, _ctx())
+    second = gen.generate_candidate_pack(replace(request, report_id="report_2"), _ctx())
+
+    assert first.candidates_path != second.candidates_path
+    assert (
+        json.loads(Path(first.candidates_path).read_text())["report_id"] == "report_1"
+    )
+    assert (
+        json.loads(Path(second.candidates_path).read_text())["report_id"] == "report_2"
+    )
+
+
+def test_same_name_reports_use_distinct_thumbnail_and_crop_namespaces(
+    tmp_path, external_boundary_mocks_only
+):
+    collected = []
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "build_pdf_context",
+        lambda req, ctx: SimpleNamespace(context=None),
+    )
+
+    def collect(req, ctx):
+        collected.append(req.report_name)
+        return ExtractCandidatesResponse(
+            schema_version="1.0", candidates=[_candidates()[0]]
+        )
+
+    def crop(req, ctx):
+        return CropResponse(
+            schema_version="1.0", paths=[f"{req.report_name}/candidates/c1.png"]
+        )
+
+    external_boundary_mocks_only.setattr(gen.pdf_service, "collect_candidates", collect)
+    external_boundary_mocks_only.setattr(gen.pdf_service, "crop_regions", crop)
+    request = _request(tmp_path)
+    first = gen.generate_candidate_pack(request, _ctx())
+    second = gen.generate_candidate_pack(replace(request, report_id="report_2"), _ctx())
+
+    assert collected[0] != collected[1]
+    assert first.crop_paths == [f"{collected[0]}/candidates/c1.png"]
+    assert second.crop_paths == [f"{collected[1]}/candidates/c1.png"]
+    assert Path(first.candidates_path).parent.parent.name == collected[0]
+    assert Path(second.candidates_path).parent.parent.name == collected[1]
+
+
+def test_selection_reads_candidate_pack_by_report_identity(
+    tmp_path, ingest_settings, external_boundary_mocks_only
+):
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "build_pdf_context",
+        lambda req, ctx: SimpleNamespace(context=None),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "collect_candidates",
+        lambda req, ctx: ExtractCandidatesResponse(
+            schema_version="1.0", candidates=[_candidates()[0]]
+        ),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "crop_regions",
+        lambda req, ctx: CropResponse(
+            schema_version="1.0", paths=[f"{req.report_name}/candidates/c1.png"]
+        ),
+    )
+    request = replace(_request(tmp_path), output_dir=ingest_settings.output_dir)
+    first = gen.generate_candidate_pack(request, _ctx())
+    second = gen.generate_candidate_pack(replace(request, report_id="report_2"), _ctx())
+    dependencies = ReportSelectionDependencies.default()
+
+    for outcome in (first, second):
+        result = selection._load_candidate_crop_path_map(
+            settings=ingest_settings,
+            report_name=outcome.report_name,
+            report_id=outcome.report_id,
+            ctx=_ctx(),
+            dependencies=dependencies,
+        )
+        assert result == {"c1": outcome.crop_paths[0]}
+
+
+def test_selection_rejects_legacy_and_mismatched_candidate_packs(ingest_settings):
+    legacy = (
+        Path(ingest_settings.output_dir)
+        / "report-name"
+        / "candidates"
+        / "candidates.json"
+    )
+    legacy.parent.mkdir(parents=True)
+    legacy.write_text(
+        json.dumps(
+            {
+                "report_id": "report_1",
+                "candidates": [
+                    {"id": "c1", "crop_path": "report-name/candidates/c1.png"}
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    dependencies = ReportSelectionDependencies.default()
+    kwargs = {
+        "settings": ingest_settings,
+        "report_name": "report-name",
+        "report_id": "report_1",
+        "ctx": _ctx(),
+        "dependencies": dependencies,
+    }
+    assert selection._load_candidate_crop_path_map(**kwargs) == {}
+
+    assert (
+        selection._candidate_extraction_output_path(ingest_settings, "report-name")
+        == legacy
+    )
+    assert (
+        selection._load_candidate_crop_path_map(
+            settings=ingest_settings,
+            report_name="report-name",
+            ctx=_ctx(),
+            dependencies=dependencies,
+        )
+        == {}
+    )
+    canonical = selection._candidate_extraction_output_path(
+        ingest_settings, "report-name", report_id="report_1"
+    )
+    canonical.parent.mkdir(parents=True)
+    canonical.write_text(
+        json.dumps(
+            {
+                "report_id": "report_2",
+                "candidates": [{"id": "c1", "crop_path": "wrong-source.png"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert selection._load_candidate_crop_path_map(**kwargs) == {}
+    assert legacy.exists()
 
 
 def test_generate_candidate_pack_success_with_crops(
@@ -184,8 +340,7 @@ def test_generate_candidate_pack_maps_crop_outcomes_by_candidate_id(
     assert payload["candidates"][1]["crop_path"] == "candidates/c2.png"
     assert payload["candidates"][1]["crop_qa_accepted"] is True
     assert (
-        payload["candidates"][1]["crop_qa_sidecar_path"]
-        == "candidates/c2.png.qa.json"
+        payload["candidates"][1]["crop_qa_sidecar_path"] == "candidates/c2.png.qa.json"
     )
 
 
@@ -333,7 +488,13 @@ def test_generate_candidate_pack_sanitizes_output_path_segments(
     )
 
     outcome = gen.generate_candidate_pack(request, _ctx())
-    expected_path = tmp_path / "out" / "escape" / "candidates" / "candidates.json"
+    expected_path = (
+        tmp_path
+        / "out"
+        / "candidate-eb8584b81bf45732f5a230fbf89114e06c92c6ac1ba488c879ca117519dca64b"
+        / "candidates"
+        / "candidates.json"
+    )
 
     assert outcome.candidates_path == str(expected_path)
     assert written["path"] == str(expected_path)

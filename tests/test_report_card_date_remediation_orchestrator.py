@@ -4,14 +4,15 @@ from pathlib import Path
 
 import pytest
 
+from src.contracts.artifact_lineage import ArtifactReuseCheckRequest
 from src.contracts.files import (
     JsonObjectCacheWriteRequest,
     PipelineCheckpointReadRequest,
     PipelineCheckpointWriteRequest,
     PipelineStageCheckpoint,
 )
-from src.contracts.report_card_remediation import ReportCardCheckpointRemediationRequest
 from src.contracts.remediation import RemediationListRequest
+from src.contracts.report_card_remediation import ReportCardCheckpointRemediationRequest
 from src.contracts.run_context import RunContext
 from src.orchestrators.report_card_date_remediation_orchestrator import (
     remediate_report_card_date_checkpoint,
@@ -24,17 +25,23 @@ from src.services.file_service import (
 from src.services.report_store_service import check_artifact_reuse
 from src.services.state_service import list_remediation_records
 from src.utils.errors import AppError
-from src.contracts.artifact_lineage import ArtifactReuseCheckRequest
 
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
+@pytest.mark.parametrize("immutable", [False, True])
 def test_checkpoint_remediation_projects_source_date_and_refreshes_lineage(
     tmp_path: Path,
+    immutable: bool,
 ) -> None:
-    artifacts_path = tmp_path / "artifacts.json"
+    artifacts_path = (
+        tmp_path / ".generations" / ("a" * 64) / "artifacts.json"
+        if immutable
+        else tmp_path / "artifacts.json"
+    )
+    artifacts_path.parent.mkdir(parents=True, exist_ok=True)
     doc_map_path = tmp_path / "doc_map.json"
     validation_path = tmp_path / "validation.json"
     write_json_object_cache(
@@ -102,15 +109,20 @@ def test_checkpoint_remediation_projects_source_date_and_refreshes_lineage(
         _ctx(),
     )
 
-    response = remediate_report_card_date_checkpoint(
-        ReportCardCheckpointRemediationRequest(
-            schema_version="1.0",
-            checkpoint_root=str(tmp_path),
-            file_id="file-1",
-            reports_db_path=str(tmp_path / "reports.sqlite"),
-        ),
-        _ctx(),
+    request = ReportCardCheckpointRemediationRequest(
+        schema_version="1.0",
+        checkpoint_root=str(tmp_path),
+        file_id="file-1",
+        reports_db_path=str(tmp_path / "reports.sqlite"),
     )
+    if immutable:
+        original = artifacts_path.read_bytes()
+        with pytest.raises(AppError) as exc:
+            remediate_report_card_date_checkpoint(request, _ctx())
+        assert exc.value.code == "report_card_generation_remediation_unsupported"
+        assert artifacts_path.read_bytes() == original
+        return
+    response = remediate_report_card_date_checkpoint(request, _ctx())
 
     assert response.result.publication_date == "2026-01-15"
     assert response.result.date_source == "doc_map.publication_date"

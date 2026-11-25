@@ -10,7 +10,7 @@ from src.contracts.candidate_extraction import (
     CandidateExtractOutcome,
     CandidateExtractRequest,
 )
-from src.contracts.drive import DriveDownloadRequest, DriveListRequest, DriveFile
+from src.contracts.drive import DriveDownloadRequest, DriveFile, DriveListRequest
 from src.contracts.files import FileExistsRequest, FileHashRequest, WriteBytesRequest
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest
@@ -18,14 +18,14 @@ from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.generators.candidate_extraction_generator import generate_candidate_pack
-from src.services.drive_service import download_pdf, list_pdfs
-from src.services.file_service import file_exists, file_md5, write_bytes
-from src.services.pdf_service import check_pdf_eof
-from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.remediation_orchestrator import (
     record_workflow_failure,
     remediation_input_checksum,
 )
+from src.orchestrators.retry_orchestrator import run_step_with_default_policy
+from src.services.drive_service import download_pdf, list_pdfs
+from src.services.file_service import file_exists, file_md5, write_bytes
+from src.services.pdf_service import check_pdf_eof
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
@@ -96,7 +96,7 @@ def _download_if_needed(
     ctx: RunContext,
     dependencies: CandidateExtractionDependencies,
 ) -> tuple[str, Optional[str]]:
-    cache_name = safe_pdf_name(file.name or f"{file.file_id}.pdf")
+    cache_name = safe_pdf_name(file.file_id)
     cache_path = str(Path(settings.cache_dir) / cache_name)
     md5 = None
     exists_resp = dependencies.file_exists(

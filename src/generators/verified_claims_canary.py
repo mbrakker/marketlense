@@ -95,6 +95,8 @@ def build_visual_authority_admitter(
     ctx: Any,
     settings: Any,
     doc_map: Mapping[str, Any],
+    visual_quarantine: Mapping[str, Any] | None = None,
+    source_spans: Sequence[Mapping[str, Any]] = (),
 ):
     """Build the explicit canary callback consumed by artifact generation."""
 
@@ -123,6 +125,98 @@ def build_visual_authority_admitter(
             for candidate in candidates
             if isinstance(candidate, Mapping)
         ]
+        visual_evidence = deepcopy(dict(evidence_packs))
+        raw_quarantine = (
+            visual_quarantine if isinstance(visual_quarantine, Mapping) else {}
+        )
+        findings = raw_quarantine.get("findings")
+        if (
+            raw_quarantine.get("schema_version") == "1.0"
+            and raw_quarantine.get("source_identity") == source_identity
+            and isinstance(findings, list)
+        ):
+            existing_ids = {
+                str(item.get("evidence_id") or "").strip()
+                for item in evaluation_candidates
+            }
+            ids = [
+                str(item["finding"].get("id") or "").strip()
+                for item in findings
+                if isinstance(item, dict) and isinstance(item.get("finding"), dict)
+            ]
+            spans_by_id: dict[str, list[Mapping[str, Any]]] = {}
+            for span in source_spans:
+                if isinstance(span, Mapping) and isinstance(span.get("id"), str):
+                    spans_by_id.setdefault(span["id"].strip(), []).append(span)
+            if len(ids) == len(findings) and len(set(ids)) == len(ids):
+                for entry in findings:
+                    finding = entry["finding"]
+                    finding_id = str(finding.get("id") or "").strip()
+                    text = finding.get("text")
+                    evidence = finding.get("evidence")
+                    pages = finding.get("pages")
+                    references = entry.get("source_references")
+                    if (
+                        not finding_id
+                        or finding_id in existing_ids
+                        or not isinstance(text, str)
+                        or not text.strip()
+                        or not isinstance(evidence, str)
+                        or not evidence.strip()
+                        or not isinstance(pages, list)
+                        or not pages
+                        or any(type(page) is not int or page <= 0 for page in pages)
+                        or not isinstance(references, list)
+                        or not references
+                    ):
+                        continue
+                    source_texts = []
+                    bound_pages = set()
+                    for ref in references:
+                        if not isinstance(ref, dict):
+                            break
+                        reference_id = ref.get("evidence_id")
+                        if not isinstance(reference_id, str):
+                            break
+                        matches = spans_by_id.get(reference_id, [])
+                        if len(matches) != 1:
+                            break
+                        span = matches[0]
+                        span_text = span.get("text")
+                        page = span.get("page")
+                        if (
+                            not isinstance(span_text, str)
+                            or not span_text.strip()
+                            or type(page) is not int
+                            or page <= 0
+                            or ref.get("page") != page
+                            or ref.get("text_hash") != sha256_json(span_text.strip())
+                        ):
+                            break
+                        source_texts.append(span_text.strip())
+                        bound_pages.add(page)
+                    else:
+                        if bound_pages != set(pages):
+                            continue
+                        pack = visual_evidence.get("findings")
+                        if not isinstance(pack, dict) or not isinstance(
+                            pack.get("findings"), list
+                        ):
+                            continue
+                        evidence = "\n".join(source_texts)
+                        finding = {**finding, "evidence": evidence}
+                        evaluation_candidates.append(
+                            {
+                                "id": finding_id,
+                                "text": text,
+                                "evidence_id": finding_id,
+                                "evidence": evidence,
+                                "pages": pages,
+                                "metric": {},
+                            }
+                        )
+                        pack["findings"].append(deepcopy(finding))
+                        continue
         # Candidate pages are discovery metadata until the retained finding
         # binder resolves them.  Apply the existing direct-evidence binding
         # before rendering visual pages so a model-supplied stale page cannot
@@ -134,9 +228,7 @@ def build_visual_authority_admitter(
             insights_final=[],
             quotes_final=[],
             doc_map={},
-            evidence_packs=(
-                dict(evidence_packs) if isinstance(evidence_packs, Mapping) else {}
-            ),
+            evidence_packs=(visual_evidence),
         )
         evaluation_candidates = _canonical_candidate_roster(evaluation_candidates)
         request, _audit = build_verified_claims_shadow_request(
@@ -144,7 +236,7 @@ def build_visual_authority_admitter(
             pdf_path=resolved_pdf_path,
             output_dir=output_dir,
             report_name=report_name,
-            evidence_packs=evidence_packs,
+            evidence_packs=visual_evidence,
             shortlisted_insights=evaluation_candidates,
             ctx=ctx,
             dpi=config.dpi,
@@ -162,7 +254,7 @@ def build_visual_authority_admitter(
             evaluation=evaluation,
             source_identity=source_identity,
             doc_map={},
-            evidence_packs=evidence_packs,
+            evidence_packs=visual_evidence,
         )
 
     return admit

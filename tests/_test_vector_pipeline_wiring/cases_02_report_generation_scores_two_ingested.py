@@ -502,7 +502,7 @@ def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun
 
     def _fake_artifacts(*args, **kwargs):
         upstream_calls["artifacts"] += 1
-        return _analysis_artifacts()
+        return _checkpoint_analysis_artifacts(settings, ctx)
 
     def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
         upstream_calls["validation"] += 1

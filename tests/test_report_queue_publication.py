@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import sqlite3
 from dataclasses import replace
 from pathlib import Path
@@ -26,41 +25,16 @@ from src.services.report_store_service import create_validation_run_manifest
 from src.services.workflow_queue_service import approve_publication_package
 from src.utils.errors import AppError
 from tests.test_workflow_queue_registry import _ctx, _isolated_app_config, _workflow_job
+from tests.test_autonomous_publication_approval import _ready_report
 
 
 def test_report_queue_uses_one_exact_approved_package_and_rejects_mutation(
     tmp_path: Path,
 ) -> None:
     config_path = _isolated_app_config(tmp_path)
-    html_path = tmp_path / "out" / "report.html"
-    readiness_path = (
-        tmp_path / "out" / "report" / "report_analysis" / "publish_readiness.json"
-    )
-    html_path.parent.mkdir(parents=True)
-    readiness_path.parent.mkdir(parents=True)
-    html_path.write_text("<html><body>Report</body></html>", encoding="utf-8")
-    readiness_path.write_text(
-        json.dumps(
-            {
-                "schema_version": "1.0",
-                "report_id": "report-1",
-                "status": "pass",
-                "artifact_hashes": {},
-                "rule_results": [],
-                "final_html_hash": "hash",
-                "publication_projection_hash": "projection",
-                "configuration_hash": "configuration",
-                "policy_hash": "policy",
-                "producer_revision": "workspace",
-                "created_at_utc": "2026-07-18T00:00:00+00:00",
-                "expires_at_utc": "2026-07-19T00:00:00+00:00",
-                "staleness_conditions": [],
-                "provenance": {},
-                "artifact_hash": "artifact",
-            }
-        ),
-        encoding="utf-8",
-    )
+    retained = _ready_report(tmp_path, config_path)
+    html_path = Path(retained.entity_package_reference)
+    readiness_path = Path(retained.validation_reference)
     checksum = report_publish_package_checksum(
         html_path=str(html_path), readiness_reference=str(readiness_path), ctx=_ctx()
     )
@@ -127,33 +101,9 @@ def test_validation_publication_readiness_records_same_lineage_manifest_stage(
 ) -> None:
     """A durable review-ready package closes A21's manifest readiness boundary."""
     config_path = _isolated_app_config(tmp_path)
-    html_path = tmp_path / "out" / "report.html"
-    readiness_path = tmp_path / "out" / "report" / "publish_readiness.json"
-    html_path.parent.mkdir(parents=True)
-    readiness_path.parent.mkdir(parents=True)
-    html_path.write_text("<html><body>Report</body></html>", encoding="utf-8")
-    readiness_path.write_text(
-        json.dumps(
-            {
-                "schema_version": "1.0",
-                "report_id": "report-1",
-                "status": "pass",
-                "artifact_hashes": {},
-                "rule_results": [],
-                "final_html_hash": "hash",
-                "publication_projection_hash": "projection",
-                "configuration_hash": "configuration",
-                "policy_hash": "policy",
-                "producer_revision": "workspace",
-                "created_at_utc": "2026-07-18T00:00:00+00:00",
-                "expires_at_utc": "2026-07-19T00:00:00+00:00",
-                "staleness_conditions": [],
-                "provenance": {},
-                "artifact_hash": "artifact",
-            }
-        ),
-        encoding="utf-8",
-    )
+    retained = _ready_report(tmp_path, config_path)
+    html_path = Path(retained.entity_package_reference)
+    readiness_path = Path(retained.validation_reference)
     from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
     from src.services.config_service import build_ingest_settings, load_settings
 
@@ -193,7 +143,7 @@ def test_validation_publication_readiness_records_same_lineage_manifest_stage(
         root_workflow_id=str(root_workflow_id),
         report_id="report-1",
         publisher_id="publisher-1",
-        source_identity_id="source:report-1",
+        source_identity_id="source-1",
     )
     payload = PublicationReadinessPayload(
         entity_type="report",
@@ -228,6 +178,6 @@ def test_validation_publication_readiness_records_same_lineage_manifest_stage(
             "publication_preflight",
             "succeeded",
             "report-1",
-            "source:report-1",
+            "source-1",
         )
     ]

@@ -31,6 +31,7 @@ from src.contracts.file_cache import (
 from src.contracts.files import ReadTextResponse
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_text import PdfTextPage, PdfTextSample, PdfTextSampleResponse
+from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_assets import RenderResponse
 from src.contracts.report_cards import (
@@ -62,6 +63,7 @@ from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.contracts.validation import ValidationReport
 from src.generators import report_analysis_generator as rag
+from src.generators.artifact_prompt_provenance import current_artifact_prompt_identity
 from src.generators.public_editorial_quality_generator import BLOCKING_RULE_IDS
 from src.generators.report_generation_dependencies import (
     FigureCaptionDependencies,
@@ -83,6 +85,7 @@ from src.orchestrators.ingest_file_orchestrator import (
     run_ingest_file,
 )
 from src.services.file_service import file_stat
+from src.services.prompt_service import load_prompt_set
 from src.services.report_store_service import (
     list_report_source_quality_history,
     record_discovered_report_source,
@@ -290,6 +293,13 @@ def _analysis_artifacts(**overrides) -> dict:
         "publication_date": "2026-06-09",
         "categories": ["cat"],
         "toc_topics": ["Topic"],
+        "editorial_plan": {
+            "report_thesis": "Revenue growth and customer retention shape the outlook.",
+            "themes": [
+                {"theme": "Revenue", "priority": 1, "evidence_ids": ["f1"]},
+                {"theme": "Retention", "priority": 2, "evidence_ids": ["f3"]},
+            ],
+        },
         "summary": summary,
         "cover_semantics": {
             "evidence_shape": "trend",
@@ -343,6 +353,24 @@ def _analysis_artifacts(**overrides) -> dict:
     }
     payload.update(overrides)
     return payload
+
+
+def _checkpoint_analysis_artifacts(settings: IngestSettings, ctx: RunContext) -> dict:
+    """Build fake analysis artifacts with current checkpoint prompt provenance."""
+    namespace = "report_vs/artifacts/summary"
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace), ctx
+    )
+    identity = current_artifact_prompt_identity(
+        namespace=namespace,
+        prompt_set=prompt_set,
+        settings=settings,
+        retrieval_mode="chat_json",
+        relevant_input_hash="test-input-hash",
+    )
+    return _analysis_artifacts(
+        _cache={"producing_prompt_identities": {namespace: identity}}
+    )
 
 
 def _analysis_dependencies(**overrides) -> ReportAnalysisDependencies:

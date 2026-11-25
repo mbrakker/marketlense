@@ -362,6 +362,8 @@ def _artifacts(**overrides) -> dict:
         },
     }
     payload.update(overrides)
+    if isinstance(payload.get("summary"), dict):
+        payload["summary"].setdefault("card_tldr_compact", "")
     return payload
 
 

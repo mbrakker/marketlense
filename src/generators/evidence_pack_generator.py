@@ -5,6 +5,7 @@ import logging
 import re
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from copy import deepcopy
 from dataclasses import asdict, replace
 from hashlib import sha256
 from typing import Dict, Optional, Tuple
@@ -1041,6 +1042,7 @@ def generate_evidence_packs(
     prompt_family_materializer=materialize_prompt_family,
     retrieval_results_observer=None,
     findings_retrieval_results_observer=None,
+    visual_ambiguity_source_identity: str = "",
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
     source_identity_id = str(ctx.source_identity_id or "").strip()
@@ -1062,6 +1064,7 @@ def generate_evidence_packs(
     )
     strategies = _resolve_pack_steps(settings)
     results: Dict[str, dict] = {}
+    visual_quarantine: dict = {}
     pack_contexts: dict[str, RunContext] = {}
     deferred_materializations: dict[
         str, tuple[PromptFamilyMaterializationRequest, RunContext, bool]
@@ -1236,6 +1239,7 @@ def generate_evidence_packs(
                     prompt_family_reuse_reader=prompt_family_reuse_reader,
                     deferred_materializations=deferred_materializations,
                     strategy=strategy,
+                    disable_findings_reuse=bool(visual_ambiguity_source_identity),
                     shared_retrieval_context_json=(
                         serialize_shared_retrieval_context(retrieval_results)
                         if strategy.pack_name in {"scope", "methods", "limitations"}
@@ -1317,6 +1321,7 @@ def generate_evidence_packs(
                 prompt_family_reuse_reader=prompt_family_reuse_reader,
                 deferred_materializations=deferred_materializations,
                 strategy=strategy,
+                disable_findings_reuse=bool(visual_ambiguity_source_identity),
                 shared_retrieval_context_json=(
                     serialize_shared_retrieval_context(retrieval_results)
                     if strategy.pack_name in {"scope", "methods", "limitations"}
@@ -1402,15 +1407,19 @@ def generate_evidence_packs(
                 source_url=source_url,
                 report_id=report_id,
                 source_id=source_identity_id,
+                visual_ambiguity_mode=bool(visual_ambiguity_source_identity),
             )
             batch_results = {}
             for candidate in candidates:
                 support = outcome.metric_support.get(candidate.claim_id)
                 if support is not None:
                     batch_results[candidate.claim_id] = (
-                        bool(support.supported),
+                        bool(support.supported)
+                        if not visual_ambiguity_source_identity or support.disposition
+                        else False,
                         support.reason,
                         outcome.execution_identity,
+                        support.disposition or "",
                     )
             return batch_results
 
@@ -1438,6 +1447,53 @@ def generate_evidence_packs(
                 if isinstance(finding, dict)
             ]
             _attach_verified_finding_pages(findings, fidelity)
+            if visual_ambiguity_source_identity:
+                pending = [
+                    result
+                    for result in findings_validation_results
+                    if result.status == "unresolved"
+                    and result.semantic_classification == "visual_ambiguity"
+                    and result.semantic_execution_identity
+                ]
+                pending_fidelity = replace(fidelity, results=pending)
+                bound_ids = _attach_verified_finding_pages(
+                    findings, pending_fidelity, allow_semantic_pending=True
+                )
+                quarantined = []
+                for result in pending:
+                    finding_id = result.candidate.claim_id.removeprefix(
+                        "evidence:findings:"
+                    )
+                    refs = result.candidate.evidence_references
+                    matches = [
+                        finding
+                        for finding in findings
+                        if str(finding.get("id") or "").strip() == finding_id
+                    ]
+                    if (
+                        finding_id not in bound_ids
+                        or len(matches) != 1
+                        or not refs
+                        or any(
+                            type(ref.page) is not int
+                            or ref.page <= 0
+                            or not ref.text_hash
+                            for ref in refs
+                        )
+                    ):
+                        continue
+                    quarantined.append(
+                        {
+                            "finding": deepcopy(matches[0]),
+                            "source_references": [asdict(ref) for ref in refs],
+                        }
+                    )
+                if quarantined:
+                    visual_quarantine = {
+                        "schema_version": "1.0",
+                        "source_identity": visual_ambiguity_source_identity,
+                        "findings": quarantined,
+                    }
             findings_pack["findings"] = findings
         quote_candidates_pack = results.get("quote_candidates")
         if isinstance(quote_candidates_pack, dict) and isinstance(
@@ -1524,6 +1580,8 @@ def generate_evidence_packs(
             fields={"report_id": report_id, "packs": list(results.keys())},
         )
     )
+    if visual_quarantine:
+        results["_visual_ambiguity_quarantine"] = visual_quarantine
     return results
 
 
@@ -1550,6 +1608,7 @@ def _generate_pack(
     shared_retrieval_context_json: str = "",
     retrieval_results_observer=None,
     require_retrieval_results: bool = False,
+    disable_findings_reuse: bool = False,
 ) -> dict:
     source_identity_id = str(ctx.source_identity_id or "").strip()
     pack_name = strategy.pack_name
@@ -1649,7 +1708,11 @@ def _generate_pack(
         relevant_hash: str,
         always_materialize: bool,
     ) -> None:
-        if not source_identity_id or not vector_provenance_verified:
+        if (
+            not source_identity_id
+            or not vector_provenance_verified
+            or (pack_name == "findings" and disable_findings_reuse)
+        ):
             return
         deferred_materializations[pack_name] = (
             PromptFamilyMaterializationRequest(
@@ -1699,6 +1762,7 @@ def _generate_pack(
     if (
         source_identity_id
         and vector_provenance_verified
+        and not (pack_name == "findings" and disable_findings_reuse)
         and not (pack_name == "doc_map" and require_retrieval_results)
     ):
         reuse = prompt_family_reuse_reader(

@@ -14,4 +14,8 @@ text: |
   - For each quote, check whether its meaning is supported even if wording differs.
   - Use `confidence` 0.0 (no support) to 1.0 (direct textual support). Lower confidence indicates uncertainty.
   - Prefer `supported: false` if evidence is missing or conflicting.
+  {% if visual_ambiguity_mode|default(false) %}
+  - For each metric also provide `disposition`: `supported`, `contradicted`, `unsupported`, or `visual_ambiguity`. Use `visual_ambiguity` only when the supplied source identifies a visual whose layout must be inspected to resolve the claim; missing evidence, contradiction, or speculation are not visual ambiguity. Set supported true only for `supported`.
+  - The evidence is flattened text, not a chart image. Do not infer chart-label relationships from text order or outside knowledge. If the text does not establish a relationship that depends on visual layout, use `visual_ambiguity`; use `contradicted` only when the supplied text itself contradicts the claim.
+  {% endif %}
   Return only the JSON object described in the system prompt.

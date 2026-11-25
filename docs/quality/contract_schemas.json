@@ -35412,6 +35412,143 @@
       ],
       "type": "object"
     },
+    "src.contracts.report_analysis.AnalysisGenerationByIdReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "type": "string"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "report_slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_dir",
+        "report_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_analysis.AnalysisGenerationCommitRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_generation": {
+          "type": "string"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "packs": {
+          "additionalProperties": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "report_slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_dir",
+        "report_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_analysis.AnalysisGenerationReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "output_dir": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "report_slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_dir",
+        "report_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_analysis.AnalysisGenerationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "type": "string"
+        },
+        "pack_paths": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "packs": {
+          "additionalProperties": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "parent_generation": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "generation",
+        "packs",
+        "pack_paths"
+      ],
+      "type": "object"
+    },
     "src.contracts.report_analysis.AnalysisPackPathRequest": {
       "additionalProperties": false,
       "properties": {
@@ -38351,6 +38488,38 @@
         "figure",
         "commentary",
         "source"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_publication_package.ReportPublicationPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string"
+        },
+        "html_path": {
+          "type": "string"
+        },
+        "manifest_path": {
+          "type": "string"
+        },
+        "readiness_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "html_path",
+        "readiness_path",
+        "manifest_path",
+        "generation",
+        "checksum"
       ],
       "type": "object"
     },

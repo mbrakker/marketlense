@@ -123,6 +123,15 @@ def _coordination_guard(lock_path: Path) -> Iterator[None]:
             handle.close()
 
 
+def filesystem_coordination_guard(lock_path: str):
+    """Hold the OS coordination lock until exit or process termination.
+
+    All participants must use the same stable lock path. The sidecar must not
+    be removed or replaced while any participant may hold or await it.
+    """
+    return _coordination_guard(Path(lock_path))
+
+
 def _owner_pid_is_alive(pid: int) -> bool:
     """Return whether a local lock owner is still running.
 

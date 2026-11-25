@@ -5,16 +5,21 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import asdict, replace
+from pathlib import Path
 from threading import Event
 from typing import Any, List, Optional
 
 from src.contracts.categories import CategoryAssignment
 from src.contracts.context_category_fit import ContextCategoryFitResponse
+from src.contracts.files import FileExistsRequest, ReadJsonRequest
 from src.contracts.regeneration import (
     RegenerationAttemptResult,
     RegenerationLoopState,
 )
 from src.contracts.report_analysis import (
+    AnalysisGenerationCommitRequest,
+    AnalysisGenerationReadRequest,
+    AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
 from src.contracts.report_generation import (
@@ -108,6 +113,8 @@ from src.orchestrators._report_analysis_orchestrator.vector_store import (
     _await_vector_store_indexing,
     _is_vector_store_ready,
 )
+from src.services import file_service, report_analysis_store_service
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.report_identity import (
@@ -422,6 +429,57 @@ def _sync_vector_store_metadata(
         )
 
 
+def _commit_final_validation_generation(runtime, ctx, report, evidence_paths):
+    """Commit the reviewed validation against the exact promoted generation."""
+    parent = Path(report.source_path).parent
+    expected = parent.name if parent.parent.name == ".generations" else ""
+    if not expected:
+        raise AppError(
+            code="analysis_generation_invalid",
+            message="Promoted validation does not identify its generation",
+            retryable=False,
+        )
+    request = AnalysisGenerationReadRequest(
+        schema_version="1.0",
+        output_dir=runtime.settings.output_dir,
+        report_id=ReportId(runtime.file.file_id),
+        report_slug=runtime.report_name,
+    )
+    current = report_analysis_store_service.read_generation(request, ctx)
+    if (
+        current.generation != expected
+        or current.pack_paths.get("validation") != report.source_path
+    ):
+        raise AppError(
+            code="analysis_generation_conflict",
+            message="Analysis generation changed before final editorial validation",
+            retryable=False,
+        )
+    committed = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version=request.schema_version,
+            output_dir=request.output_dir,
+            report_id=request.report_id,
+            report_slug=request.report_slug,
+            expected_generation=expected,
+            packs={**current.packs, "validation": report.to_dict()},
+        ),
+        ctx,
+    )
+    replacements = {
+        old_path: committed.pack_paths[name]
+        for name, old_path in current.pack_paths.items()
+    }
+    paths = {
+        name: replacements.get(path, path) for name, path in evidence_paths.items()
+    }
+    return (
+        replace(report, source_path=committed.pack_paths["validation"]),
+        paths,
+        replacements,
+    )
+
+
 def run_report_analysis(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -440,6 +498,20 @@ def run_report_analysis(
     source_dependencies: ReportSourceDependencies | None = None,
     visual_authority_canary: VisualAuthorityCanaryConfig | None = None,
 ) -> ReportAnalysisState:
+    generation_request = AnalysisGenerationReadRequest(
+        schema_version="1.0",
+        output_dir=runtime.settings.output_dir,
+        report_id=ReportId(runtime.file.file_id),
+        report_slug=runtime.report_name,
+    )
+    try:
+        parent_generation = report_analysis_store_service.read_generation(
+            generation_request, runtime.ctx
+        ).generation
+    except AppError as exc:
+        if exc.code != "analysis_generation_missing":
+            raise
+        parent_generation = ""
     if str(runtime.ctx.admission_decision_hash or "").strip():
         # Admission is the report workflow boundary.  Reject incomplete
         # attribution before vector-store or model work can begin.
@@ -512,6 +584,10 @@ def run_report_analysis(
     # of a vector store. Leave provenance unverified until that proof exists.
     vector_store_content_hash = None
     evidence_kwargs["vector_store_content_hash"] = vector_store_content_hash
+    if visual_authority_canary is not None:
+        evidence_kwargs["visual_ambiguity_source_identity"] = (
+            visual_authority_canary.source_identity
+        )
     chart_identity_enricher = None
     if source_openai_client is not None and source_dependencies is not None:
         source_pdf_path = source.analysis_pdf_path or runtime.local_pdf_path
@@ -707,6 +783,7 @@ def run_report_analysis(
             )
         raise
 
+    visual_quarantine = packs.pop("_visual_ambiguity_quarantine", None)
     mode_evidence_paths = pack_paths(
         runtime.settings.output_dir,
         runtime.file.file_id,
@@ -1035,6 +1112,8 @@ def run_report_analysis(
                     ctx=artifact_ctx,
                     settings=runtime.settings,
                     doc_map=artifact_doc_map,
+                    visual_quarantine=visual_quarantine,
+                    source_spans=source_spans,
                 )
             )
         with ArtifactStepTaskScheduler(runtime.settings) as artifact_executor:
@@ -1278,6 +1357,15 @@ def run_report_analysis(
         max_reached=False,
     )
     if validation_report.status != "pass" and isinstance(artifacts_payload, dict):
+        if parent_generation:
+            raise AppError(
+                code="analysis_generation_conflict",
+                message=(
+                    "Regeneration cannot safely adopt an existing analysis generation"
+                ),
+                retryable=False,
+                context={"report_id": runtime.file.file_id},
+            )
         (
             artifacts_payload,
             validation_report,
@@ -1314,6 +1402,7 @@ def run_report_analysis(
                 else ""
             ),
             verified_authority_context=verified_authority_context,
+            expected_generation=parent_generation,
         )
         for field_name, value in payload_identity_overrides.items():
             # Canonical source-identity corrections survive promotion with the
@@ -1322,7 +1411,7 @@ def run_report_analysis(
         mode_evidence_paths.update(regeneration_paths)
         if validation_report.source_path:
             mode_evidence_paths["validation"] = validation_report.source_path
-        if regeneration_attempts:
+        if regeneration_attempts and "artifacts" not in regeneration_paths:
             mode_evidence_paths["artifacts"] = regeneration_attempts[-1].artifacts_path
 
     validation_outcome = "succeeded" if validation_report.status == "pass" else "failed"
@@ -1406,18 +1495,104 @@ def run_report_analysis(
         # PASS merely because the after-review model returned pass.
         replace_existing=promoted_regeneration,
     )
-    final_validation_path = _store_validation_snapshot(
-        runtime=runtime,
-        dependencies=dependencies,
-        report=validation_report,
-        pack_name="validation",
-        ctx=mode_ctx,
-    )
-    validation_report = replace(validation_report, source_path=final_validation_path)
+    if promoted_regeneration:
+        validation_report, mode_evidence_paths, replacements = (
+            _commit_final_validation_generation(
+                runtime, mode_ctx, validation_report, mode_evidence_paths
+            )
+        )
+    else:
+        if not isinstance(artifacts_payload, dict):
+            raise AppError(
+                code="analysis_generation_invalid",
+                message="Cannot commit final validation without analysis artifacts",
+                retryable=False,
+                context={"report_id": runtime.file.file_id},
+            )
+        candidate_name = "validation_retained_claim_validation_candidate"
+        candidate_path = dependencies.analysis_pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                report_slug=runtime.report_name,
+                pack_name=candidate_name,
+            ),
+            mode_ctx,
+        ).output_path
+        generation_packs = {
+            "artifacts": artifacts_payload,
+            "validation": validation_report.to_dict(),
+            "authoritative_evidence": factual_evidence_packs,
+        }
+        if file_service.file_exists(
+            FileExistsRequest(schema_version="1.0", path=candidate_path), mode_ctx
+        ).exists:
+            candidate = dependencies.read_json(
+                ReadJsonRequest(schema_version="1.0", path=candidate_path), mode_ctx
+            ).payload
+            if not isinstance(candidate, dict) or candidate.get(
+                "artifact_hash"
+            ) != sha256_json(artifacts_payload):
+                raise AppError(
+                    code="retained_claim_candidate_artifact_mismatch",
+                    message=(
+                        "Retained claim candidate does not match analysis artifacts"
+                    ),
+                    retryable=False,
+                    context={"report_id": runtime.file.file_id},
+                )
+            generation_packs[candidate_name] = candidate
+        committed = report_analysis_store_service.commit_generation(
+            AnalysisGenerationCommitRequest(
+                schema_version=generation_request.schema_version,
+                output_dir=generation_request.output_dir,
+                report_id=generation_request.report_id,
+                report_slug=generation_request.report_slug,
+                expected_generation=parent_generation,
+                packs=generation_packs,
+            ),
+            mode_ctx,
+        )
+        replacements = {
+            old: committed.pack_paths[name]
+            for name in ("artifacts", "validation")
+            if (old := mode_evidence_paths.get(name))
+        }
+        mode_evidence_paths = {
+            name: replacements.get(path, path)
+            for name, path in mode_evidence_paths.items()
+        }
+        validation_report = replace(
+            validation_report, source_path=committed.pack_paths["validation"]
+        )
+        mode_evidence_paths["artifacts"] = committed.pack_paths["artifacts"]
+        if candidate_name in committed.pack_paths:
+            mode_evidence_paths[candidate_name] = committed.pack_paths[candidate_name]
+    regeneration_attempts = [
+        replace(
+            attempt,
+            artifacts_path=replacements.get(
+                attempt.artifacts_path, attempt.artifacts_path
+            ),
+            validation_path=replacements.get(
+                attempt.validation_path, attempt.validation_path
+            ),
+            candidate_audit_path=replacements.get(
+                attempt.candidate_audit_path, attempt.candidate_audit_path
+            ),
+        )
+        for attempt in regeneration_attempts
+    ]
     if editorial_after_path:
         mode_evidence_paths["public_editorial_quality_after"] = editorial_after_path
     if validation_report.source_path:
         mode_evidence_paths["validation"] = validation_report.source_path
+
+    validation_outcome = "succeeded" if validation_report.status == "pass" else "failed"
+    validation_failure = (
+        "" if validation_outcome == "succeeded" else "validation_failed"
+    )
 
     normalized_payload = _attach_payload_analysis_metadata(
         merge_artifacts_into_payload(deepcopy(base_payload), artifacts_payload or {}),

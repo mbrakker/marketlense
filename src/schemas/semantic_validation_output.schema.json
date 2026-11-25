@@ -12,6 +12,7 @@
         "properties": {
           "id": {"type": "string"},
           "supported": {"type": ["boolean", "string"]},
+          "disposition": {"type": "string", "enum": ["supported", "contradicted", "unsupported", "visual_ambiguity"]},
           "confidence": {"type": ["number", "string"]},
           "reason": {"type": "string"}
         }

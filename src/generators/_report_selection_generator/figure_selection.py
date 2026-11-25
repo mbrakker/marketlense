@@ -23,6 +23,7 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_models import ReportFigureAsset, ReportPayload
+from src.generators.candidate_extraction_generator import candidate_artifact_name
 from src.generators.report_generation_dependencies import ReportSelectionDependencies
 from src.generators.report_generation_shared import logger, read_cache_json
 from src.utils.coercion import coerce_float
@@ -375,10 +376,16 @@ def _apply_crop_qa_escalation(
 def _candidate_extraction_output_path(
     settings: IngestSettings,
     report_name: str,
+    *,
+    report_id: str | None = None,
 ) -> Path:
     return (
         Path(settings.output_dir)
-        / str(report_name or "").strip()
+        / (
+            candidate_artifact_name(report_id)
+            if report_id
+            else str(report_name or "").strip()
+        )
         / "candidates"
         / "candidates.json"
     )
@@ -390,10 +397,20 @@ def _load_candidate_crop_path_map(
     report_name: str,
     ctx,
     dependencies: ReportSelectionDependencies,
+    report_id: str | None = None,
 ) -> dict[str, str]:
-    candidates_path = _candidate_extraction_output_path(settings, report_name)
+    """Read identity-scoped paths; legacy shared crop files lack source proof.
+
+    report_name remains accepted for callers that also use the display name.
+    The returned paths alone are not publication-strict crop QA evidence.
+    """
+    if not report_id:
+        return {}
+    candidates_path = _candidate_extraction_output_path(
+        settings, report_name, report_id=report_id
+    )
     payload = read_cache_json(candidates_path, ctx, dependencies)
-    if not isinstance(payload, dict):
+    if not isinstance(payload, dict) or payload.get("report_id") != report_id:
         return {}
     rows_value = payload.get("candidates")
     rows = rows_value if isinstance(rows_value, list) else []

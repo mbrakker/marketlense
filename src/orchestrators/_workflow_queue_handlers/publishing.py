@@ -463,16 +463,16 @@ def _automatic_publication_evidence(
                 parse_publish_readiness_payload,
             )
             from src.orchestrators._publish_orchestrator.routing import (
-                report_publish_package_checksum,
+                resolve_report_publication_package,
             )
 
-            current_checksum = report_publish_package_checksum(
+            resolved_readiness = resolve_report_publication_package(
                 html_path=payload.entity_package_reference,
                 readiness_reference=payload.validation_reference,
+                checksum=payload.package_checksum,
+                expected_report_id=job.report_id,
                 ctx=ctx,
             )
-            if current_checksum != payload.package_checksum:
-                return False, "report_package_checksum_stale", "", "", ""
             html_response = read_bytes(
                 ReadBytesRequest(
                     schema_version="1.0", path=payload.entity_package_reference
@@ -480,9 +480,7 @@ def _automatic_publication_evidence(
                 ctx,
             )
             validation_response = read_bytes(
-                ReadBytesRequest(
-                    schema_version="1.0", path=payload.validation_reference
-                ),
+                ReadBytesRequest(schema_version="1.0", path=resolved_readiness),
                 ctx,
             )
             raw_readiness = json.loads(validation_response.content.decode("utf-8"))
@@ -689,31 +687,57 @@ def _publication_readiness_handler(
             retryable=False,
         )
     required_assets = str(payload.required_asset_status or "optional").strip().lower()
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     if payload.entity_type == "report":
         from src.generators.publish_readiness_generator import (
             parse_publish_readiness_payload,
+            verify_publish_readiness,
         )
         from src.orchestrators._publish_orchestrator.routing import (
-            report_publish_package_checksum,
+            resolve_report_publication_package,
         )
+        from src.utils.verified_facts import verified_source_identity_matches_runtime
 
+        package_stale = False
         try:
-            package_checksum = report_publish_package_checksum(
+            resolved_readiness = resolve_report_publication_package(
                 html_path=payload.entity_package_reference,
                 readiness_reference=payload.validation_reference,
+                checksum=payload.package_checksum,
+                expected_report_id=job.report_id,
                 ctx=ctx,
             )
             readiness_payload = json.loads(
                 read_bytes(
-                    ReadBytesRequest(
-                        schema_version="1.0", path=payload.validation_reference
-                    ),
+                    ReadBytesRequest(schema_version="1.0", path=resolved_readiness),
                     ctx,
                 ).content.decode("utf-8")
             )
             report_readiness = parse_publish_readiness_payload(readiness_payload)
+            html = read_bytes(
+                ReadBytesRequest(
+                    schema_version="1.0", path=payload.entity_package_reference
+                ),
+                ctx,
+            ).content.decode("utf-8")
+            ingest_settings = build_ingest_settings(
+                IngestSettingsBuildRequest(schema_version="1.0", app_settings=app),
+                ctx,
+            )
+            verification = verify_publish_readiness(
+                artifact=report_readiness,
+                report_id=job.report_id,
+                final_html=html,
+                configuration_hash=admission_configuration_hash(ingest_settings),
+                policy_hash=admission_policy_hash(ingest_settings),
+                producer_revision=ctx.producer_commit_sha,
+            )
+        except AppError as exc:
+            if exc.code != "workflow_queue_report_publish_package_checksum_mismatch":
+                raise
+            package_stale = True
         except (
-            AppError,
             UnicodeDecodeError,
             json.JSONDecodeError,
             TypeError,
@@ -737,9 +761,23 @@ def _publication_readiness_handler(
                 cause=exc,
                 retryable=False,
             ) from exc
+        source_id = str(job.source_identity_id or "").strip()
+        retained_source_id = (
+            report_readiness.provenance.get("build_source_id", "")
+            if not package_stale
+            else ""
+        )
+        source_matches = bool(source_id) and (
+            source_id == retained_source_id
+            or verified_source_identity_matches_runtime(source_id, retained_source_id)
+        )
         if (
-            package_checksum != payload.package_checksum
-            or report_readiness.status != "pass"
+            package_stale
+            or not job.report_id
+            or verification.status != "pass"
+            or not source_matches
+            or not report_readiness.rule_results
+            or any(item.status != "pass" for item in report_readiness.rule_results)
         ):
             logger.info(
                 log_event(
@@ -748,9 +786,11 @@ def _publication_readiness_handler(
                     event="report_publication_readiness_rejected",
                     module=logger.name,
                     fields={
-                        "reason": "checksum_or_status",
+                        "reason": "readiness_verification_failed",
                         "report_id": job.report_id,
-                        "readiness_status": report_readiness.status,
+                        "readiness_status": report_readiness.status
+                        if not package_stale
+                        else "stale",
                     },
                 )
             )
@@ -794,8 +834,6 @@ def _publication_readiness_handler(
         if required_assets in {"ready", "optional"}
         else "not_publishable"
     )
-    config_path = str(payload.attributes.get("config_path", ""))
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     validation_ctx = _report_queue_validation_context(
         job=job,
         payload=payload,
@@ -1135,7 +1173,7 @@ def _wordpress_publish_handler(
     )
     if payload.entity_type == "report":
         from src.orchestrators._publish_orchestrator.routing import (
-            report_publish_package_checksum,
+            resolve_report_publication_package,
         )
 
         readiness_reference = str(payload.readiness_reference or "").strip()
@@ -1145,17 +1183,13 @@ def _wordpress_publish_handler(
                 message="Approved Report publication requires its immutable readiness reference",
                 retryable=False,
             )
-        actual_checksum = report_publish_package_checksum(
+        resolved_readiness = resolve_report_publication_package(
             html_path=payload.entity_package_reference,
             readiness_reference=readiness_reference,
+            checksum=payload.package_checksum,
+            expected_report_id=job.report_id,
             ctx=ctx,
         )
-        if actual_checksum != payload.package_checksum:
-            raise AppError(
-                code="workflow_queue_report_publish_package_checksum_mismatch",
-                message="Approved Report package no longer matches its immutable references",
-                retryable=False,
-            )
         logger.info(
             log_event(
                 ctx,
@@ -1187,8 +1221,19 @@ def _wordpress_publish_handler(
             html_paths=[payload.entity_package_reference],
             ctx=ctx,
             report_readiness_references={
-                payload.entity_package_reference: readiness_reference
+                payload.entity_package_reference: resolved_readiness
             },
+            report_generation_packages=(
+                {
+                    payload.entity_package_reference: (
+                        job.report_id,
+                        readiness_reference,
+                        payload.package_checksum,
+                    )
+                }
+                if resolved_readiness != readiness_reference
+                else None
+            ),
         )
         if len(outcomes) != 1 or outcomes[0].status == "error":
             outcome = outcomes[0] if outcomes else None

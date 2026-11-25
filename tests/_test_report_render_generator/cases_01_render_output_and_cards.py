@@ -16,6 +16,308 @@ def test_public_source_note_keeps_title_when_publisher_is_absent(tmp_path) -> No
     assert _public_source_note(runtime) == "Source: Publisher Evidence Report"
 
 
+def test_render_rejects_artifacts_that_differ_from_pinned_generation(tmp_path):
+    from src.contracts.report_analysis import AnalysisGenerationCommitRequest
+    from src.services import report_analysis_store_service
+    from tests._test_report_analysis_generator._shared import (
+        _artifacts_without_retained_claims,
+    )
+
+    runtime = _runtime(tmp_path, md5="source-md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    artifact = _artifacts_without_retained_claims()
+    artifact["summary"]["card_tldr_compact"] = ""
+    committed = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            report_slug=runtime.report_name,
+            packs={
+                "artifacts": artifact,
+                "validation": analysis.validation_report.to_dict(),
+            },
+        ),
+        runtime.ctx,
+    )
+    analysis = replace(analysis, evidence_paths=committed.pack_paths)
+    with pytest.raises(AppError) as exc:
+        render_report_output(
+            runtime, source, selection, analysis, _deps(), preview_resp=None
+        )
+    assert exc.value.code == "analysis_generation_render_mismatch"
+
+
+def test_render_accepts_matching_pinned_generation(tmp_path):
+    from src.contracts.report_analysis import AnalysisGenerationCommitRequest
+    from src.services import report_analysis_store_service
+    from tests._test_report_analysis_generator._shared import (
+        _artifacts_without_retained_claims,
+    )
+
+    runtime = _runtime(tmp_path, md5="source-md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    artifact = _artifacts_without_retained_claims()
+    artifact["summary"]["card_tldr_compact"] = ""
+    committed = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            report_slug=runtime.report_name,
+            packs={
+                "artifacts": artifact,
+                "validation": analysis.validation_report.to_dict(),
+            },
+        ),
+        runtime.ctx,
+    )
+    analysis = replace(
+        analysis,
+        evidence_paths=committed.pack_paths,
+        artifacts_payload=artifact,
+        validation_report=replace(
+            analysis.validation_report, source_path=committed.pack_paths["validation"]
+        ),
+    )
+    rendered = []
+    html_path = tmp_path / "report.html"
+
+    def render(req, ctx):
+        rendered.append(req.data["title"])
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(render_report=render)
+    preview = render_preview_asset(runtime, source, deps)
+    render_report_output(
+        runtime, source, selection, analysis, deps, preview_resp=preview
+    )
+    assert rendered == ["DB Title"]
+
+
+def test_render_rejects_evidence_changed_after_generation_commit(tmp_path):
+    from src.contracts.report_analysis import AnalysisGenerationCommitRequest
+    from src.services import report_analysis_store_service
+    from tests._test_report_analysis_generator._shared import (
+        _artifacts_without_retained_claims,
+    )
+
+    runtime = _runtime(tmp_path, md5="source-md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    artifact = _artifacts_without_retained_claims()
+    artifact["summary"]["card_tldr_compact"] = ""
+    committed = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            report_slug=runtime.report_name,
+            packs={
+                "artifacts": artifact,
+                "validation": analysis.validation_report.to_dict(),
+                "authoritative_evidence": {"doc_map": {"title": "Original"}},
+            },
+        ),
+        runtime.ctx,
+    )
+    analysis = replace(
+        analysis,
+        evidence_paths=committed.pack_paths,
+        artifacts_payload=artifact,
+        evidence_packs={"doc_map": {"title": "Different"}},
+        validation_report=replace(
+            analysis.validation_report, source_path=committed.pack_paths["validation"]
+        ),
+    )
+    deps = _deps()
+    preview = render_preview_asset(runtime, source, deps)
+    with pytest.raises(AppError) as exc:
+        render_report_output(
+            runtime, source, selection, analysis, deps, preview_resp=preview
+        )
+    assert exc.value.code == "analysis_generation_render_mismatch"
+
+
+def test_render_uses_pinned_artifacts_instead_of_stale_checkpoint_projection(tmp_path):
+    from src.contracts.report_analysis import AnalysisGenerationCommitRequest
+    from src.services import report_analysis_store_service
+    from tests._test_report_analysis_generator._shared import (
+        _artifacts_without_retained_claims,
+    )
+
+    runtime = _runtime(tmp_path, md5="source-md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    artifact = _artifacts_without_retained_claims()
+    artifact["summary"]["card_tldr_compact"] = ""
+    committed = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            report_slug=runtime.report_name,
+            packs={
+                "artifacts": artifact,
+                "validation": analysis.validation_report.to_dict(),
+            },
+        ),
+        runtime.ctx,
+    )
+    analysis = replace(
+        analysis,
+        evidence_paths=committed.pack_paths,
+        artifacts_payload=artifact,
+        validation_report=replace(
+            analysis.validation_report, source_path=committed.pack_paths["validation"]
+        ),
+        data_dict={**analysis.data_dict, "artifacts": {"summary": {"tldr": "stale"}}},
+    )
+    rendered = []
+
+    def render(req, ctx):
+        rendered.append(req.data["artifacts"])
+        html_path = tmp_path / "report.html"
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(render_report=render)
+    preview = render_preview_asset(runtime, source, deps)
+    render_report_output(
+        runtime, source, selection, analysis, deps, preview_resp=preview
+    )
+    assert rendered == [artifact]
+
+
+def test_render_uses_generation_evidence_not_stale_checkpoint_projection(tmp_path):
+    from src.contracts.report_analysis import AnalysisGenerationCommitRequest
+    from src.services import report_analysis_store_service
+    from tests._test_report_analysis_generator._shared import (
+        _artifacts_without_retained_claims,
+    )
+
+    runtime = _runtime(tmp_path, md5="source-md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    artifact = _artifacts_without_retained_claims()
+    artifact["summary"]["card_tldr_compact"] = ""
+    evidence = {"doc_map": {"title": "Original"}}
+    committed = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            report_slug=runtime.report_name,
+            packs={
+                "artifacts": artifact,
+                "validation": analysis.validation_report.to_dict(),
+                "authoritative_evidence": evidence,
+            },
+        ),
+        runtime.ctx,
+    )
+    analysis = replace(
+        analysis,
+        evidence_paths=committed.pack_paths,
+        artifacts_payload=artifact,
+        evidence_packs=evidence,
+        validation_report=replace(
+            analysis.validation_report, source_path=committed.pack_paths["validation"]
+        ),
+        data_dict={
+            **analysis.data_dict,
+            "evidence_packs": {"doc_map": {"title": "Stale"}},
+        },
+    )
+    rendered = []
+
+    def render(req, ctx):
+        rendered.append(req.data["evidence_packs"])
+        html_path = tmp_path / "report.html"
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(render_report=render)
+    preview = render_preview_asset(runtime, source, deps)
+    render_report_output(
+        runtime, source, selection, analysis, deps, preview_resp=preview
+    )
+    assert rendered == [evidence]
+
+
+def test_render_does_not_fall_back_to_unbound_checkpoint_editorial_copy(tmp_path):
+    from src.contracts.report_analysis import AnalysisGenerationCommitRequest
+    from src.services import report_analysis_store_service
+    from src.services._render_service.view import _build_render_view
+    from tests._test_report_analysis_generator._shared import (
+        _artifacts_without_retained_claims,
+    )
+
+    runtime = _runtime(tmp_path, md5="source-md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    artifact = _artifacts_without_retained_claims()
+    artifact["summary"]["card_tldr_compact"] = ""
+    committed = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            report_slug=runtime.report_name,
+            packs={
+                "artifacts": artifact,
+                "validation": analysis.validation_report.to_dict(),
+            },
+        ),
+        runtime.ctx,
+    )
+    analysis = replace(
+        analysis,
+        evidence_paths=committed.pack_paths,
+        artifacts_payload=artifact,
+        validation_report=replace(
+            analysis.validation_report, source_path=committed.pack_paths["validation"]
+        ),
+        data_dict={
+            **analysis.data_dict,
+            "tldr": "Stale summary",
+            "commentary": "Stale analysis",
+            "insights": ["Stale finding"],
+            "quote": {"text": "Stale quote"},
+        },
+    )
+    views = []
+
+    def render(req, ctx):
+        views.append(_build_render_view(req, {}, ctx))
+        html_path = tmp_path / "report.html"
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(render_report=render)
+    render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+    assert views[0]["summary"]["tldr_text"] == ""
+    assert views[0]["commentary"] == ""
+    assert views[0]["insights"] == []
+    assert views[0]["quotes"] == []
+
+
 def test_public_source_note_decodes_a_url_encoded_canonical_title(tmp_path) -> None:
     runtime = replace(
         _runtime(tmp_path, md5="md5"),
@@ -352,8 +654,10 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
     )
 
 
+@pytest.mark.parametrize("immutable_candidate", [False, True, "missing", "unbound"])
 def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pages(
     tmp_path,
+    immutable_candidate,
 ):
     runtime = _runtime(tmp_path, md5="source-md5")
     runtime = replace(
@@ -503,7 +807,7 @@ def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pa
         policy_hash=runtime.ctx.policy_hash,
     )
     candidate_dependencies = _deps()
-    store_pack(
+    stored_candidate = store_pack(
         AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=runtime.settings.output_dir,
@@ -515,6 +819,29 @@ def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pa
         runtime.ctx,
     )
     baseline_analysis = _analysis(runtime, source, _selection(runtime, source))
+    if immutable_candidate == "unbound":
+        baseline_analysis = replace(
+            baseline_analysis,
+            evidence_paths={
+                **baseline_analysis.evidence_paths,
+                "artifacts": str(
+                    tmp_path / ".generations" / ("a" * 64) / "artifact.json"
+                ),
+            },
+        )
+    elif immutable_candidate:
+        snapshot = tmp_path / "immutable" / "candidate.json"
+        snapshot.parent.mkdir()
+        if immutable_candidate is True:
+            snapshot.write_text(json.dumps(candidate_payload), encoding="utf-8")
+            Path(stored_candidate.output_path).write_text("{}", encoding="utf-8")
+        baseline_analysis = replace(
+            baseline_analysis,
+            evidence_paths={
+                **baseline_analysis.evidence_paths,
+                "validation_retained_claim_validation_candidate": str(snapshot),
+            },
+        )
     analysis = replace(
         baseline_analysis,
         artifacts_payload=artifacts,
@@ -547,8 +874,12 @@ def test_verified_readiness_reuses_canonical_semantic_binding_without_raw_pdf_pa
         / "retained_claim_validation.json"
     )
     retained = json.loads(retained_path.read_text(encoding="utf-8"))
-    assert retained["semantic_validation_count"] == 1
-    assert retained["unresolved_factual_count"] == 0
+    if immutable_candidate in {"missing", "unbound"}:
+        assert retained["semantic_validation_count"] == 0
+        assert retained["unresolved_factual_count"] > 0
+    else:
+        assert retained["semantic_validation_count"] == 1
+        assert retained["unresolved_factual_count"] == 0
 
 
 def test_render_projects_card_tldr_from_final_insight_when_summary_abstains(

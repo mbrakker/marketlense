@@ -126,6 +126,7 @@ def _ready_report(tmp_path: Path, config_path: Path) -> PublicationReadinessPayl
         created_at_utc=now.isoformat(),
         expires_at_utc=(now + timedelta(days=2)).isoformat(),
         staleness_conditions=["final_html_hash_changed", "expired"],
+        provenance={"build_source_id": "source-1"},
     )
     artifact = replace(artifact, artifact_hash=_artifact_signature(artifact))
     readiness_path.write_text(
@@ -414,7 +415,89 @@ def test_invalid_report_readiness_creates_no_automatic_approval(tmp_path: Path) 
     assert _outbox_count(tmp_path / "state.sqlite") == 0
 
 
-def test_warning_review_readiness_result_does_not_auto_approve(
+@pytest.mark.parametrize(
+    "defect",
+    [
+        "signature",
+        "html",
+        "report",
+        "source",
+        "missing_source",
+        "configuration",
+        "policy",
+        "expired",
+        "validator",
+        "failed_rule",
+        "empty_rules",
+    ],
+)
+def test_invalid_report_readiness_never_reaches_review(
+    tmp_path: Path, defect: str
+) -> None:
+    config_path = _config(tmp_path, autonomous=False)
+    payload = _ready_report(tmp_path, config_path)
+    if defect == "signature":
+        path = Path(payload.validation_reference)
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw["artifact_hash"] = "0" * 64
+        path.write_text(json.dumps(raw), encoding="utf-8")
+    elif defect == "html":
+        Path(payload.entity_package_reference).write_text("changed", encoding="utf-8")
+    else:
+        changes = {
+            "report": {"report_id": "another-report"},
+            "source": {"provenance": {"build_source_id": "source-other"}},
+            "missing_source": {"provenance": {}},
+            "configuration": {"configuration_hash": "other-config"},
+            "policy": {"policy_hash": "other-policy"},
+            "expired": {
+                "expires_at_utc": (datetime.now(UTC) - timedelta(days=1)).isoformat()
+            },
+            "validator": {"validator_version": "publish-readiness:v2"},
+            "failed_rule": {
+                "rule_results": [{"rule_id": "x", "status": "fail", "surfaces": []}]
+            },
+            "empty_rules": {"rule_results": []},
+        }
+        _resign_readiness(payload, **changes[defect])
+    payload = replace(
+        payload,
+        package_checksum=report_publish_package_checksum(
+            html_path=payload.entity_package_reference,
+            readiness_reference=payload.validation_reference,
+            ctx=_ctx(),
+        ),
+    )
+
+    result = _run_readiness(payload)
+
+    assert result.result.summary["readiness_status"] == "not_publishable"
+    assert result.result.output_verified is False
+    assert _approval_rows(tmp_path / "state.sqlite") == []
+    assert _outbox_count(tmp_path / "state.sqlite") == 0
+
+
+def test_report_readiness_accepts_source_qualified_by_pdf_hash(tmp_path: Path) -> None:
+    config_path = _config(tmp_path, autonomous=False)
+    payload = _ready_report(tmp_path, config_path)
+    _resign_readiness(
+        payload, provenance={"build_source_id": "source-1|pdf-sha256:" + "a" * 64}
+    )
+    payload = replace(
+        payload,
+        package_checksum=report_publish_package_checksum(
+            html_path=payload.entity_package_reference,
+            readiness_reference=payload.validation_reference,
+            ctx=_ctx(),
+        ),
+    )
+
+    result = _run_readiness(payload)
+
+    assert result.result.summary["readiness_status"] == "awaiting_review"
+
+
+def test_warning_readiness_rule_is_not_publishable(
     tmp_path: Path,
 ) -> None:
     config_path = _config(tmp_path, autonomous=True)
@@ -435,7 +518,7 @@ def test_warning_review_readiness_result_does_not_auto_approve(
 
     result = _run_readiness(payload)
 
-    assert result.result.summary["readiness_status"] == "awaiting_review"
+    assert result.result.summary["readiness_status"] == "not_publishable"
     assert _approval_rows(tmp_path / "state.sqlite") == []
     assert _outbox_count(tmp_path / "state.sqlite") == 0
 
@@ -451,7 +534,7 @@ def test_warn_publish_policy_remains_manual(tmp_path: Path) -> None:
     assert _outbox_count(tmp_path / "state.sqlite") == 0
 
 
-def test_expired_report_readiness_remains_manual(tmp_path: Path) -> None:
+def test_expired_report_readiness_is_not_publishable(tmp_path: Path) -> None:
     config_path = _config(tmp_path, autonomous=True)
     payload = _ready_report(tmp_path, config_path)
     expired = (datetime.now(UTC) - timedelta(days=1)).isoformat()
@@ -467,12 +550,12 @@ def test_expired_report_readiness_remains_manual(tmp_path: Path) -> None:
 
     result = _run_readiness(payload)
 
-    assert result.result.summary["readiness_status"] == "awaiting_review"
+    assert result.result.summary["readiness_status"] == "not_publishable"
     assert _approval_rows(tmp_path / "state.sqlite") == []
     assert _outbox_count(tmp_path / "state.sqlite") == 0
 
 
-def test_changed_source_configuration_identity_remains_manual(
+def test_changed_source_configuration_identity_is_not_publishable(
     tmp_path: Path,
 ) -> None:
     config_path = _config(tmp_path, autonomous=True)
@@ -483,9 +566,32 @@ def test_changed_source_configuration_identity_remains_manual(
 
     result = _run_readiness(payload)
 
-    assert result.result.summary["readiness_status"] == "awaiting_review"
+    assert result.result.summary["readiness_status"] == "not_publishable"
     assert _approval_rows(tmp_path / "state.sqlite") == []
     assert _outbox_count(tmp_path / "state.sqlite") == 0
+
+
+def test_stale_context_hash_cannot_hide_changed_configuration(tmp_path: Path) -> None:
+    config_path = _config(tmp_path, autonomous=False)
+    payload = _ready_report(tmp_path, config_path)
+    retained = json.loads(
+        Path(payload.validation_reference).read_text(encoding="utf-8")
+    )
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["ingest"]["batch_limit"] = int(config["ingest"]["batch_limit"]) + 1
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    ctx = replace(
+        _ctx(),
+        configuration_hash=retained["configuration_hash"],
+        policy_hash=retained["policy_hash"],
+    )
+    job = _workflow_job(
+        queue_name="publication_readiness", job_type="publication_readiness.v1"
+    )
+
+    result = queue_orchestrator._publication_readiness_handler(job, payload, ctx)
+
+    assert result.result.summary["readiness_status"] == "not_publishable"
 
 
 def test_unresolved_claim_grounding_remains_manual(tmp_path: Path) -> None:

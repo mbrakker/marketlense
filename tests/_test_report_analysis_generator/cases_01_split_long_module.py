@@ -454,8 +454,24 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
                 {
                     "schema_version": "1.4",
                     "artifact_hash": sha256_json(req.artifacts),
-                    "package_hash": "candidate-package-2",
+                    "package_hash": "",
+                    "results": [],
+                    "readiness_status": "awaiting_review",
+                    "unsupported_factual_count": 0,
+                    "unresolved_factual_count": 0,
+                    "deterministic_pass_count": 0,
+                    "semantic_validation_count": 0,
+                    "semantic_execution_identities": [],
+                    "validation_identity": None,
+                    "lineage": None,
                 }
+            )
+            from src.generators.claim_validation_generator import (
+                claim_validation_package_hash,
+            )
+
+            candidate_package_payload["package_hash"] = claim_validation_package_hash(
+                candidate_package_payload
             )
         return ValidationReport(
             schema_version="1.1", status="pass", issues=[], severity="pass"
@@ -611,18 +627,27 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     assert candidate_package_reads[0].endswith(
         "validation_regen_candidate_2_retained_claim_validation_candidate.json"
     )
-    assert len(promoted_candidate_packages) == 1
-    assert promoted_candidate_packages[0].payload == candidate_package_payload
-    assert promoted_candidate_packages[0].payload["artifact_hash"] == sha256_json(
-        state.artifacts_payload
+    promoted_package = json.loads(
+        Path(
+            state.evidence_paths["validation_retained_claim_validation_candidate"]
+        ).read_text(encoding="utf-8")
     )
+    assert promoted_package == candidate_package_payload
+    assert promoted_package["artifact_hash"] == sha256_json(state.artifacts_payload)
     assert (
         state.regeneration_attempts[1].artifacts_path
         == state.evidence_paths["artifacts"]
     )
+    promoted_validation_path = state.regeneration_attempts[1].validation_path
+    promoted_validation = json.loads(
+        Path(promoted_validation_path).read_text(encoding="utf-8")
+    )
+    assert promoted_validation["source_path"] == promoted_validation_path
     assert (
-        state.regeneration_attempts[1].validation_path
-        == state.evidence_paths["validation"]
+        json.loads(
+            Path(state.evidence_paths["validation"]).read_text(encoding="utf-8")
+        )["status"]
+        == "pass"
     )
 
 

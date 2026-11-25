@@ -91,7 +91,7 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
 
     def _fake_artifacts(*args, **kwargs):
         stage_calls["artifacts"] += 1
-        return _analysis_artifacts()
+        return _checkpoint_analysis_artifacts(settings, ctx)
 
     def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
         stage_calls["validation"] += 1
@@ -151,6 +151,14 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
     def _stable_render_payload(payload: dict) -> dict:
         stable = json.loads(json.dumps(payload, ensure_ascii=True, sort_keys=True))
         stable.pop("_vector_store_id", None)
+        evidence_paths = stable.pop("_evidence_packs", {})
+        validation = stable.get("validation_report")
+        if isinstance(validation, dict):
+            assert validation.pop("source_path", "") == evidence_paths.get("validation")
+        assert (
+            json.loads(Path(evidence_paths["artifacts"]).read_text(encoding="utf-8"))
+            == stable["artifacts"]
+        )
         return stable
 
     def _unexpected_source(*args, **kwargs):

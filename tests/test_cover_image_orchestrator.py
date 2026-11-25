@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -8,16 +9,70 @@ from src.contracts.cover_images import (
     CoverImageOrchestratorRequest,
     CoverImageRenderResponse,
 )
+from src.contracts.report_analysis import AnalysisGenerationCommitRequest
 from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.contracts.run_context import RunContext
-from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
-from src.services import cover_image_service
+from src.orchestrators.cover_image_orchestrator import (
+    _load_cover_fingerprint,
+    run_cover_image_generation,
+)
+from src.services import cover_image_service, report_analysis_store_service
 from src.services.report_store_service import upsert_metadata
 from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def test_cover_uses_committed_generation_instead_of_stale_legacy_artifact(tmp_path):
+    from tests._test_report_analysis_generator._shared import (
+        _artifacts_without_retained_claims,
+    )
+
+    artifact = _artifacts_without_retained_claims()
+    artifact["schema_version"] = "3.0"
+    artifact["summary"]["card_tldr_compact"] = ""
+    report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=str(tmp_path),
+            report_id="file-1",
+            report_slug="report",
+            packs={"artifacts": artifact},
+        ),
+        _ctx(),
+    )
+    legacy = tmp_path / "report" / "report_analysis" / "artifacts.json"
+    legacy.write_text("{}", encoding="utf-8")
+    metadata = SimpleNamespace(
+        file_id="file-1",
+        html_path="report.html",
+        file_name="report.pdf",
+        title="Report",
+        region="Global",
+    )
+    fingerprint = _load_cover_fingerprint(metadata, str(tmp_path), _ctx())
+    assert fingerprint.geometry_family == "forecast_horizon"
+
+
+def test_cover_does_not_fall_back_when_generation_manifest_is_invalid(tmp_path):
+    directory = tmp_path / "report" / "report_analysis"
+    directory.mkdir(parents=True)
+    (directory / ".generation-manifest.json").write_text("{}", encoding="utf-8")
+    (directory / "artifacts.json").write_text(
+        '{"schema_version": "3.0"}', encoding="utf-8"
+    )
+    metadata = SimpleNamespace(
+        file_id="file-1",
+        html_path="report.html",
+        file_name="report.pdf",
+        title="Report",
+        region="Global",
+    )
+    with pytest.raises(AppError) as exc:
+        _load_cover_fingerprint(metadata, str(tmp_path), _ctx())
+    assert exc.value.code == "analysis_generation_invalid"
 
 
 def test_cover_image_orchestrator_loads_grounded_semantics(

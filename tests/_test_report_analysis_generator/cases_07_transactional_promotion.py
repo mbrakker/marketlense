@@ -1,12 +1,15 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import hashlib
 from copy import deepcopy
 from types import SimpleNamespace
 
 from src.contracts.files import ReadJsonRequest
 from src.contracts.regeneration import RepairDecision, RepairPatchOperation
 from src.contracts.report_analysis import (
+    AnalysisGenerationCommitRequest,
+    AnalysisGenerationReadRequest,
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
@@ -97,7 +100,7 @@ def test_verified_promotion_requires_current_persisted_validation_artifact(
         "promoted_claim_validation",
         "canonical_validation",
         "final_promotion_audit",
-        "rollback_inconsistent",
+        "manifest_before",
     ],
 )
 def test_promotion_persistence_failures_do_not_authorize_partial_state(
@@ -129,9 +132,18 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
     candidate_package = {
         "schema_version": "1.4",
         "artifact_hash": sha256_json(candidate),
-        "package_hash": "candidate-package",
+        "package_hash": "",
         "results": [],
+        "readiness_status": "awaiting_review",
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "deterministic_pass_count": 0,
+        "semantic_validation_count": 0,
+        "semantic_execution_identities": [],
+        "validation_identity": None,
+        "lineage": None,
     }
+    candidate_package["package_hash"] = claim_validation_package_hash(candidate_package)
     stored: dict[str, dict] = {}
     writes: list[str] = []
     injected = False
@@ -173,7 +185,7 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
             and request.payload == candidate
             or failure_stage == "promoted_claim_validation"
             and request.pack_name == "validation_retained_claim_validation_candidate"
-            or failure_stage in {"canonical_validation", "rollback_inconsistent"}
+            or failure_stage == "canonical_validation"
             and request.pack_name == "validation"
             and request.payload.get("status") == "pass"
             or failure_stage == "final_promotion_audit"
@@ -230,9 +242,32 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
         )
 
     def _write_bytes(request, ctx):
-        if failure_stage == "rollback_inconsistent" and injected:
-            raise AppError(code="injected_rollback_failure", message="restore failed")
-        return file_service.write_bytes(request, ctx)
+        nonlocal injected
+        names = {
+            "canonical_artifacts": "artifacts",
+            "promoted_claim_validation": (
+                "validation_retained_claim_validation_candidate"
+            ),
+            "canonical_validation": "validation",
+            "final_promotion_audit": "regeneration_candidate_audit_1",
+        }
+        name = names.get(failure_stage, "")
+        target = hashlib.sha256(name.encode("utf-8")).hexdigest()[:16] + ".json"
+        if (
+            failure_stage == "manifest_before"
+            and Path(request.path).name == ".generation-manifest.json"
+        ):
+            injected = True
+            raise AppError(
+                code="injected_manifest_before", message="manifest write failed"
+            )
+        result = file_service.write_bytes(request, ctx)
+        if name and Path(request.path).name == target:
+            injected = True
+            raise AppError(
+                code=f"injected_{failure_stage}", message="staging write failed"
+            )
+        return result
 
     dependencies = _deps(
         analysis_pack_path=_analysis_pack_path,
@@ -288,17 +323,18 @@ def test_promotion_persistence_failures_do_not_authorize_partial_state(
 
     assert caught.retryable is False
     assert injected is True
-    if failure_stage == "rollback_inconsistent":
-        assert caught.code == "regeneration_promotion_inconsistent"
-        audit = stored.get("regeneration_candidate_audit_1")
-        assert audit is None or audit["promotion_outcome"] != "rolled_back"
-        audit_path = tmp_path / "packs" / "regeneration_candidate_audit_1.json"
-        if audit_path.exists():
-            assert (
-                json.loads(audit_path.read_text(encoding="utf-8"))["promotion_outcome"]
-                != "rolled_back"
-            )
-    elif failure_stage == "candidate_audit":
+    with pytest.raises(AppError) as no_generation:
+        report_analysis_store_service.read_generation(
+            AnalysisGenerationReadRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=runtime.file.file_id,
+                report_slug=runtime.report_name,
+            ),
+            runtime.ctx,
+        )
+    assert no_generation.value.code == "analysis_generation_missing"
+    if failure_stage == "candidate_audit":
         assert "artifacts" not in writes
     else:
         assert (
@@ -514,12 +550,27 @@ def test_promotion_rollback_restores_existing_claim_package_exactly(
             runtime.ctx,
         ).output_path
 
-    artifacts_path = _store_pack("artifacts", original)
-    claim_path = _store_pack(
-        "validation_retained_claim_validation_candidate", previous_claim
+    original_generation = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=runtime.file.file_id,
+            report_slug=runtime.report_name,
+            packs={
+                "artifacts": original,
+                "validation_retained_claim_validation_candidate": previous_claim,
+                "validation": previous_validation,
+                "regeneration_candidate_audit_1": previous_audit,
+            },
+        ),
+        runtime.ctx,
     )
-    validation_path = _store_pack("validation", previous_validation)
-    audit_path = _store_pack("regeneration_candidate_audit_1", previous_audit)
+    artifacts_path = original_generation.pack_paths["artifacts"]
+    claim_path = original_generation.pack_paths[
+        "validation_retained_claim_validation_candidate"
+    ]
+    validation_path = original_generation.pack_paths["validation"]
+    audit_path = original_generation.pack_paths["regeneration_candidate_audit_1"]
     prior_bytes = {
         path: Path(path).read_bytes()
         for path in (artifacts_path, claim_path, validation_path, audit_path)
@@ -530,8 +581,9 @@ def test_promotion_rollback_restores_existing_claim_package_exactly(
 
     def _store_with_failure(request, ctx):
         nonlocal injected
-        result = base_dependencies.analysis_store_pack(request, ctx)
-        if request.pack_name == failure_pack and not injected:
+        result = base_dependencies.write_bytes(request, ctx)
+        target = hashlib.sha256(failure_pack.encode("utf-8")).hexdigest()[:16] + ".json"
+        if Path(request.path).name == target and not injected:
             injected = True
             if interrupt:
                 raise KeyboardInterrupt()
@@ -542,7 +594,7 @@ def test_promotion_rollback_restores_existing_claim_package_exactly(
             )
         return result
 
-    dependencies = _deps(analysis_store_pack=_store_with_failure)
+    dependencies = _deps(write_bytes=_store_with_failure)
     candidate_package = dict(previous_claim)
     candidate_package["artifact_hash"] = sha256_json(candidate)
     candidate_package["package_hash"] = claim_validation_package_hash(candidate_package)
@@ -586,13 +638,20 @@ def test_promotion_rollback_restores_existing_claim_package_exactly(
         )
 
     if not interrupt:
-        assert exc_info.value.code == (
-            "retained_claim_candidate_promotion_failed"
-            if failure_pack == "validation_retained_claim_validation_candidate"
-            else "injected_after_validation_write"
-        )
+        assert exc_info.value.code == "injected_after_validation_write"
     assert injected is True
     assert {path: Path(path).read_bytes() for path in prior_bytes} == prior_bytes
+    observed = report_analysis_store_service.read_generation(
+        AnalysisGenerationReadRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=runtime.file.file_id,
+            report_slug=runtime.report_name,
+        ),
+        runtime.ctx,
+    )
+    assert observed.generation == original_generation.generation
+    assert observed.packs["artifacts"] == original
 
 
 @pytest.mark.parametrize(

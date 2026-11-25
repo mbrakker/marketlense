@@ -552,3 +552,95 @@ def test_unresolved_analyst_interpretation_warning_does_not_block_readiness() ->
     )
     assert semantic_rule.status == "pass"
     assert readiness.status == "pass"
+
+
+@pytest.mark.parametrize(
+    ("classification", "outcome", "expected"),
+    [
+        ("factual_claim", "not_established", "fail"),
+        ("analyst_interpretation", "not_established", "pass"),
+        ("factual_claim", "entailed", "pass"),
+        ("", "", "pass"),
+    ],
+)
+def test_retrieval_warning_uses_structured_factual_verdict_for_readiness(
+    classification: str, outcome: str, expected: str
+) -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    validation = ValidationReport(
+        schema_version="1.1",
+        status="pass",
+        severity="warning",
+        issues=[
+            ValidationIssue(
+                rule_id="grounding",
+                violation_type="evidence_retrieval_failure",
+                severity="warning",
+                affected_section="insights:unbatched.text",
+                message="Evidence retrieval failed.",
+                classification=classification,
+                entailment_outcome=outcome,
+            )
+        ],
+    )
+
+    readiness = _readiness_with_package(package, validation_report=validation)
+
+    semantic_rule = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.semantic_grounding"
+    )
+    assert semantic_rule.status == expected
+    assert readiness.status == expected
+
+
+def test_readiness_rejects_decisions_from_before_retrieval_warning_fix() -> None:
+    from dataclasses import replace
+
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    readiness = _readiness_with_package(package)
+    old_readiness = replace(readiness, validator_version="publish-readiness:v2")
+
+    verification = verify_publish_readiness(
+        artifact=old_readiness, report_id="report-1", final_html=html
+    )
+
+    assert "publish_readiness.validator_unsupported" in verification.issues
+
+
+def test_downgraded_retrieval_verdict_survives_validation_handover() -> None:
+    from src.generators.validation.shared import downgrade_issues_for_data_gap
+    from src.utils.validation import parse_validation_report_payload
+
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    issue = ValidationIssue(
+        rule_id="grounding",
+        violation_type="evidence_retrieval_failure",
+        severity="error",
+        affected_section="insights:unbatched.text",
+        message="Evidence retrieval failed.",
+        classification="factual_claim",
+        entailment_outcome="not_established",
+    )
+    downgraded = downgrade_issues_for_data_gap([issue])
+    assert downgraded[0].severity == "warning"
+    report = ValidationReport(
+        schema_version="1.1", status="pass", severity="warning", issues=downgraded
+    )
+    restored = parse_validation_report_payload(report.to_dict())
+
+    readiness = _readiness_with_package(package, validation_report=restored)
+
+    assert readiness.status == "fail"
+    assert (
+        next(
+            item.status
+            for item in readiness.rule_results
+            if item.rule_id == "publish_readiness.semantic_grounding"
+        )
+        == "fail"
+    )

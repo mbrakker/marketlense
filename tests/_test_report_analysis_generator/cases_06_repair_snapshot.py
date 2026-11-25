@@ -71,4 +71,7 @@ def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_pa
     assert snapshot["_text_pages_sampled"] == 3
     assert snapshot["_text_char_count"] == 100
     assert snapshot["_evidence_packs"]["doc_map"].endswith("doc_map.json")
-    assert snapshot["_evidence_packs"]["validation"].endswith("validation.json")
+    assert (
+        snapshot["_evidence_packs"]["validation"] == state.validation_report.source_path
+    )
+    assert Path(state.validation_report.source_path).is_file()

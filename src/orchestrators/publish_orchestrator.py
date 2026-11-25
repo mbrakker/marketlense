@@ -159,6 +159,7 @@ from src.orchestrators._publish_orchestrator.routing import (
     _resolve_publish_candidates,
     _route_publish_entity_metadata,
     _sort_auto_discovered_html_paths,
+    resolve_report_publication_package,
 )
 from src.orchestrators.publish_shared import canonicalize_html_path
 from src.orchestrators.remediation_orchestrator import (
@@ -1617,6 +1618,7 @@ def run_publish(
     cohort_manifest: str | None = None,
     require_full_validation_manifest: bool = False,
     report_readiness_references: Mapping[str, str] | None = None,
+    report_generation_packages: Mapping[str, tuple[str, str, str]] | None = None,
     monotonic_fn: Callable[[], float] = time.monotonic,
     sleep_fn: Callable[[float], None] = time.sleep,
 ) -> List[PublishOutcome]:
@@ -1718,6 +1720,26 @@ def run_publish(
         )
         html_file_id_map = {}
         metadata_by_file_id = {}
+
+    for html_path, (report_id, manifest_path, checksum) in (
+        report_generation_packages or {}
+    ).items():
+        readiness_path = resolve_report_publication_package(
+            html_path=html_path,
+            readiness_reference=manifest_path,
+            checksum=checksum,
+            expected_report_id=report_id,
+            ctx=root_ctx,
+        )
+        if readiness_path == manifest_path or report_id not in metadata_by_file_id:
+            raise AppError(
+                code="report_publish_generation_metadata_missing",
+                message=(
+                    "Generation-bound report publication requires matching report metadata"
+                ),
+                retryable=False,
+            )
+        html_file_id_map[canonicalize_html_path(html_path)] = report_id
 
     if cohort_member_file_ids is not None:
         candidates, _candidate_set_hash, _binding_path = (

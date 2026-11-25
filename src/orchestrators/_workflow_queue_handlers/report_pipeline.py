@@ -14,6 +14,7 @@ import json
 import uuid
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field, replace
+from pathlib import Path
 from typing import Callable
 
 from src.contracts.acquisition_handoff import VerifiedAcquisitionIngestHandoffRequest
@@ -286,20 +287,36 @@ def _report_publication_readiness_submission(
     payload: QueuePayload,
     html_path: str,
     readiness_reference: str,
+    output_dir: str,
+    pack_paths: dict[str, str],
     ctx: RunContext,
 ) -> WorkflowJobSubmission:
     """Hand one rendered Report to the approval-gated durable publication path."""
 
     from src.orchestrators._publish_orchestrator.routing import (
-        report_publish_package_checksum,
+        create_report_publication_package,
     )
 
-    package_checksum = report_publish_package_checksum(
+    report_id = str(getattr(payload, "report_id", "") or job.report_id).strip()
+    artifact = Path(str(pack_paths.get("artifacts") or ""))
+    if artifact.parent.parent.name != ".generations":
+        raise AppError(
+            code="report_publish_generation_missing",
+            message="New report publication requires a pinned generation",
+            retryable=False,
+        )
+    package = create_report_publication_package(
         html_path=html_path,
         readiness_reference=readiness_reference,
+        output_dir=output_dir,
+        report_id=report_id,
+        report_slug=artifact.parents[3].name,
+        pack_paths=pack_paths,
         ctx=ctx,
     )
-    report_id = str(getattr(payload, "report_id", "") or job.report_id).strip()
+    package_checksum = package.checksum
+    html_path = package.html_path
+    readiness_reference = package.manifest_path
     return WorkflowJobSubmission(
         schema_version="1.0",
         queue_name="publication_readiness",
@@ -647,6 +664,8 @@ def _report_stage_handler(
                     payload=payload,
                     html_path=html_path,
                     readiness_reference=readiness_reference,
+                    output_dir=settings.output_dir,
+                    pack_paths=dict(outcome.evidence_packs or {}),
                     ctx=ctx,
                 )
             )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from dataclasses import replace
@@ -50,6 +51,66 @@ def _json_events(caplog, *logger_names: str) -> list[dict[str, object]]:
         if isinstance(payload, dict):
             events.append(payload)
     return events
+
+
+def test_same_filename_drive_reports_keep_separate_cache_and_outputs(
+    ingest_settings, run_context
+) -> None:
+    first_pdf = _pdf_bytes()
+    writer = PdfWriter()
+    writer.add_blank_page(width=400, height=500)
+    buffer = BytesIO()
+    writer.write(buffer)
+    second_pdf = buffer.getvalue()
+    contents = {"file-1": first_pdf, "file-2": second_pdf}
+    files = [
+        replace(
+            _drive_file(), file_id=file_id, md5_checksum=hashlib.md5(data).hexdigest()
+        )
+        for file_id, data in contents.items()
+    ]
+    old_cache = Path(ingest_settings.cache_dir) / "report.pdf"
+    old_output = (
+        Path(ingest_settings.output_dir)
+        / "report-pdf"
+        / "candidates"
+        / "candidates.json"
+    )
+    old_cache.parent.mkdir(parents=True, exist_ok=True)
+    old_output.parent.mkdir(parents=True, exist_ok=True)
+    old_cache.write_bytes(b"historical cache")
+    old_output.write_bytes(b"historical output")
+    downloads = []
+
+    def download(req, ctx):
+        data = contents[req.file.file_id]
+        downloads.append(req.file.file_id)
+        return DriveDownloadResponse(
+            schema_version="1.0",
+            file=req.file,
+            content=data,
+            md5=req.file.md5_checksum,
+            size=len(data),
+        )
+
+    deps = _deps(list_pdfs=lambda req, ctx: files, download_pdf=download)
+    outcomes = orch.run_candidate_extraction(
+        ingest_settings, limit=2, ctx=run_context, dependencies=deps
+    )
+    assert all(outcome.error is None for outcome in outcomes)
+    assert len({outcome.pdf_path for outcome in outcomes}) == 2
+    assert len({outcome.candidates_path for outcome in outcomes}) == 2
+    for outcome in outcomes:
+        assert Path(outcome.pdf_path).read_bytes() == contents[outcome.report_id]
+        saved = json.loads(Path(outcome.candidates_path).read_text(encoding="utf-8"))
+        assert saved["report_id"] == outcome.report_id
+        assert saved["pdf_path"] == outcome.pdf_path
+    assert old_cache.read_bytes() == b"historical cache"
+    assert old_output.read_bytes() == b"historical output"
+    orch.run_candidate_extraction(
+        ingest_settings, limit=2, ctx=run_context, dependencies=deps
+    )
+    assert downloads == ["file-1", "file-2"]
 
 
 def test_candidate_extract_retries_retryable_download_with_real_generator_path(

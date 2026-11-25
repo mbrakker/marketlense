@@ -6,6 +6,14 @@
 
 Generated report artifacts are checked for contract completeness, schema validity, and configured semantic and grounding requirements. Validation results are persisted with the report artifacts.
 
+Regeneration promotion creates `.promotion-pending` beside the canonical
+analysis artifacts before replacing them. An existing marker blocks another
+promotion and retained-claim package reuse. A process terminated during
+promotion can leave this marker and a mixed set of files: retain the evidence
+and restore a known-consistent artifact, retained-claim, validation, and audit
+set before removing the marker. This guard does not coordinate all readers or
+publication, and does not make the four-file promotion crash-atomic.
+
 Public-copy generation keeps each sentence and summary-map entry to one
 source-supported proposition. Claims that depend on different sections or
 evidence items are separated and bound independently. A DocMap section summary
@@ -890,6 +898,21 @@ claim/insight lineage comparison, grounding validation, semantic validation,
 and the public-editorial check. The corresponding validation result is retained
 under `validation_regen_candidate_<attempt>.json`; a candidate failure cannot
 replace either canonical artifact or canonical validation output.
+
+New immutable analysis generations bind the report ID into their content-hashed
+identity. A different report sharing the same storage slug cannot read or
+advance such a generation. Historical generation formats remain readable to
+preserve existing approvals; they do not contain this report-ID binding and
+must not be treated as providing that protection. They cannot be advanced to
+a new generation without independently establishing identity; existing
+approved packages remain readable without rewriting them.
+
+New report generations retain the factual evidence used for validation.
+Rendering checks that evidence against the pinned generation, and new report
+publication packages require matching readiness evidence hashes.
+Generation-backed rendering takes artifacts and evidence from the checked
+analysis state, not separately serialized checkpoint projections; legacy
+editorial fallback fields cannot replace missing pinned artifact content.
 
 The regeneration loop treats canonical artifacts and `validation.json` as one
 promoted state. Before each repair plan, deterministic `validate_retained_claims()`

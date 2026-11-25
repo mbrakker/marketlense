@@ -75,6 +75,7 @@ def run_semantic_validation(
     source_url: str = "",
     report_id: str = "",
     source_id: str = "",
+    visual_ambiguity_mode: bool = False,
     prompt_family_reuse_reader=read_reusable_prompt_family,
     prompt_family_materializer=materialize_prompt_family,
 ) -> SemanticCheckOutcome:
@@ -157,6 +158,7 @@ def run_semantic_validation(
         "metrics_json": json.dumps(payload["metrics"], ensure_ascii=False),
         "quotes_json": json.dumps(payload["quotes"], ensure_ascii=False),
         "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
+        "visual_ambiguity_mode": visual_ambiguity_mode,
     }
     prompt_bundle = prepare_prompt_bundle(
         namespace=prompt_namespace,
@@ -243,6 +245,7 @@ def run_semantic_validation(
             "metrics": payload["metrics"],
             "quotes": payload["quotes"],
             "evidence": list(evidence_texts),
+            "visual_ambiguity_mode": visual_ambiguity_mode,
         }
     )
     configuration_policy_hash = sha256_json(
@@ -355,6 +358,7 @@ def run_semantic_validation(
             )
 
         if reused_payload is None:
+
             def validate_semantic_payload(payload: Any) -> None:
                 validate_schema(
                     SchemaValidateRequest(
@@ -646,8 +650,20 @@ def parse_semantic_response(payload: dict) -> SemanticCheckOutcome:
                 supported = bool(state) if state is not None else False
             confidence = to_float(entry.get("confidence")) or 0.0
             reason = s(entry.get("reason"))
+            disposition = entry.get("disposition")
+            if (
+                type(state) is not bool
+                or not isinstance(disposition, str)
+                or disposition
+                not in {"supported", "contradicted", "unsupported", "visual_ambiguity"}
+                or (disposition == "supported") != state
+            ):
+                disposition = None
             metric_support[label] = SemanticSupport(
-                supported=supported, confidence=confidence, reason=reason
+                supported=supported,
+                confidence=confidence,
+                reason=reason,
+                disposition=disposition,
             )
             if not supported:
                 severity = "error" if confidence >= 0.6 else "warning"

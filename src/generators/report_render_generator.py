@@ -16,6 +16,8 @@ from src.contracts.files import (
 )
 from src.contracts.ingest import IngestOutcome
 from src.contracts.report_analysis import (
+    AnalysisGenerationByIdReadRequest,
+    AnalysisGenerationReadRequest,
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
@@ -60,6 +62,7 @@ from src.generators.report_generation_shared import (
     write_cache_json,
 )
 from src.generators.report_title_resolution_generator import is_generic_report_title
+from src.services import report_analysis_store_service
 from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
 from src.utils.clock import utc_now_iso
@@ -979,6 +982,85 @@ def render_preview_asset(
     )
 
 
+def _require_pinned_analysis_generation(
+    runtime: ReportRuntimeState, analysis: ReportAnalysisState
+) -> None:
+    request = AnalysisGenerationReadRequest(
+        schema_version="1.0",
+        output_dir=runtime.settings.output_dir,
+        report_id=ReportId(runtime.file.file_id),
+        report_slug=runtime.report_name,
+    )
+    try:
+        report_analysis_store_service.read_generation(request, runtime.ctx)
+    except AppError as exc:
+        if exc.code == "analysis_generation_missing":
+            artifact = Path(str(analysis.evidence_paths.get("artifacts") or ""))
+            if artifact.parent.parent.name != ".generations":
+                return
+        raise
+    artifact_path = Path(str(analysis.evidence_paths.get("artifacts") or ""))
+    if artifact_path.parent.parent.name != ".generations":
+        raise AppError(
+            code="analysis_generation_render_mismatch",
+            message="Rendering requires the committed analysis generation paths",
+            retryable=False,
+        )
+    pinned = report_analysis_store_service.read_generation_by_id(
+        AnalysisGenerationByIdReadRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            report_slug=runtime.report_name,
+            generation=artifact_path.parent.name,
+        ),
+        runtime.ctx,
+    )
+    for name in (
+        "artifacts",
+        "validation",
+        "validation_retained_claim_validation_candidate",
+    ):
+        expected = pinned.pack_paths.get(name)
+        supplied = analysis.evidence_paths.get(name)
+        if (expected is None and supplied) or (
+            expected is not None
+            and (not supplied or Path(supplied).resolve() != Path(expected).resolve())
+        ):
+            raise AppError(
+                code="analysis_generation_render_mismatch",
+                message="Render inputs do not belong to the pinned analysis generation",
+                retryable=False,
+            )
+    if pinned.packs.get("artifacts") != (analysis.artifacts_payload or {}):
+        raise AppError(
+            code="analysis_generation_render_mismatch",
+            message="Render artifacts do not match the pinned analysis generation",
+            retryable=False,
+        )
+    if "authoritative_evidence" in pinned.packs:
+        evidence = (
+            analysis.authoritative_evidence_packs
+            if analysis.verified_authority_context is not None
+            else analysis.evidence_packs
+        )
+        if pinned.packs["authoritative_evidence"] != evidence:
+            raise AppError(
+                code="analysis_generation_render_mismatch",
+                message="Render evidence does not match the pinned analysis generation",
+                retryable=False,
+            )
+    if (
+        analysis.validation_report is None
+        or pinned.packs.get("validation") != analysis.validation_report.to_dict()
+    ):
+        raise AppError(
+            code="analysis_generation_render_mismatch",
+            message="Render validation does not match the pinned analysis generation",
+            retryable=False,
+        )
+
+
 def render_report_output(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -989,6 +1071,7 @@ def render_report_output(
     preview_resp,
     reuse_report_card_assets: bool = False,
 ) -> IngestOutcome:
+    _require_pinned_analysis_generation(runtime, analysis)
     validation_status = str(
         getattr(analysis.validation_report, "status", "") or ""
     ).strip()
@@ -1079,11 +1162,25 @@ def render_report_output(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:render_metadata"),
     )
     render_data_dict = deepcopy(analysis.data_dict)
-    if verified_authority is not None:
-        # The authority check above validates the retained snapshot.  Render
-        # the same snapshot rather than trusting a separately serialized
-        # legacy projection in data_dict.
+    artifact_ref = Path(str(analysis.evidence_paths.get("artifacts") or ""))
+    if (
+        verified_authority is not None
+        or artifact_ref.parent.parent.name == ".generations"
+    ):
+        # Render the checked snapshot, not an independently serialized projection.
         render_data_dict["artifacts"] = deepcopy(analysis.artifacts_payload or {})
+        render_data_dict["evidence_packs"] = deepcopy(analysis.evidence_packs)
+        if verified_authority is not None:
+            render_data_dict["authoritative_evidence_packs"] = deepcopy(
+                analysis.authoritative_evidence_packs
+            )
+        if artifact_ref.parent.parent.name == ".generations":
+            summary = (analysis.artifacts_payload or {}).get("summary")
+            summary = summary if isinstance(summary, dict) else {}
+            render_data_dict["tldr"] = str(summary.get("tldr") or "")
+            render_data_dict["commentary"] = str(summary.get("executive_summary") or "")
+            render_data_dict["insights"] = []
+            render_data_dict["quote"] = {}
     build_provenance = _render_build_provenance(runtime, analysis)
     public_publication_date = _publication_date(runtime)
     existing_title = str(render_data_dict.get("title") or "").strip()
@@ -1677,28 +1774,37 @@ def _persist_publish_readiness(
     )
     source_md5 = str(runtime.md5 or "").strip()
     readiness_source_pages = [] if authority is not None else source.text_response.pages
-    candidate_path = dependencies.analysis_pack_path(
-        AnalysisPackPathRequest(
-            schema_version="1.0",
-            output_dir=runtime.settings.output_dir,
-            report_id=ReportId(runtime.file.file_id),
-            pack_name="validation_retained_claim_validation_candidate",
-            report_slug=runtime.report_name,
-        ),
-        child_context(
-            runtime.ctx,
-            task_id=f"{runtime.ctx.task_id}:retained_claim_candidate_path",
-        ),
-    ).output_path
+    candidate_path = str(
+        analysis.evidence_paths.get("validation_retained_claim_validation_candidate")
+        or ""
+    ).strip()
+    artifact_ref = Path(str(analysis.evidence_paths.get("artifacts") or ""))
+    if not candidate_path and artifact_ref.parent.parent.name != ".generations":
+        candidate_path = dependencies.analysis_pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                pack_name="validation_retained_claim_validation_candidate",
+                report_slug=runtime.report_name,
+            ),
+            child_context(
+                runtime.ctx,
+                task_id=f"{runtime.ctx.task_id}:retained_claim_candidate_path",
+            ),
+        ).output_path
     candidate_claim_payload = None
     retained_claim_path = ""
-    if dependencies.file_exists(
-        FileExistsRequest(schema_version="1.0", path=candidate_path),
-        child_context(
-            runtime.ctx,
-            task_id=f"{runtime.ctx.task_id}:retained_claim_candidate_exists",
-        ),
-    ).exists:
+    if (
+        candidate_path
+        and dependencies.file_exists(
+            FileExistsRequest(schema_version="1.0", path=candidate_path),
+            child_context(
+                runtime.ctx,
+                task_id=f"{runtime.ctx.task_id}:retained_claim_candidate_exists",
+            ),
+        ).exists
+    ):
         try:
             candidate_response = dependencies.read_json(
                 ReadJsonRequest(schema_version="1.0", path=candidate_path),

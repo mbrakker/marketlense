@@ -135,7 +135,7 @@ SemanticBatchValidator = Callable[
     [list[ClaimSemanticInput]], list[ClaimSemanticGroundingResult]
 ]
 EvidenceSemanticBatchValidator = Callable[
-    [list[ClaimCandidate], list[str]], Mapping[str, tuple[bool, str, str]]
+    [list[ClaimCandidate], list[str]], Mapping[str, tuple]
 ]
 
 
@@ -1210,7 +1210,7 @@ def _validate_claims_against_sources(
                 member = batch_result.get(candidate.claim_id)
                 if (
                     not isinstance(member, tuple)
-                    or len(member) != 3
+                    or len(member) not in {3, 4}
                     or type(member[0]) is not bool
                     or not isinstance(member[1], str)
                     or not isinstance(member[2], str)
@@ -1218,14 +1218,30 @@ def _validate_claims_against_sources(
                     supported = False
                     reason = "semantic_support_not_established"
                     execution_identity = ""
+                    disposition = ""
                 else:
-                    supported, reason, execution_identity = member
+                    supported, reason, execution_identity = member[:3]
+                    disposition = member[3] if len(member) == 4 else ""
+                    if disposition not in {
+                        "",
+                        "supported",
+                        "contradicted",
+                        "unsupported",
+                        "visual_ambiguity",
+                    } or (disposition and ((disposition == "supported") != supported)):
+                        supported = False
+                        disposition = ""
                 results[index] = replace(
                     results[index],
-                    status="supported" if supported else "unsupported",
+                    status="supported"
+                    if supported
+                    else "unresolved"
+                    if disposition == "visual_ambiguity" and execution_identity
+                    else "unsupported",
                     reasons=[reason],
                     semantic_outcome="entailed" if supported else None,
                     semantic_reason=reason,
+                    semantic_classification=disposition,
                     semantic_validator_used=True,
                     semantic_execution_identity=execution_identity,
                 )

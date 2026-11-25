@@ -14,6 +14,7 @@ import re
 from copy import deepcopy
 from dataclasses import asdict, dataclass, replace
 from difflib import SequenceMatcher
+from pathlib import Path
 from time import perf_counter
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -46,6 +47,8 @@ from src.contracts.regeneration import (
     repair_strategy_fingerprint,
 )
 from src.contracts.report_analysis import (
+    AnalysisGenerationCommitRequest,
+    AnalysisGenerationReadRequest,
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
@@ -117,7 +120,7 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
-from src.services import prompt_service
+from src.services import file_service, prompt_service, report_analysis_store_service
 from src.services.prompt_family_materialization_service import (
     materialize_prompt_family,
     read_reusable_prompt_family,
@@ -4024,6 +4027,24 @@ def _load_promoted_claim_validation_for_reuse(
         ),
         ctx,
     ).output_path
+    _require_no_interrupted_promotion(runtime, dependencies, ctx)
+    try:
+        generation = report_analysis_store_service.read_generation(
+            AnalysisGenerationReadRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                report_slug=runtime.report_name,
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        if exc.code != "analysis_generation_missing":
+            raise
+    else:
+        path = generation.pack_paths.get(pack_name, "")
+        if not path:
+            return None
     try:
         payload = dependencies.read_json(
             ReadJsonRequest(schema_version="1.0", path=path),
@@ -4040,6 +4061,7 @@ def _load_promoted_claim_validation_for_reuse(
             )
         )
         return None
+    _require_no_interrupted_promotion(runtime, dependencies, ctx)
     if not isinstance(payload, dict):
         logger.info(
             log_event(
@@ -4066,6 +4088,64 @@ def _load_promoted_claim_validation_for_reuse(
         )
         return None
     return payload
+
+
+def _promotion_marker_path(runtime, dependencies, ctx) -> str:
+    path = _promotion_pack_path(
+        runtime=runtime, dependencies=dependencies, pack_name="artifacts", ctx=ctx
+    )
+    return str(Path(path).parent / ".promotion-pending")
+
+
+def _require_no_interrupted_promotion(runtime, dependencies, ctx) -> None:
+    marker = _promotion_marker_path(runtime, dependencies, ctx)
+    try:
+        file_service.read_bytes(
+            ReadBytesRequest(schema_version="1.0", path=marker), ctx
+        )
+    except AppError as exc:
+        if exc.code == "file_not_found":
+            return
+        raise AppError(
+            code="regeneration_promotion_recovery_failed",
+            message="Cannot verify regeneration promotion state",
+            retryable=False,
+            cause=exc,
+        ) from exc
+    raise AppError(
+        code="regeneration_promotion_recovery_failed",
+        message="An incomplete regeneration promotion requires recovery",
+        retryable=False,
+        context={"marker_path": marker},
+    )
+
+
+def _release_promotion_marker(marker: str, owner: bytes, ctx) -> None:
+    try:
+        current = file_service.read_bytes(
+            ReadBytesRequest(schema_version="1.0", path=marker), ctx
+        ).content
+        if current != owner:
+            raise AppError(
+                code="regeneration_promotion_recovery_failed",
+                message=(
+                    "Promotion marker ownership changed; manual recovery is required"
+                ),
+                retryable=False,
+                context={"marker_path": marker},
+            )
+        file_service.delete_file(
+            DeleteFileRequest(schema_version="1.0", path=marker), ctx
+        )
+    except AppError as exc:
+        if exc.code == "regeneration_promotion_recovery_failed":
+            raise
+        raise AppError(
+            code="regeneration_promotion_recovery_failed",
+            message="Promotion marker could not be safely released",
+            retryable=False,
+            cause=exc,
+        ) from exc
 
 
 def _store_promoted_candidate_claim_validation(
@@ -4670,6 +4750,7 @@ def _run_validation_regeneration_loop(
     verified_source_identity: str = "",
     verified_fact_digest: str = "",
     verified_authority_context: VerifiedAuthorityContext | None = None,
+    expected_generation: str | None = None,
 ) -> tuple[
     Dict[str, Any],
     ValidationReport,
@@ -4731,6 +4812,39 @@ def _run_validation_regeneration_loop(
         ),
         mode_ctx,
     ).output_path
+    try:
+        current_generation = report_analysis_store_service.read_generation(
+            AnalysisGenerationReadRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                report_slug=runtime.report_name,
+            ),
+            mode_ctx,
+        )
+    except AppError as exc:
+        if exc.code != "analysis_generation_missing":
+            raise
+        if expected_generation:
+            raise AppError(
+                code="analysis_generation_conflict",
+                message="Analysis generation changed before repair",
+                retryable=False,
+            ) from exc
+        pinned_generation = ""
+    else:
+        if (
+            expected_generation is not None
+            and current_generation.generation != expected_generation
+        ):
+            raise AppError(
+                code="analysis_generation_conflict",
+                message="Analysis generation changed before repair",
+                retryable=False,
+            )
+        pinned_generation = current_generation.generation
+        if current_generation.packs.get("artifacts") == current_artifacts:
+            current_artifacts_path = current_generation.pack_paths["artifacts"]
     promoted_artifacts = deepcopy(current_artifacts)
     promoted_validation_report = current_validation_report
     working_artifacts = deepcopy(current_artifacts)
@@ -5556,6 +5670,7 @@ def _run_validation_regeneration_loop(
                             promoted_claim_validation_package
                         ),
                         current_artifacts_path=current_artifacts_path,
+                        expected_generation=pinned_generation,
                         expected_source_id=validation_source_identity,
                         expected_source_md5=str(runtime.md5 or ""),
                         require_execution_identity=verified_mode,
@@ -5771,6 +5886,7 @@ def _run_validation_regeneration_loop(
             current_validation_report = promoted_validation_report
             if artifacts_path:
                 current_artifacts_path = artifacts_path
+                pinned_generation = Path(artifacts_path).parent.name
                 evidence_paths["artifacts"] = artifacts_path
             if current_validation_report.source_path:
                 evidence_paths["validation"] = current_validation_report.source_path
@@ -6014,6 +6130,7 @@ def _promote_validated_regeneration_candidate(
     promoted_validation_report: ValidationReport,
     promoted_claim_validation_package: Dict[str, Any] | None,
     current_artifacts_path: str,
+    expected_generation: str | None = None,
     expected_source_id: str = "",
     expected_source_md5: str = "",
     require_execution_identity: bool = False,
@@ -6021,12 +6138,7 @@ def _promote_validated_regeneration_candidate(
     promotion_audit: RegenerationCandidateAudit | None = None,
     ctx,
 ) -> tuple[str, str, str, Dict[str, Any], str]:
-    """Promote artifacts, retained grounding, and validation as one contract.
-
-    Every write is marked before invocation because the canonical file service
-    may raise after replacing a file.  A failed later write therefore restores
-    every earlier canonical root that this transaction could have changed.
-    """
+    """Commit the validated artifact, grounding, validation, and audit together."""
 
     if require_execution_identity:
         if not str(expected_source_id or "").strip() or not isinstance(
@@ -6115,6 +6227,7 @@ def _promote_validated_regeneration_candidate(
                     },
                 )
 
+    _require_no_interrupted_promotion(runtime, dependencies, ctx)
     retained_claim_candidate = _load_candidate_claim_validation_for_promotion(
         runtime=runtime,
         dependencies=dependencies,
@@ -6134,82 +6247,40 @@ def _promote_validated_regeneration_candidate(
             retryable=False,
             context={"report_id": runtime.file.file_id},
         )
-    snapshots = _capture_promotion_file_snapshots(
-        runtime=runtime,
-        dependencies=dependencies,
-        current_artifacts_path=current_artifacts_path,
-        attempt_index=promotion_audit.attempt_index,
-        ctx=ctx,
-    )
-    artifacts_path = current_artifacts_path
-    retained_claim_path = ""
-    validation_path = ""
-    audit_path = ""
-    try:
-        artifacts_path = _promote_regeneration_candidate(
-            runtime=runtime,
-            dependencies=dependencies,
-            candidate_artifacts=candidate_artifacts,
-            ctx=ctx,
+    parent = Path(current_artifacts_path).parent
+    if expected_generation is None:
+        expected_generation = (
+            parent.name if parent.parent.name == ".generations" else ""
         )
-        retained_claim_path = _store_promoted_candidate_claim_validation(
-            runtime=runtime,
-            dependencies=dependencies,
-            candidate_package=retained_claim_candidate,
-            ctx=ctx,
-        )
-        validation_path = _store_validation_snapshot(
-            runtime=runtime,
-            dependencies=dependencies,
-            report=candidate_validation_report,
-            pack_name="validation",
-            ctx=ctx,
-        )
-        audit_path = _store_regeneration_candidate_audit(
-            runtime=runtime,
-            dependencies=dependencies,
-            audit=promotion_audit,
-            ctx=ctx,
-        )
-    except BaseException as promotion_error:
-        try:
-            _restore_promotion_file_snapshots(
-                dependencies=dependencies,
-                snapshots=snapshots,
-                ctx=ctx,
-            )
-        except Exception as rollback_error:
-            if isinstance(rollback_error, AppError):
-                raise AppError(
-                    code="regeneration_promotion_inconsistent",
-                    message=rollback_error.message,
-                    retryable=False,
-                    context={
-                        "report_id": runtime.file.file_id,
-                        "promotion_error": type(promotion_error).__name__,
-                        "rollback_error": type(rollback_error).__name__,
-                    },
-                    cause=rollback_error,
-                ) from rollback_error
-            raise AppError(
-                code="regeneration_promotion_inconsistent",
-                message=(
-                    "A promoted regeneration could not be rolled back after a "
-                    "related artifact persistence failure."
+    audit_name = f"regeneration_candidate_audit_{promotion_audit.attempt_index}"
+    committed = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            report_slug=runtime.report_name,
+            expected_generation=expected_generation,
+            packs={
+                "artifacts": candidate_artifacts,
+                "validation": candidate_validation_report.to_dict(),
+                **(
+                    {"authoritative_evidence": evidence_packs}
+                    if evidence_packs is not None
+                    else {}
                 ),
-                retryable=False,
-                context={
-                    "report_id": runtime.file.file_id,
-                    "promotion_error": type(promotion_error).__name__,
-                    "rollback_error": type(rollback_error).__name__,
-                },
-                cause=rollback_error,
-            ) from rollback_error
-        raise
+                "validation_retained_claim_validation_candidate": (
+                    retained_claim_candidate
+                ),
+                audit_name: asdict(promotion_audit),
+            },
+        ),
+        ctx,
+        write_bytes=dependencies.write_bytes,
+    )
     return (
-        artifacts_path,
-        validation_path,
-        retained_claim_path,
+        committed.pack_paths["artifacts"],
+        committed.pack_paths["validation"],
+        committed.pack_paths["validation_retained_claim_validation_candidate"],
         retained_claim_candidate,
-        audit_path,
+        committed.pack_paths[audit_name],
     )

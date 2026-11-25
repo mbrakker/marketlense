@@ -12,6 +12,12 @@ Use `python -m src.cli publish-wp` after required configuration and validation a
 
 For report routes, `publish_readiness.json` is required. It is a signed/hash-verified decision over the exact rendered HTML and the normalized final WordPress body projection, including semantic/grounding state, the current retained claim-grounding package, evidence and figure linkage, public-surface checks, artifact/configuration/policy hashes, producer revision, and expiry. The `publish_readiness.retained_claim_grounding` rule blocks unsupported or unresolved material factual claims and rejects stale or missing required package lineage without another provider call. With `publish.validation_policy: block`, a missing, expired, altered, failed, or incompatible readiness artifact prevents WordPress side effects. Publication verifies the retained decision before uploads and verifies the completed media projection before the post write; it never reruns a parallel editorial checker. See [public editorial quality](../quality/public-editorial-quality.md) for the rule inventory and retained repair diagnostics.
 
+Before a Report queue item enters human review, the readiness worker verifies
+the retained decision against its report, source, configuration, policy and
+HTML identities and rejects expired, invalid or failing decisions. The v3
+readiness validator also blocks factual retrieval warnings explicitly marked
+`not_established`; decisions produced by older validator versions require refresh.
+
 When ordinary ingest encounters a non-ready retained Report package, it writes
 the typed `publish_readiness_refresh_plan.json` beside the canonical readiness
 artifact and uses the existing lineage-enforced report recovery path before a
