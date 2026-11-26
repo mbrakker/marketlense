@@ -292,7 +292,9 @@ def test_a21_full_chain_preserves_grounding_disposition(
     )
     assert publication_manifest["generation"] == generation.generation
     for name in (
-        "artifacts", "validation", "validation_retained_claim_validation_candidate"
+        "artifacts",
+        "validation",
+        "validation_retained_claim_validation_candidate",
     ):
         assert publication_manifest["pack_paths"][name] == generation.pack_paths[name]
     readiness_path = resolve_report_publication_package(

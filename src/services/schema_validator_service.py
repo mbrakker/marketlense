@@ -12,7 +12,7 @@ from src.contracts.schema_validation import (
     SchemaValidateRequest,
     SchemaValidateResponse,
 )
-from src.utils.errors import AppError
+from src.utils.errors import SAFE_ERROR_CONTEXT_TOKEN_CHARS, AppError
 from src.utils.logging import log_event
 from src.utils.verified_facts import (
     validated_verified_facts,
@@ -161,6 +161,23 @@ def _path(error: ValidationError) -> str:
     return "".join(parts)
 
 
+def _schema_property_path(error: ValidationError) -> str:
+    """Name declared properties only; never include instance keys or values."""
+    parts = list(error.absolute_schema_path)
+    names: list[str] = []
+    index = 0
+    while index < len(parts) - 1:
+        if parts[index] == "properties" and isinstance(parts[index + 1], str):
+            names.append(parts[index + 1])
+            index += 2
+        else:
+            index += 1
+    path = ".".join(names) or "root"
+    if len(path) > 128 or not set(path) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS:
+        return "root"
+    return path
+
+
 def _error_code(error: ValidationError) -> str:
     validator = str(error.validator or "")
     if validator == "required":
@@ -220,7 +237,11 @@ def validate_schema(
             code=code,
             message=f"{location} {first_error.message}",
             retryable=False,
-            context={"schema": request.schema_name, "validator": first_error.validator},
+            context={
+                "schema": request.schema_name,
+                "validator": first_error.validator,
+                "schema_path": _schema_property_path(first_error),
+            },
         )
 
     logger.info(
@@ -262,6 +283,7 @@ def validate_output_schema(
             "schema": schema_name,
             "root_key": root,
             "validator": first_error.validator,
+            "schema_path": _schema_property_path(first_error),
         },
     )
 

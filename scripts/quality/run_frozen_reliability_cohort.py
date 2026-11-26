@@ -18,6 +18,9 @@ from scripts.quality.ias_live_canary_runner import (
     run_frozen_cohort_once,
     summarize_frozen_cohort_results,
 )
+from src.contracts.logging import LoggingSetupRequest
+from src.services.config_service import new_runtime_context
+from src.services.logging_service import setup_logging
 
 DEFAULT_SOURCES_MANIFEST = Path(__file__).with_name("frozen_reliability_cohort_10.json")
 STAGING_FROZEN_COHORT_MANIFEST_SHA256 = (
@@ -659,6 +662,10 @@ def main() -> int:
         help="Opt into the isolated visual-authority verified-facts benchmark path",
     )
     args = parser.parse_args()
+    setup_logging(
+        LoggingSetupRequest(schema_version="1.0"),
+        new_runtime_context(task_id="frozen_reliability_cohort"),
+    )
     try:
         if (
             args.enable_wordpress_staging or args.enable_cross_report_analysis

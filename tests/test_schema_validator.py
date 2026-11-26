@@ -51,6 +51,19 @@ def test_validate_schema_fails_missing_required():
     assert exc.value.code == "schema_missing_required"
 
 
+def test_schema_diagnostic_omits_dynamic_map_key():
+    with pytest.raises(AppError) as exc:
+        validate_output_schema(
+            payload={"artifact_hashes": {"private_customer_key": 123}},
+            schema_name="publish_readiness",
+            root_key="artifact_hashes",
+            ctx=_ctx(),
+        )
+    assert exc.value.context["schema_path"] == "artifact_hashes"
+    assert exc.value.context["validator"] == "type"
+    assert "private_customer_key" not in str(exc.value.context)
+
+
 def test_editorial_theme_coverage_schema_requires_verified_control_fields():
     schema = load_schema("editorial_theme_coverage_output")
 
@@ -62,9 +75,10 @@ def test_editorial_theme_coverage_schema_requires_verified_control_fields():
         "original_essential_obligation_assessments",
     }
     assert "recovery_action" not in schema["properties"]
-    assert "resolution" not in schema["properties"]["theme_coverage"]["items"][
-        "properties"
-    ]
+    assert (
+        "resolution"
+        not in schema["properties"]["theme_coverage"]["items"]["properties"]
+    )
     assert schema["properties"]["diagnosis"]["enum"] == [
         "planned_theme_execution",
         "material_report_completeness",

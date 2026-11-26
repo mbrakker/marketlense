@@ -1069,6 +1069,14 @@ def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
 
     context = error.context if isinstance(error.context, dict) else {}
     retained: dict[str, Any] = {}
+    if error.code.startswith("schema_"):
+        for source, target in (
+            ("schema_path", "schema_path"),
+            ("validator", "schema_validator"),
+        ):
+            value = _bounded_context_scalar(context.get(source))
+            if isinstance(value, str):
+                retained[target] = value
     assessment_category = context.get("assessment_failure_category")
     if assessment_category in (
         "unauthorized_supporting_insights",
@@ -1153,6 +1161,10 @@ def _merge_bounded_app_error_contexts(
     for context in contexts:
         if not isinstance(context, dict):
             continue
+        for key in ("schema_path", "schema_validator"):
+            value = _bounded_context_scalar(context.get(key))
+            if key not in merged and isinstance(value, str):
+                merged[key] = value
         category = context.get("coverage_failure_category")
         if (
             "coverage_failure_category" not in merged

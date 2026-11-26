@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -52,6 +53,7 @@ def test_preflight_cli_limits_admission_to_requested_report(tmp_path: Path) -> N
     manifest = tmp_path / "manifest.json"
     manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
     selected_id = f"cohort-{members[2]['content_md5'][:20]}"
+    log_dir = tmp_path / "logs"
     result = subprocess.run(
         [
             sys.executable,
@@ -68,12 +70,18 @@ def test_preflight_cli_limits_admission_to_requested_report(tmp_path: Path) -> N
         ],
         capture_output=True,
         text=True,
+        env={**os.environ, "MARKET_LENSE_LOG_DIR": str(log_dir)},
         timeout=120,
         check=True,
     )
     payload = json.loads(result.stdout)
     assert payload["cohort_size"] == 1
     assert [report["report_id"] for report in payload["reports"]] == [selected_id]
+    log_files = list(log_dir.glob("market_lense_*.log"))
+    assert len(log_files) == 1
+    log_text = log_files[0].read_text(encoding="utf-8")
+    assert '"event": "logging_setup_complete"' in log_text
+    assert '"event": "source_admission_preflight_complete"' in log_text
 
     unknown = subprocess.run(
         [
@@ -91,6 +99,7 @@ def test_preflight_cli_limits_admission_to_requested_report(tmp_path: Path) -> N
         ],
         capture_output=True,
         text=True,
+        env={**os.environ, "MARKET_LENSE_LOG_DIR": str(log_dir)},
         timeout=120,
         check=False,
     )

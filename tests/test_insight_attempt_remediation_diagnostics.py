@@ -11,11 +11,85 @@ from src.generators.artifact_normalization import (
     validate_final_insight_editorial_coverage,
 )
 from src.orchestrators.remediation_orchestrator import record_workflow_failure
+from src.services.schema_validator_service import validate_output_schema
 from src.services.state_service import list_remediation_records
 from src.services.structured_output_service import execute_structured_output
 from src.utils.errors import AppError
 from src.utils.structured_output import StructuredOutputFailure
 from tests._test_artifact_generator._shared import _ctx
+
+
+@pytest.mark.parametrize(
+    ("changed_paths", "extra", "expected_path", "expected_validator"),
+    [
+        (["same", "same"], {}, "repair_decision.changed_paths", "uniqueItems"),
+        (
+            ["safe"],
+            {"private_customer_key": "private_customer_value"},
+            "repair_decision",
+            "additionalProperties",
+        ),
+    ],
+)
+def test_schema_diagnostics_survive_remediation_without_private_response(
+    tmp_path, changed_paths, extra, expected_path, expected_validator
+):
+    payload = {
+        "repair_decision": {
+            "schema_version": "1.0",
+            "repair_action": "replace",
+            "repair_strategy": "current",
+            "evidence_ids_used": [],
+            "changed_paths": changed_paths,
+            "minimal_patch": [
+                {"op": "replace", "path": "safe", "value": "private response text"}
+            ],
+            **extra,
+        }
+    }
+    ctx = _ctx()
+    with pytest.raises(StructuredOutputFailure) as caught:
+        execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id="report",
+                artifact_family="insights_final",
+                schema_name="regeneration_repair_decision",
+                allow_model_recovery=False,
+                terminal_failure_code="artifact_structured_output_invalid",
+            ),
+            ctx,
+            call_model=lambda *args: OpenAIResponseResult(
+                schema_version="1.0", text=json.dumps(payload), parsed_json=payload
+            ),
+            normalize_payload=lambda candidate: candidate,
+            validate_payload=lambda candidate: validate_output_schema(
+                payload=candidate,
+                schema_name="regeneration_repair_decision",
+                root_key="",
+                ctx=ctx,
+            ),
+            is_substantive=lambda candidate: bool(candidate),
+            model_pricing={},
+        )
+    state_db = str(tmp_path / "state.sqlite")
+    record_workflow_failure(
+        state_db=state_db,
+        workflow="report_generation",
+        stage="artifact_generation",
+        operation="insights_final",
+        error=caught.value,
+        ctx=ctx,
+        report_id="report",
+    )
+    records = list_remediation_records(
+        RemediationListRequest(schema_version="1.0", state_db=state_db), ctx
+    ).records
+    diagnostic = records[0].diagnostics["error_context"]
+    assert diagnostic["schema_path"] == expected_path
+    assert diagnostic["schema_validator"] == expected_validator
+    assert "private response text" not in json.dumps(records[0].diagnostics)
+    assert "private_customer" not in json.dumps(records[0].diagnostics)
 
 
 def test_missing_essential_theme_reason_survives_attempt_remediation(tmp_path):
