@@ -1,10 +1,16 @@
 import hashlib
 import json
+import logging
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from src.contracts.openai import OpenAIResponseResult
+from src.contracts.soft_copy_claim_provenance import (
+    resolve_soft_copy_public_text_partition,
+)
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators._artifact_generator.family_policy import (
     build_artifact_family_status,
@@ -15,6 +21,7 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
     _run_validation_regeneration_loop,
 )
 from src.utils.cache_utils import sha256_json
+from src.utils.errors import AppError
 from src.utils.verified_facts import build_verified_authority_context
 from tests._test_report_analysis_generator._shared import (
     _deps,
@@ -34,7 +41,12 @@ from tests.test_verified_facts_validation_authority import (
 )
 
 
-def test_production_summary_repair_prompt_promotes_verified_candidate(tmp_path):
+@pytest.mark.parametrize(
+    "failure", [None, "direct", "wrapped", "malformed", "retryable", "unrelated"]
+)
+def test_production_summary_repair_prompt_promotes_verified_candidate(
+    tmp_path, caplog, failure
+):
     artifacts = _case()
     authority_fixture = _authority_artifacts()
     facts = [deepcopy(_fact()) for _ in range(5)]
@@ -111,10 +123,36 @@ def test_production_summary_repair_prompt_promotes_verified_candidate(tmp_path):
     class Provider(_SemanticPassOpenAIClient):
         def __init__(self):
             self.repairs = []
+            self.failure = None
 
         def openai_chat_json(self, request, ctx):
             identity = request.structured_output_schema_identity or ""
             if "regeneration_" in identity:
+                if failure:
+                    try:
+                        resolve_soft_copy_public_text_partition(
+                            text="Synthetic public sentence.",
+                            claim_bindings=[{"claim": "Synthetic declared sentence."}],
+                        )
+                    except AppError as error:
+                        error.context["private_extra"] = "PRIVATE_SENTINEL"
+                        if failure == "malformed":
+                            error.context["claim_sha256"] = "a" * 63 + "G"
+                            error.context["public_text_sha256"] = 123
+                        if failure == "retryable":
+                            error.retryable = True
+                        if failure == "unrelated":
+                            error.code = "unrelated_failure"
+                        if failure == "wrapped":
+                            self.failure = AppError(
+                                code="regeneration_deterministic_projection_failed",
+                                message="Synthetic wrapper",
+                                cause=error,
+                                context={"projection": "soft_copy_claim_provenance"},
+                            )
+                            raise self.failure from error
+                        self.failure = error
+                        raise
                 self.repairs.append(request)
                 if "claim_repair_proposal" in identity:
                     payload = {
@@ -184,28 +222,71 @@ def test_production_summary_repair_prompt_promotes_verified_candidate(tmp_path):
         evidence_ids=["verified-fact:f1"],
         entity_id=compact_claim["claim_id"],
     )
-    promoted, validation, attempts, _, paths, _ = _run_validation_regeneration_loop(
-        runtime=runtime,
-        mode_ctx=runtime.ctx,
-        base_payload=_payload(),
-        current_artifacts=artifacts,
-        current_validation_report=ValidationReport(
-            schema_version="1.1", status="fail", severity="error", issues=[issue]
-        ),
-        evidence_packs=authority.evidence_packs,
-        source_status=artifacts["source_status"],
-        category_labels=["Category"],
-        vector_store_id=None,
-        dependencies=_deps(
-            regenerate_artifacts=regenerate_artifacts, run_validation=validate
-        ),
-        regeneration_openai_client=client,
-        validation_openai_client=client,
-        source_identity=SOURCE_IDENTITY,
-        verified_source_identity=SOURCE_IDENTITY,
-        verified_fact_digest=authority.verified_fact_digest,
-        verified_authority_context=authority,
-    )
+    caplog.set_level(logging.WARNING)
+
+    def run_loop():
+        return _run_validation_regeneration_loop(
+            runtime=runtime,
+            mode_ctx=runtime.ctx,
+            base_payload=_payload(),
+            current_artifacts=artifacts,
+            current_validation_report=ValidationReport(
+                schema_version="1.1", status="fail", severity="error", issues=[issue]
+            ),
+            evidence_packs=authority.evidence_packs,
+            source_status=artifacts["source_status"],
+            category_labels=["Category"],
+            vector_store_id=None,
+            dependencies=_deps(
+                regenerate_artifacts=regenerate_artifacts, run_validation=validate
+            ),
+            regeneration_openai_client=client,
+            validation_openai_client=client,
+            source_identity=SOURCE_IDENTITY,
+            verified_source_identity=SOURCE_IDENTITY,
+            verified_fact_digest=authority.verified_fact_digest,
+            verified_authority_context=authority,
+        )
+
+    if failure:
+        with pytest.raises(AppError) as raised:
+            run_loop()
+        assert raised.value is client.failure
+        assert raised.value.retryable is (failure == "retryable")
+        assert raised.value.code == (
+            "regeneration_deterministic_projection_failed"
+            if failure == "wrapped"
+            else "unrelated_failure"
+            if failure == "unrelated"
+            else "soft_copy_claim_provenance_coverage_invalid"
+        )
+        events = [
+            json.loads(record.message)
+            for record in caplog.records
+            if "validation_regen_pre_candidate_failure" in record.message
+        ]
+        assert len(events) == (0 if failure in {"retryable", "unrelated"} else 1)
+        if events:
+            fields = events[0]["fields"]
+            if failure == "malformed":
+                assert "claim_sha256" not in fields
+                assert "public_copy_sha256" not in fields
+            else:
+                assert (
+                    fields["claim_sha256"]
+                    == hashlib.sha256(b"Synthetic declared sentence.").hexdigest()
+                )
+                assert (
+                    fields["public_copy_sha256"]
+                    == hashlib.sha256(b"Synthetic public sentence.").hexdigest()
+                )
+            serialized = json.dumps(events[0])
+            assert "Synthetic declared sentence." not in serialized
+            assert "Synthetic public sentence." not in serialized
+            assert "PRIVATE_SENTINEL" not in serialized
+            assert fields["candidate_persisted"] is False
+        return
+    promoted, validation, attempts, _, paths, _ = run_loop()
     assert len(client.repairs) == 1
     assert "Repair the named summary" in client.repairs[0].user_prompt
     assert "verified-fact:f1" in client.repairs[0].user_prompt

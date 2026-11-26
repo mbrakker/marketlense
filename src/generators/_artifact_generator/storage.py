@@ -385,7 +385,8 @@ def assemble_artifacts_payload(
             if exc.code != "card_tldr_compact_invalid":
                 raise
             repaired_compact_tldr_invalid = True
-    _repair_incomplete_executive_summary(summary)
+    if not summary_repair_in_progress:
+        _repair_incomplete_executive_summary(summary)
     pre_correction_soft_copy: Dict[str, Any] = {
         "summary": deepcopy(summary),
         "expert_comment": expert_comment,

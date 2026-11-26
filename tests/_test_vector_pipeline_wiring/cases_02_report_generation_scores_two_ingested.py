@@ -337,7 +337,7 @@ def test_report_generation_scores_drive_only_ingest_without_source_url(
         ),
     )
 
-    assert [outcome.status for outcome in outcomes] == ["processed"]
+    assert [outcome.status for outcome in outcomes] == ["processed"], outcomes
     assert rendered_scores
     assert {
         component["dimension"] for component in rendered_scores[0]["components"]

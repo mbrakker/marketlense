@@ -3,6 +3,12 @@ from __future__ import annotations
 
 import fitz
 
+from src.contracts.report_analysis import AnalysisGenerationReadRequest
+from src.orchestrators._publish_orchestrator.routing import (
+    resolve_report_publication_package,
+)
+from src.services.report_analysis_store_service import read_generation
+
 from ._shared import *  # noqa: F401,F403
 from ._shared import (
     _ctx,
@@ -268,8 +274,36 @@ def test_a21_full_chain_preserves_grounding_disposition(
     ]
     assert len(artifact_dirs) == 1, [str(directory) for directory in analysis_dirs]
     analysis_dir = artifact_dirs[0]
-    artifacts = json.loads(
-        (analysis_dir / "artifacts.json").read_text(encoding="utf-8")
+    generation = read_generation(
+        AnalysisGenerationReadRequest(
+            schema_version="1.0",
+            output_dir=str(tmp_path / "out"),
+            report_id="report-1",
+            report_slug=analysis_dir.parent.name,
+        ),
+        _ctx(),
+    )
+    artifacts = generation.packs["artifacts"]
+    publication_payload = next(
+        json.loads(row[4]) for row in queue_rows if row[0] == "publication_readiness"
+    )
+    publication_manifest = json.loads(
+        Path(publication_payload["validation_reference"]).read_text(encoding="utf-8")
+    )
+    assert publication_manifest["generation"] == generation.generation
+    for name in (
+        "artifacts", "validation", "validation_retained_claim_validation_candidate"
+    ):
+        assert publication_manifest["pack_paths"][name] == generation.pack_paths[name]
+    readiness_path = resolve_report_publication_package(
+        html_path=publication_payload["entity_package_reference"],
+        readiness_reference=publication_payload["validation_reference"],
+        checksum=publication_payload["package_checksum"],
+        expected_report_id="report-1",
+        ctx=_ctx(),
+    )
+    assert (
+        json.loads(Path(readiness_path).read_text(encoding="utf-8"))["status"] == "pass"
     )
     if repair_soft_copy or reproduce_ias_soft_copy:
         regeneration_audit = json.loads(

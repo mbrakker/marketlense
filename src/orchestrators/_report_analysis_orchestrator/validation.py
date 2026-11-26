@@ -5120,12 +5120,38 @@ def _run_validation_regeneration_loop(
                 **regeneration_kwargs,
             )
         except AppError as exc:
-            if (
-                exc.code != "regeneration_deterministic_projection_failed"
-                or exc.retryable
-                or exc.context.get("projection") != "summary_status_content"
+            provenance_error: Exception | None = exc
+            seen_errors: set[int] = set()
+            while (
+                isinstance(provenance_error, AppError)
+                and provenance_error.code
+                != "soft_copy_claim_provenance_coverage_invalid"
+                and id(provenance_error) not in seen_errors
+            ):
+                seen_errors.add(id(provenance_error))
+                provenance_error = provenance_error.cause
+            is_provenance_failure = (
+                isinstance(provenance_error, AppError)
+                and provenance_error.code
+                == "soft_copy_claim_provenance_coverage_invalid"
+            )
+            is_summary_projection_failure = (
+                exc.code == "regeneration_deterministic_projection_failed"
+                and exc.context.get("projection") == "summary_status_content"
+            )
+            if exc.retryable or not (
+                is_provenance_failure or is_summary_projection_failure
             ):
                 raise
+            diagnostic_hashes: dict[str, str] = {}
+            if is_provenance_failure and isinstance(provenance_error, AppError):
+                for source_key, log_key in (
+                    ("claim_sha256", "claim_sha256"),
+                    ("public_text_sha256", "public_copy_sha256"),
+                ):
+                    value = provenance_error.context.get(source_key)
+                    if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value):
+                        diagnostic_hashes[log_key] = value
             logger.warning(
                 log_event(
                     attempt_ctx,
@@ -5136,10 +5162,15 @@ def _run_validation_regeneration_loop(
                         "file_id": runtime.file.file_id,
                         "attempt_index": attempt_index,
                         "error_code": exc.code,
-                        "projection": "summary_status_content",
+                        "projection": (
+                            "soft_copy_claim_provenance"
+                            if is_provenance_failure
+                            else "summary_status_content"
+                        ),
                         "input_sha256": sha256_json(artifacts_before),
                         "target_count": len(plan.targets),
                         "candidate_persisted": False,
+                        **diagnostic_hashes,
                     },
                 )
             )

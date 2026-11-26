@@ -527,6 +527,10 @@ def resolve_soft_copy_public_text_partition(
                 code="soft_copy_claim_provenance_coverage_invalid",
                 message="Declared claim does not exactly match public text",
                 retryable=False,
+                context={
+                    "claim_sha256": soft_copy_sentence_hash(claim),
+                    "public_text_sha256": soft_copy_sentence_hash(normalized),
+                },
             )
         evidence = binding.get("evidence_ids")
         add_identity(

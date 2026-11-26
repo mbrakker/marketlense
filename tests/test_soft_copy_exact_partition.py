@@ -1,3 +1,5 @@
+import hashlib
+
 import pytest
 
 from src.contracts import soft_copy_claim_provenance as contract
@@ -104,6 +106,23 @@ def test_partial_declaration_cannot_acquire_undeclared_claim_text():
     ]
     with pytest.raises(AppError):
         build(text, bindings)
+
+
+def test_unmatched_declaration_reports_hashes_without_public_or_claim_text():
+    public_text = "Sales rose."
+    declared_claim = "Profits fell."
+    with pytest.raises(AppError) as failure:
+        contract.resolve_soft_copy_public_text_partition(
+            text=public_text, claim_bindings=[{"claim": declared_claim}]
+        )
+
+    assert failure.value.code == "soft_copy_claim_provenance_coverage_invalid"
+    assert failure.value.context == {
+        "claim_sha256": hashlib.sha256(declared_claim.encode()).hexdigest(),
+        "public_text_sha256": hashlib.sha256(public_text.encode()).hexdigest(),
+    }
+    assert public_text not in str(failure.value.context)
+    assert declared_claim not in str(failure.value.context)
 
 
 def test_unmatched_declaration_cannot_silently_lose_evidence():
