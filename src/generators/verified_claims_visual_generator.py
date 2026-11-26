@@ -891,6 +891,15 @@ def _correction_attempt(
         inspected_physical_pages=inspected_physical_pages,
         recovery_candidates=recovery_candidates,
     )
+    page_text = getattr(request, "source_page_text_by_physical_page", {})
+    if isinstance(page_text, Mapping):
+        selected_page_text = {
+            str(page): page_text[page]
+            for page in inspected_physical_pages
+            if isinstance(page_text.get(page), str) and page_text[page].strip()
+        }
+        if selected_page_text:
+            binding["unverified_extracted_page_text"] = selected_page_text
     rendered = dependencies.render_prompt(
         PromptRenderRequest(
             schema_version="1.0",

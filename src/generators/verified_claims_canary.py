@@ -8,7 +8,7 @@ editorial canary; original candidate bindings remain discovery diagnostics.
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence
 
@@ -126,6 +126,7 @@ def build_visual_authority_admitter(
             if isinstance(candidate, Mapping)
         ]
         visual_evidence = deepcopy(dict(evidence_packs))
+        bound_page_text: dict[int, list[str]] = {}
         raw_quarantine = (
             visual_quarantine if isinstance(visual_quarantine, Mapping) else {}
         )
@@ -204,6 +205,13 @@ def build_visual_authority_admitter(
                         ):
                             continue
                         evidence = "\n".join(source_texts)
+                        for ref, source_text in zip(
+                            references, source_texts, strict=True
+                        ):
+                            page = ref["page"]
+                            values = bound_page_text.setdefault(page, [])
+                            if source_text not in values:
+                                values.append(source_text)
                         finding = {**finding, "evidence": evidence}
                         evaluation_candidates.append(
                             {
@@ -242,6 +250,13 @@ def build_visual_authority_admitter(
             dpi=config.dpi,
             recovery_enabled=config.recovery_enabled,
             recovery_limit=config.recovery_limit,
+        )
+        request = replace(
+            request,
+            source_page_text_by_physical_page={
+                **{page: "\n".join(texts) for page, texts in bound_page_text.items()},
+                **request.source_page_text_by_physical_page,
+            },
         )
         evaluation = evaluate_shortlisted_claims(
             request=request,
