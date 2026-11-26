@@ -13,10 +13,7 @@ from src.contracts.openai import OpenAIResponseResult
 from src.contracts.run_context import RunContext
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.generators.validation.grounding import _validate_grounding_check_coverage
-from src.services.schema_validator_service import (
-    provider_output_schema,
-    validate_output_schema,
-)
+from src.services.schema_validator_service import provider_output_schema
 from src.services.structured_output_service import execute_structured_output
 from src.utils.errors import AppError
 from src.utils.structured_output import StructuredOutputFailure
@@ -45,69 +42,6 @@ def _response(payload: dict, *, model: str = "gpt-5-mini") -> OpenAIResponseResu
         model=model,
         request_id="req_fixture",
     )
-
-
-@pytest.mark.parametrize(
-    ("changed_paths", "extra", "expected_path", "expected_validator"),
-    [
-        (["same", "same"], {}, "repair_decision.changed_paths", "uniqueItems"),
-        (
-            ["safe"],
-            {"private_customer_key": "private_customer_value"},
-            "repair_decision",
-            "additionalProperties",
-        ),
-    ],
-)
-def test_terminal_schema_diagnostic_uses_schema_path_without_instance_data(
-    changed_paths, extra, expected_path, expected_validator
-) -> None:
-    payload = {
-        "repair_decision": {
-            "schema_version": "1.0",
-            "repair_action": "replace",
-            "repair_strategy": "current",
-            "evidence_ids_used": [],
-            "changed_paths": changed_paths,
-            "minimal_patch": [
-                {"op": "replace", "path": "safe", "value": "private_value"}
-            ],
-            **extra,
-        }
-    }
-
-    with pytest.raises(StructuredOutputFailure) as exc:
-        execute_structured_output(
-            StructuredOutputExecutionRequest(
-                schema_version="1.0",
-                report_id="r",
-                artifact_family="insights_final",
-                schema_name="regeneration_repair_decision",
-                allow_model_recovery=False,
-                terminal_failure_code="artifact_structured_output_invalid",
-            ),
-            _ctx(),
-            call_model=lambda mode, original_response, schema_errors: _response(
-                payload
-            ),
-            normalize_payload=lambda candidate: candidate,
-            validate_payload=lambda candidate: validate_output_schema(
-                payload=candidate,
-                schema_name="regeneration_repair_decision",
-                root_key="",
-                ctx=_ctx(),
-            ),
-            is_substantive=lambda candidate: bool(candidate),
-            model_pricing={},
-        )
-
-    assert exc.value.code == "artifact_structured_output_invalid"
-    assert exc.value.context["schema_path"] == expected_path
-    assert exc.value.context["schema_validator"] == expected_validator
-    retained = json.dumps(exc.value.context)
-    assert "private_customer_key" not in retained
-    assert "private_customer_value" not in retained
-    assert "private_value" not in retained
 
 
 def test_recovery_feedback_names_unknown_references_and_uncovered_sentences() -> None:

@@ -72,6 +72,11 @@ def test_schema_diagnostics_survive_remediation_without_private_response(
             is_substantive=lambda candidate: bool(candidate),
             model_pricing={},
         )
+    assert caught.value.code == "artifact_structured_output_invalid"
+    assert caught.value.context["schema_path"] == expected_path
+    assert caught.value.context["schema_validator"] == expected_validator
+    assert "private response text" not in json.dumps(caught.value.context)
+    assert "private_customer" not in json.dumps(caught.value.context)
     state_db = str(tmp_path / "state.sqlite")
     record_workflow_failure(
         state_db=state_db,
