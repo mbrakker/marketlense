@@ -1536,6 +1536,56 @@ above the unchanged 1,000-line ownership gate. The remaining 9,325 hosted tests
 passed, with 19 skipped; release evidence failed its test prerequisite. The
 regression is relocated rather than weakening that gate. The live run is on
 the earlier SHA and cannot establish same-SHA acceptance for a later commit.
+
+In the repaired `insight-03` grounding batch, the primary and several recovery
+responses judged a conditional planning-risk interpretation entailed but also
+marked its literal causality/certainty values unknown. The existing protected-
+fact contract therefore rejected the inconsistent response; later recovery
+classified the interpretation as an unsupported causal outcome. The contract
+was not weakened. An initial schema-constrained formulation preserved the
+literal conditional values but left their evidence values null, so the existing
+contract still returned unresolved ($0.006636). A revised bounded diagnostic
+preserved the literal values and supplied the factual basis for the model's
+compatible interpretation; a deliberately fabricated realized 30% causal
+outcome remained unsupported. The positive response passed the JSON schema and
+the existing claim contract returned supported; the negative response retained
+the unsupported causal-outcome verdict. These two calls cost $0.006836 in total.
+That formulation was not adopted: independent review found that presenting a
+general factual basis as the evidence value of a causal dimension could
+misrepresent what the source establishes. The production prompt and protected-
+fact contract remain unchanged, and the disagreement remains unresolved.
+Earlier unconstrained diagnostics produced malformed schema responses ($0.008851);
+another constrained formulation that omitted literal values ($0.007518) was
+not adopted. A separate pair-repair prompt trial produced nonconforming
+envelopes and was not adopted ($0.004416). These are component diagnostics, not
+proof of stable full-pipeline performance or of the remaining editorial-review
+outcomes.
+
+An additional attempt to run that pair-repair experiment with the existing
+repair-decision schema as a strict provider schema was rejected by the provider
+because `uniqueItems` is unsupported in that mode. This diagnostic did not
+change the production schema or its existing output mode. The discarded
+grounding clarification would have added 149 fixture tokens and an estimated
+$0.000015 in corpus cost; it is not part of the production prompt.
+
+The review also flagged an unchanged expert comment's missing retail exclusion
+and an unchanged generic implication only after regeneration, although both
+were present in the initial review request and the canonical facts were
+unchanged. Both complete requests were approximately 133k input tokens; exact
+repeated evidence is present, but the cause of the model's inconsistent coverage
+has not been established. Do not drop or merge evidence merely to reduce length.
+
+Two further bounded replays used the exact initial full-review inputs: both
+flagged the unchanged generic insight; one flagged the expert comment's missing
+retail exclusion, while the other passed it. The former failed the existing
+item-status contract and would require recovery; the latter passed the
+validator. The two calls used 133,468 input tokens each and cost $0.039788 in
+total. Physical PDF page 113 confirms the forecast excludes travel and event
+tickets. Two reduced-item diagnostic calls, retaining the expert item's evidence
+and the original report scope, both flagged that exclusion (51,097 input tokens
+each; $0.011821 total). They did not review the full item batch and do not
+establish a safe production batching or aggregation contract. Review instability
+remains open; none of these diagnostics promoted an artifact.
 Independent inspection of all physical pages cited by an earlier run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed
