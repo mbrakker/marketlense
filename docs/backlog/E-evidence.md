@@ -1180,6 +1180,11 @@ by the official image sizing documentation; no transport change was assumed.
 A separate temporary images-before-text trial corrected one wrong-claim run but
 still verified a reversed mapping in the other; the correct control passed.
 Its measured cost was $0.033538. That transport experiment was also reverted.
+Independent inspection of all physical pages cited by this run's seven
+verified facts found the other six facts' reported values and attached source
+qualifiers consistent with the pages; the page-6 reversal remains one confirmed
+incorrect admitted fact. This is not a complete review of every downstream
+assertion, and no final HTML was produced.
 
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
