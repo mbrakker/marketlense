@@ -1466,6 +1466,50 @@ retain the full challenge response or earlier assessment after a subsequent
 coverage review replaces the family output. Provider-side retrieval is not a
 durable access-controlled audit guarantee. Full reconstruction of that history
 remains open and must not be claimed from these hashes alone.
+
+**Activate provider-backed E2E at `b8231d66` — FAIL.** The isolated original-PDF
+run is `C:/v44/fr-9cfaqnww/`; its source SHA-256 was
+`5f960886c6d6ee8cf355b4d469a6c1bc12080cd85351b4cb457c8565ae9dd4f2`.
+All eight visual candidates were admitted, but first-pass validation failed and
+the repair candidate was rolled back after independent review found four
+remaining generic or repetitive `so_what` leaves. No HTML was accepted and no
+WordPress write occurred. The cohort ledger records zero unsupported and zero
+unresolved retained factual claims; this is an automated diagnostic, not an
+independent factual audit. The run used 524 provider calls, eight structured
+output repair calls, $0.537331 estimated cost, and 3,484.203 seconds. The
+unrelated ZIP was restored with its original SHA-256. Hosted CI on the run SHA
+passed tests, mutation partitions and release evidence; the concurrent local
+full suite had two vector-wiring failures among 9,322 passes, while that file
+passed both standalone and standalone with coverage (15 tests each). Their
+full-suite interaction remains unproven.
+
+The failed repair audit reports `changed_path_outside_allowed_paths` for four
+proposals. Retained provider messages show validator-style paths rather than
+the canonical writable paths. In the examined request, compaction removed the
+repair context and task instructions: the model did not receive the allowed
+path. The item-specific prompt also contained a duplicate whole-roster
+`current_section` of 145,099 characters within its grounding package, while
+the exact item and the complete relevant verified fact were supplied separately.
+This identifies a source of context pressure, not proof that removing it alone
+will produce a valid repair. The new coverage challenger did not execute in
+this run. Activate and same-SHA Capgemini acceptance remain open.
+
+Independent visual inspection of physical PDF page 129 confirms that the
+podcast chart identifies reported factors respondents said would lead to
+listening or increased consumption, with both sample sizes shown. It does not
+state that those responses were not intentions or plans. The initial grounding
+objection to that added characterization was justified; the repair candidate's
+factual grounding no longer contained that error. This inspection does not
+independently verify the rest of the report.
+
+The targeted correction removes only the redundant whole-section snapshot from
+item-level insight-repair grounding; the separately supplied target insight and
+all selected evidence, IDs, windows and qualifiers remain. A provider-boundary
+regression with a 150,000-character sibling shows the repair context, exact
+allowed path, task and complete linked fact survive compaction. The test failed
+before the correction and passed afterward. Atomic path and evidence checks
+are unchanged. This controlled regression does not prove that arbitrary larger
+inputs fit, nor does it establish live first-repair success.
 Independent inspection of all physical pages cited by an earlier run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed

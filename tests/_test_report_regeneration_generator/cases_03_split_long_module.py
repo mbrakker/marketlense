@@ -502,7 +502,7 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
     variables = prompt_client.render_calls[-1]["variables"]
     assert (
         "A different finding changes another decision."
-        in variables["grounding_package_json"]
+        not in variables["grounding_package_json"]
     )
     assert response.updated_artifacts["insights_final"][1] == sibling
     assert "every editorial theme" not in localized_prompt

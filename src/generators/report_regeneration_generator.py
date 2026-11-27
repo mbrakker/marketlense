@@ -6295,7 +6295,13 @@ def _regenerate_one_final_insight(
             "insights_candidates_json": _dump_json([candidate] if candidate else []),
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
-            "grounding_package_json": _dump_json(execution.grounding_package),
+            "grounding_package_json": _dump_json(
+                {
+                    key: value
+                    for key, value in execution.grounding_package.items()
+                    if key != "current_section"
+                }
+            ),
             "editorial_plan_json": _dump_json(
                 _claim_scoped_editorial_plan(
                     execution.state.editorial_plan, selected_evidence_ids
