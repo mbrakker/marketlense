@@ -785,6 +785,15 @@ def run_report_analysis(
 
     packs.pop("_visual_ambiguity_quarantine", None)
     provisional_evidence = packs.pop("_provisional_findings", None)
+    if visual_authority_canary is not None and not isinstance(
+        provisional_evidence, dict
+    ):
+        raise AppError(
+            code="provisional_evidence_handover_missing",
+            message="Verified analysis requires its provisional evidence handover",
+            retryable=False,
+            context={"report_id": runtime.file.file_id},
+        )
     mode_evidence_paths = pack_paths(
         runtime.settings.output_dir,
         runtime.file.file_id,

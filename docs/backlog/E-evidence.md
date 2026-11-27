@@ -1129,6 +1129,16 @@ the Activate failure and has no acceptance result. Retained artifacts are under
 `ca25e9f0`. The path failure and unstable/incomplete editorial repair review
 remain open; no final HTML or full-report factual review supports acceptance.
 No WordPress write occurred. E18 and Step 2 remain **Active/PARTIAL**.
+Verified orchestration now also fails closed before artifact generation if the
+provisional-evidence handover is absent, instead of falling through to the
+legacy candidate route. This protects the handover but does not resolve the
+recorded editorial-review or Windows output-path failures.
+Independent inspection of Activate physical pages 5, 7, 9, 11, 17, 38, 72,
+84, 98 and 118 found the eight retained fact statements' reported chart values,
+categories and forecast framing consistent with those pages. This is not a
+complete review of every generated assertion or a successful HTML review. The
+page-6 internet-access growth contribution was not among the eight retained
+facts; whether its omission materially reduces report coverage remains open.
 
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live

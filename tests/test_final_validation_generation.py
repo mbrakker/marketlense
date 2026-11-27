@@ -12,6 +12,7 @@ from src.contracts.report_analysis import (
 from src.contracts.validation import ValidationReport
 from src.generators.claim_validation_generator import claim_validation_package_hash
 from src.generators.report_analysis_generator import VectorStoreIndexingState
+from src.generators.verified_claims_canary import VisualAuthorityCanaryConfig
 from src.orchestrators import report_analysis_orchestrator as orchestrator
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _load_promoted_claim_validation_for_reuse,
@@ -234,6 +235,39 @@ def test_no_promotion_commits_and_subsequent_analysis_advances_generation(tmp_pa
     assert newest.packs["artifacts"] == again.artifacts_payload
     assert newest.packs["validation"] == again.validation_report.to_dict()
     assert calls == ["evidence", "evidence"]
+
+
+def test_verified_analysis_rejects_missing_provisional_handover(tmp_path):
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    calls = []
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title"}},
+            "findings": {"findings": []},
+        },
+        generate_artifacts=lambda **kwargs: calls.append("artifacts"),
+    )
+    indexing = VectorStoreIndexingState(
+        vector_store_id="vs_1",
+        openai_file_id="file_1",
+        vector_store_status="completed",
+        indexed_at_utc="2026-01-01T00:00:00Z",
+        last_error=None,
+    )
+    with pytest.raises(AppError) as exc:
+        run_report_analysis(
+            runtime,
+            source,
+            _selection(runtime, source),
+            indexing,
+            deps,
+            visual_authority_canary=VisualAuthorityCanaryConfig(
+                source_identity="report|pdf-sha256:" + "a" * 64
+            ),
+        )
+    assert exc.value.code == "provisional_evidence_handover_missing"
+    assert not calls
 
 
 @pytest.mark.parametrize("existing", [False, True])
