@@ -68,6 +68,9 @@ from src.orchestrators._report_analysis_orchestrator.artifact_batches import (
     _artifact_batch_workers,
     _execute_artifact_step_batch,
 )
+from src.orchestrators._report_analysis_orchestrator.coverage_challenge import (
+    challenge_editorial_coverage,
+)
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_analysis_stage,
 )
@@ -1132,6 +1135,15 @@ def run_report_analysis(
                 )
             )
             artifact_kwargs["provisional_evidence"] = provisional_evidence
+            artifact_kwargs["coverage_gap_challenger"] = lambda request: (
+                challenge_editorial_coverage(
+                    request,
+                    settings=runtime.settings,
+                    openai_client=artifact_openai_client,
+                    report_id=runtime.file.file_id,
+                    report_name=runtime.report_name,
+                )
+            )
         with ArtifactStepTaskScheduler(runtime.settings) as artifact_executor:
             artifact_kwargs["artifact_step_executor"] = artifact_executor
             artifacts_payload = dependencies.generate_artifacts(

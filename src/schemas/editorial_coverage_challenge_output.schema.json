@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdicts"],
+  "properties": {
+    "verdicts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gap_index", "verdict", "explanation", "supporting_insight_id", "supporting_quote"],
+        "properties": {
+          "gap_index": {"type": "integer", "minimum": 0},
+          "verdict": {"type": "string", "enum": ["confirmed", "refuted", "unresolved"]},
+          "explanation": {"type": "string", "minLength": 1},
+          "supporting_insight_id": {"type": "string"},
+          "supporting_quote": {"type": "string"}
+        }
+      }
+    }
+  }
+}

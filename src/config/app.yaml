@@ -118,6 +118,7 @@ openai_models:
   report_vs/artifacts/cover_semantics_repair: "gpt-6-luna"
   report_vs/artifacts/insights_candidates: "gpt-6-luna"
   report_vs/artifacts/insights_final: "gpt-6-luna"
+  report_vs/artifacts/editorial_coverage_challenge: "gpt-6-luna"
   report_vs/artifacts/quotes: "gpt-6-luna"
   report_vs/artifacts/expert_comment: "gpt-6-luna"
   report_vs/artifacts/linkedin_post: "gpt-6-luna"
@@ -346,6 +347,19 @@ llm_execution_policies:
     fallback_policy: same_provider_only
     pricing_key: "gpt-6-luna"
   report_vs/artifacts/editorial_theme_coverage:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: high
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/artifacts/editorial_coverage_challenge:
     schema_version: "1.0"
     provider: openai
     model: "gpt-6-luna"

@@ -5,11 +5,16 @@ import logging
 from collections.abc import Callable, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, wait
 from copy import deepcopy
+from hashlib import sha256
 from threading import Lock
 from time import perf_counter
 from typing import Any, Dict, List, Optional, TypedDict, cast
 
-from src.contracts.artifact_generation import ArtifactRenderTask
+from src.contracts.artifact_generation import (
+    ArtifactRenderTask,
+    EditorialCoverageChallengeRequest,
+    EditorialCoverageChallengeResponse,
+)
 from src.contracts.config import AppSettings
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -68,6 +73,7 @@ from src.generators.artifact_normalization import (
     normalize_editorial_theme_coverage_assessment,
     normalize_expert_domain,
     preserve_public_source_displays,
+    resolve_editorial_coverage_challenge,
     restore_artifact_insight_factual_fields,
     select_artifact_insights,
     soft_copy_context_evidence_anchors,
@@ -1739,6 +1745,11 @@ def generate_artifacts(
     prompt_family_reuse_reader=read_reusable_prompt_family,
     visual_authority_admitter: Optional[
         Callable[[Sequence[Dict[str, Any]]], Any]
+    ] = None,
+    coverage_gap_challenger: Optional[
+        Callable[
+            [EditorialCoverageChallengeRequest], EditorialCoverageChallengeResponse
+        ]
     ] = None,
     provisional_evidence: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
@@ -4187,6 +4198,105 @@ def generate_artifacts(
 
         return validate
 
+    coverage_challenge_audit: Dict[str, Any] = {}
+    coverage_challenge_history: List[Dict[str, Any]] = []
+
+    def challenge_coverage(
+        assessment: Dict[str, Any],
+        *,
+        require_original_obligation_assessment: bool,
+        stage: str,
+    ) -> Dict[str, Any]:
+        nonlocal coverage_challenge_audit
+        if not (
+            coverage_gap_challenger is not None
+            and assessment.get("report_completeness") == "incomplete"
+            and assessment.get("diagnosis") == "material_report_completeness"
+        ):
+            return assessment
+        try:
+            validate_substantive_editorial_theme_coverage(
+                payload=assessment,
+                editorial_plan=editorial_plan,
+                final_insights=insights_final,
+                candidate_insights=insights_candidates,
+                original_essential_obligations=original_essential_obligations,
+                require_original_obligation_assessment=require_original_obligation_assessment,
+            )
+        except AppError as original_error:
+            if (
+                original_error.code != "artifact_final_insight_coverage_invalid"
+                or original_error.context.get("assessment_contract_failure")
+                is not False
+                or not original_error.context.get("material_gaps")
+            ):
+                raise
+            response = coverage_gap_challenger(
+                EditorialCoverageChallengeRequest(
+                    schema_version="1.0",
+                    original_assessment=deepcopy(assessment),
+                    editorial_plan=deepcopy(editorial_plan),
+                    final_insights=deepcopy(insights_final),
+                    candidate_insights=deepcopy(insights_candidates),
+                    verified_facts=deepcopy(relevant_verified_facts),
+                    original_essential_obligations=deepcopy(
+                        original_essential_obligations
+                    ),
+                    require_original_obligation_assessment=require_original_obligation_assessment,
+                    ctx=child_context(
+                        ctx, task_id=f"{ctx.task_id}:{stage}:coverage_challenge"
+                    ),
+                )
+            )
+            if (
+                not isinstance(response, EditorialCoverageChallengeResponse)
+                or response.schema_version != "1.0"
+            ):
+                raise AppError(
+                    code="editorial_coverage_challenge_invalid",
+                    message="Coverage challenge returned an invalid contract",
+                    retryable=False,
+                ) from original_error
+            effective = resolve_editorial_coverage_challenge(
+                original_assessment=assessment,
+                challenge={"verdicts": response.verdicts},
+                editorial_plan=editorial_plan,
+                candidate_insights=insights_candidates,
+                final_insights=insights_final,
+                original_essential_obligations=original_essential_obligations,
+                require_original_obligation_assessment=require_original_obligation_assessment,
+            )
+            entry = {
+                "schema_version": "1.0",
+                "original_assessment_sha256": sha256_json(assessment),
+                "effective_assessment_sha256": sha256_json(effective),
+                "challenge_response_sha256": sha256_json(response.verdicts),
+                "verdicts": [item.get("verdict") for item in response.verdicts],
+                "verdict_details": [
+                    {
+                        "gap_index": item.get("gap_index"),
+                        "verdict": item.get("verdict"),
+                        "supporting_insight_id": item.get("supporting_insight_id"),
+                        "supporting_quote_sha256": sha256(
+                            item.get("supporting_quote", "").encode("utf-8")
+                        ).hexdigest(),
+                        "explanation_sha256": sha256(
+                            item.get("explanation", "").encode("utf-8")
+                        ).hexdigest(),
+                    }
+                    for item in response.verdicts
+                ],
+                "request_id": response.request_id,
+                "prompt_identity": deepcopy(response.prompt_identity),
+            }
+            coverage_challenge_history.append(entry)
+            coverage_challenge_audit = {
+                **entry,
+                "history": deepcopy(coverage_challenge_history),
+            }
+            return effective
+        return assessment
+
     if (
         visual_authority_admitter is not None
         and theme_bindings
@@ -4207,6 +4317,13 @@ def generate_artifacts(
                 require_original_obligation_assessment=bool(
                     semantic_theme_repair.get("replan", {}).get("attempted")
                 ),
+            ),
+        )
+        semantic_theme_coverage_result = challenge_coverage(
+            semantic_theme_coverage_result,
+            stage="initial",
+            require_original_obligation_assessment=bool(
+                semantic_theme_repair.get("replan", {}).get("attempted")
             ),
         )
         try:
@@ -4499,6 +4616,13 @@ def generate_artifacts(
                     ),
                 ),
             )
+            semantic_theme_coverage_result = challenge_coverage(
+                semantic_theme_coverage_result,
+                stage="semantic_repair",
+                require_original_obligation_assessment=bool(
+                    semantic_theme_repair.get("replan", {}).get("attempted")
+                ),
+            )
             try:
                 semantic_theme_coverage = validate_substantive_editorial_theme_coverage(
                     payload=semantic_theme_coverage_result,
@@ -4743,6 +4867,11 @@ def generate_artifacts(
                             require_original_obligation_assessment=True,
                         ),
                     )
+                    semantic_theme_coverage_result = challenge_coverage(
+                        semantic_theme_coverage_result,
+                        stage="semantic_replan",
+                        require_original_obligation_assessment=True,
+                    )
                     try:
                         semantic_theme_coverage = (
                             validate_substantive_editorial_theme_coverage(
@@ -4826,6 +4955,10 @@ def generate_artifacts(
             raise
         if semantic_theme_coverage:
             final_selection_coverage["semantic_assessment"] = semantic_theme_coverage
+        if coverage_challenge_audit:
+            final_selection_coverage["coverage_challenge"] = deepcopy(
+                coverage_challenge_audit
+            )
         if semantic_theme_repair:
             final_selection_coverage["semantic_repair"] = deepcopy(
                 semantic_theme_repair

@@ -13807,6 +13807,95 @@
       ],
       "type": "object"
     },
+    "src.contracts.artifact_generation.EditorialCoverageChallengeRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_insights": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "ctx": {
+          "$ref": "#/$defs/src.contracts.run_context.RunContext"
+        },
+        "editorial_plan": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "final_insights": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "original_assessment": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "original_essential_obligations": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "require_original_obligation_assessment": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "verified_facts": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "original_assessment",
+        "editorial_plan",
+        "final_insights",
+        "candidate_insights",
+        "verified_facts",
+        "original_essential_obligations",
+        "require_original_obligation_assessment",
+        "ctx"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_generation.EditorialCoverageChallengeResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "prompt_identity": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "verdicts": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "verdicts"
+      ],
+      "type": "object"
+    },
     "src.contracts.artifact_lineage.ArtifactInvalidationRequest": {
       "additionalProperties": false,
       "properties": {

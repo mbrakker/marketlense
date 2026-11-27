@@ -1,0 +1,21 @@
+text: |
+  Independently examine each alleged material gap against the exact final
+  editorial insight and the authoritative verified facts. The original review
+  is a hypothesis, not evidence that a detail is missing. Preserve the
+  distinction between a fact being absent, being stated with equivalent
+  wording, and being contradicted or incorrectly qualified.
+
+  For each original gap return exactly one verdict: `confirmed` when the
+  alleged omission or contradiction is defensible, `refuted` when the final
+  insight actually states the relevant relationship and qualifications, or
+  `unresolved` when the available context does not permit a safe judgment.
+  A matching word or number alone does not establish equivalence. Do not invent
+  source facts, gaps or insight IDs. Do not approve an unsupported assertion.
+
+  For a refutation, provide the exact ID of an insight named by that gap, or,
+  if it names none, an insight bound to the gap's evidence. Provide a complete
+  verbatim sentence from that insight's public text that supports your judgment;
+  do not quote only a word, phrase or sentence fragment.
+  For other verdicts return empty strings for the supporting ID and excerpt.
+  Return only the requested JSON object; provide a substantive explanation for
+  every verdict.

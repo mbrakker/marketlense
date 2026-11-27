@@ -1418,6 +1418,54 @@ covered and returned complete; the other incorrectly repeated the video
 omission allegation. Their costs were $0.005028 and $0.002507. Requiring a
 per-fact response alone therefore did not establish reliable semantic review;
 the experimental response shape was not added to production.
+
+A later three-call diagnostic removed repeated fact objects from the retained
+review input while keeping the canonical fact roster and identity mappings.
+It reduced the rendered input from 110,904 to 73,654 characters, but only one
+output passed the existing schema and the judgments differed. The calls cost
+$0.002961, $0.003458 and $0.004233. This does not establish a safe context
+change, so production input was not changed. Three further scoped-challenge
+calls used an adversarial version of the retained video insight in which
+"includes" was replaced with "excludes"; all three identified the
+contradiction rather than accepting the shared phrase. They cost $0.000268,
+$0.000069 and $0.000065. These bounded calls support further design work, not
+an end-to-end factual or editorial acceptance claim.
+
+The production challenge boundary was also exercised with the retained Activate
+review, plan, final insights and canonical fact roster. It refuted the alleged
+missing TV Everywhere qualification and cited the complete sentence already in
+the insight; the existing coverage validator then accepted the resulting
+assessment. This component replay used reviewer-formatted insights in place of
+the original candidate objects, so it is not an ingestion-to-HTML replay or
+proof of complete report quality. The first production call used 30,304 input
+and 238 output tokens and cost an estimated $0.003149. A separate production
+probe replaced the insight's “includes” with “excludes”; the challenger
+confirmed the gap and left the assessment incomplete. That call used 30,319
+input and 491 output tokens, costing an estimated $0.003277. The implementation and
+its repair-path integration remain under verification; Activate and Capgemini
+end-to-end acceptance remains open.
+
+After requiring the cited insight to share the gap's authoritative evidence,
+the same retained-input production replay again refuted the false omission and
+passed the coverage contract. This additional call used 30,319 input and 242
+output tokens, costing an estimated $0.003153. A focused regression separately
+rejects a named insight with unrelated evidence; this is not a full report run.
+
+The prompt-fixture baseline was regenerated with the repository builder after
+the new challenge namespace and its factual context were added. Total fixture
+tokens changed from 126,240 to 127,657 (+1,417); estimated fixture cost changed
+from $0.027302 to $0.027723 (+$0.000421). Publishing accounts for +1,283
+tokens and +$0.000408, and the previously changed visual-claim-verification
+prompt accounts for +134 tokens and +$0.000013. Regression thresholds and
+fixtures were not relaxed; the unchanged comparator passes against the new
+measured baseline. These fixture estimates are not per-report runtime cost.
+
+The challenge audit records producing prompt and execution identities, provider
+request IDs, verdict labels, supporting insight IDs and hashes. It does not
+retain the full challenge response or earlier assessment after a subsequent
+coverage review replaces the family output. Provider-side retrieval is not a
+durable access-controlled audit guarantee. Full reconstruction of that history
+remains open and must not be claimed from these hashes alone.
 Independent inspection of all physical pages cited by an earlier run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed

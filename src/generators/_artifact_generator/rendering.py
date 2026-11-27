@@ -47,6 +47,7 @@ _ARTIFACT_RESPONSE_ROOTS = {
     "report_vs/artifacts/linkedin_post": "linkedin_post",
     "report_vs/artifacts/cover_semantics": "cover_semantics",
     "report_vs/artifacts/editorial_theme_coverage": "theme_coverage",
+    "report_vs/artifacts/editorial_coverage_challenge": "verdicts",
     "report_vs/artifacts/regenerate/summary": "summary",
     "report_vs/artifacts/regenerate/insights_candidates": "insights_candidates",
     "report_vs/artifacts/regenerate/insights_final": "insights_final",

@@ -1,0 +1,17 @@
+text: |
+  Original independent coverage assessment, with material gaps in order:
+  {{ original_assessment_json }}
+
+  Final editorial insights:
+  {{ final_insights_json }}
+
+  Authoritative canonical verified facts:
+  {{ verified_facts_json }}
+
+  Editorial plan and original essential obligations:
+  {{ editorial_plan_json }}
+  {{ original_essential_obligations_json }}
+
+  Return `verdicts`, one object for each material gap, using its zero-based
+  `gap_index` and the fields `verdict`, `explanation`,
+  `supporting_insight_id`, and `supporting_quote`.

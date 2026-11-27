@@ -4,7 +4,7 @@ import re
 import unicodedata
 from copy import deepcopy
 from dataclasses import replace
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, NoReturn, Optional, Sequence
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
@@ -3489,6 +3489,133 @@ def validate_substantive_editorial_theme_coverage(
         "material_gaps": deepcopy(material_gaps),
         "original_essential_obligation_assessments": original_obligation_assessments,
     }
+
+
+def resolve_editorial_coverage_challenge(
+    *,
+    original_assessment: Dict[str, Any],
+    challenge: Dict[str, Any],
+    editorial_plan: Dict[str, Any],
+    candidate_insights: List[Dict[str, Any]],
+    final_insights: List[Dict[str, Any]],
+    original_essential_obligations: Sequence[Dict[str, Any]] | None = None,
+    require_original_obligation_assessment: bool = False,
+) -> Dict[str, Any]:
+    """Resolve a fully refuted material-gap review through the existing gate.
+
+    The challenger owns the semantic verdict. Exact insight/quote bindings are
+    checked mechanically; they do not establish factual or editorial truth.
+    Confirmed or uncertain findings retain the complete original assessment.
+    """
+
+    def invalid() -> NoReturn:
+        raise AppError(
+            code="editorial_coverage_challenge_invalid",
+            message="Coverage challenge is incomplete or has unbound support",
+            retryable=False,
+        )
+
+    if (
+        not isinstance(original_assessment, dict)
+        or original_assessment.get("report_completeness") != "incomplete"
+        or original_assessment.get("diagnosis") != "material_report_completeness"
+    ):
+        invalid()
+    try:
+        validate_substantive_editorial_theme_coverage(
+            payload=original_assessment,
+            editorial_plan=editorial_plan,
+            final_insights=final_insights,
+            candidate_insights=candidate_insights,
+            original_essential_obligations=original_essential_obligations,
+            require_original_obligation_assessment=require_original_obligation_assessment,
+        )
+    except AppError as error:
+        if (
+            error.code != "artifact_final_insight_coverage_invalid"
+            or error.context.get("assessment_contract_failure") is not False
+        ):
+            raise
+    else:
+        invalid()
+
+    gaps = original_assessment.get("material_gaps")
+    verdicts = challenge.get("verdicts") if isinstance(challenge, dict) else None
+    if not isinstance(gaps, list) or not gaps or not isinstance(verdicts, list):
+        invalid()
+    if len(verdicts) != len(gaps):
+        invalid()
+    insights_by_id = {
+        _s(item.get("id")).strip(): item
+        for item in final_insights
+        if isinstance(item, dict) and _s(item.get("id")).strip()
+    }
+    seen: set[int] = set()
+    all_refuted = True
+    for verdict in verdicts:
+        if not isinstance(verdict, dict):
+            invalid()
+        index = verdict.get("gap_index")
+        status = verdict.get("verdict")
+        explanation = verdict.get("explanation")
+        if (
+            type(index) is not int
+            or index < 0
+            or index >= len(gaps)
+            or index in seen
+            or status not in {"confirmed", "refuted", "unresolved"}
+            or not isinstance(explanation, str)
+            or not explanation.strip()
+        ):
+            invalid()
+        seen.add(index)
+        if status != "refuted":
+            all_refuted = False
+            continue
+        gap = gaps[index]
+        insight_id = verdict.get("supporting_insight_id")
+        quote = verdict.get("supporting_quote")
+        if (
+            not isinstance(gap, dict)
+            or not isinstance(insight_id, str)
+            or insight_id not in insights_by_id
+            or (
+                bool(gap.get("final_insight_ids"))
+                and insight_id not in gap["final_insight_ids"]
+            )
+            or (
+                not set(gap.get("evidence_ids", [])).intersection(
+                    _ordered_item_evidence_ids(insights_by_id[insight_id])
+                )
+            )
+            or not isinstance(quote, str)
+            or not quote.strip()
+            or not any(
+                quote in soft_copy_material_sentences(value)
+                for key in ("text", "so_what", "now_what")
+                if isinstance((value := insights_by_id[insight_id].get(key)), str)
+            )
+        ):
+            invalid()
+    if not all_refuted:
+        return deepcopy(original_assessment)
+
+    effective = deepcopy(original_assessment)
+    effective.update(
+        report_completeness="complete",
+        diagnosis="planned_theme_execution",
+        recovery_action="none",
+        material_gaps=[],
+    )
+    validate_substantive_editorial_theme_coverage(
+        payload=effective,
+        editorial_plan=editorial_plan,
+        final_insights=final_insights,
+        candidate_insights=candidate_insights,
+        original_essential_obligations=original_essential_obligations,
+        require_original_obligation_assessment=require_original_obligation_assessment,
+    )
+    return effective
 
 
 def validate_final_insight_editorial_coverage(
