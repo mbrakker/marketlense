@@ -1110,6 +1110,26 @@ regression corpus: its total is 124,106 versus 120,430 tokens and estimated
 $0.026784 versus $0.025696. This fixture corpus counts both legacy and verified
 variants; it is not a measurement of calls or cost for an individual report.
 
+On `ca25e9f0`, the focused provider-backed Activate page-6 probe retained the
+correct $128B/5.7% internet-access forecast contribution and corrected a
+deliberately swapped advertising claim to $108B/4.7%, with independent visual
+verification. This is not a report-wide recall or quality result. The fresh
+Activate run retained eight verified facts and reached editorial review, but
+the initial output and all three repair candidates failed that review. The
+initial nine issues included thin business implications and a missing forecast
+period; seven implication/action fields newly flagged after the first repair
+were unchanged from the initial output. The run then failed closed with
+`analysis_generation_path_too_long` on Windows: the isolated cohort's deep
+output root exceeded the existing atomic-generation path budget. The ledger
+records $0.595265 estimated cost, 3,445,219 input tokens, 552,782 output tokens
+and eight tool calls for that interrupted member. Capgemini was stopped after
+the Activate failure and has no acceptance result. Retained artifacts are under
+`C:/vd868c/hybrid-live-ca25e9f0/frozen-reliability-bjs8o8my/`. Hosted CI run
+`45964576351` passed tests, both mutation partitions and release evidence for
+`ca25e9f0`. The path failure and unstable/incomplete editorial repair review
+remain open; no final HTML or full-report factual review supports acceptance.
+No WordPress write occurred. E18 and Step 2 remain **Active/PARTIAL**.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the
