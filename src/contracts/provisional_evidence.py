@@ -12,6 +12,9 @@ class ProvisionalFinding:
     source_references: list[dict[str, Any]] = field(
         metadata={"doc": "Physical-page source identities and text hashes."}
     )
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Finding handoff schema version."}
+    )
 
 
 @dataclass(frozen=True)

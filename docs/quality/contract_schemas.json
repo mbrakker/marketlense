@@ -32473,6 +32473,9 @@
           "additionalProperties": {},
           "type": "object"
         },
+        "schema_version": {
+          "type": "string"
+        },
         "source_references": {
           "items": {
             "additionalProperties": {},
