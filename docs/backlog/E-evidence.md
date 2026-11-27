@@ -1144,6 +1144,42 @@ names reduce path depth while leaving report IDs, historical locations and
 atomic-generation safeguards unchanged. A native Windows regression exercises
 a real generation commit; an excessively long operator-supplied root can still
 exceed the budget, so use a short root for live runs.
+The subsequent Activate run on `88036789` used that layout and reached a
+committed generation without the previous path error. It admitted 7 of 7
+visually assessed candidates, but independent inspection found a material
+false verification: on physical page 6, correction and verification reversed
+the color-bound internet-access and paid-content values. The source shows
+internet access $128B at 5.7% CAGR and paid content $66B at 2.3%; the admitted
+fact states the reverse. Both calls received the full rendered page; their
+prompts explicitly require tracing color to label and value. The cause of the
+model's incorrect interpretation has not yet been established. The incorrect
+fact is present in the isolated run's committed generation; publication
+readiness failed for separate editorial reasons. This is a factual-integrity
+blocker, not a passed visual-authority result. The run also
+failed readiness after a repair: the initial
+review reported 15 editorial failures, while its first candidate had three
+newly reported factual/timeframe failures. The run cost $0.486321 over
+3,350.618 seconds, with 498 provider calls and seven file-search calls; no
+WordPress write occurred. The two newly flagged distribution claims were
+unchanged, with identical claim hashes, verified facts, evidence IDs and source
+bindings in the original and candidate. Their LLM editorial-review findings
+were not carried forward because the existing feedback handover accepted only
+grounding-rule findings. That handover now also routes factual semantic-review
+findings through the same exact-identity and provenance checks. A provider-free
+replay of the retained input produces two targeted LinkedIn claim paths rather
+than dropping both findings; this does not prove successful model repair or
+end-to-end acceptance. Capgemini and a live retest remain outstanding.
+An isolated three-page replay reproduced the false verification; the same
+pages with the correct mapping were accepted. A temporary source-first prompt
+trial corrected two of three wrong-claim runs, but still verified one reversed
+mapping; a correct-claim control passed. The trial cost $0.051612 in total and
+was reverted because it did not meet factual-integrity acceptance. This points
+to possible claim anchoring but does not prove its cause or establish model
+reliability. The exact model's automatic image-detail behavior was not resolved
+by the official image sizing documentation; no transport change was assumed.
+A separate temporary images-before-text trial corrected one wrong-claim run but
+still verified a reversed mapping in the other; the correct control passed.
+Its measured cost was $0.033538. That transport experiment was also reverted.
 
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live

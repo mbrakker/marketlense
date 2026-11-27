@@ -122,6 +122,69 @@ def test_distinct_findings_share_repair_target_without_losing_reasoning():
     }
 
 
+def test_unchanged_factual_editorial_finding_reaches_repair_plan():
+    artifacts = _case()
+    claim = next(
+        item
+        for item in artifacts["soft_copy_claim_provenance"]["claims"]
+        if item["claim_id"] == "soft_copy:summary:one"
+    )
+    claim["classification"] = "factual"
+    issue = replace(
+        _issue("summary"),
+        rule_id="public_editorial_quality.semantic_timeframe",
+        violation_type="semantic_review_unresolved",
+        classification="factual_claim",
+        repair_target="summary",
+        message="The forecast period is missing.",
+    )
+    issues = _unchanged_candidate_claim_issues(artifacts, deepcopy(artifacts), [issue])
+    plan = _build_regeneration_plan(
+        issues=issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+        verified_mode=True,
+    )
+    assert {path for target in plan.targets for path in target.allowed_paths} == {
+        "summary.tldr[claim_index=0]",
+        "summary.executive_summary[claim_index=0]",
+    }
+    assert all(item.rule_id == issue.rule_id for item in issues)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["text", "binding", "source_span", "fact", "interpretation"]
+)
+def test_editorial_factual_feedback_never_crosses_changed_or_nonfactual_claim(mutation):
+    artifacts = _case()
+    claim = next(
+        item
+        for item in artifacts["soft_copy_claim_provenance"]["claims"]
+        if item["claim_id"] == "soft_copy:summary:one"
+    )
+    claim["classification"] = "factual"
+    candidate = deepcopy(artifacts)
+    issue = replace(
+        _issue("summary"),
+        rule_id="public_editorial_quality.semantic_timeframe",
+        violation_type="semantic_review_unresolved",
+        classification="factual_claim",
+    )
+    if mutation == "text":
+        candidate["summary"]["tldr"] = "Changed claim."
+    elif mutation == "binding":
+        candidate["soft_copy_claim_provenance"]["claims"][0]["evidence_ids"] = ["f2"]
+    elif mutation == "source_span":
+        candidate["soft_copy_claim_provenance"]["claims"][0]["source_spans"] = [
+            {"evidence_id": "f1", "page": 99}
+        ]
+    elif mutation == "fact":
+        candidate["verified_facts"][0]["text"] = "Changed fact"
+    else:
+        issue = replace(issue, classification="analyst_interpretation")
+    assert _unchanged_candidate_claim_issues(artifacts, candidate, [issue]) == []
+
+
 def test_missing_verified_facts_do_not_authorize_feedback():
     artifacts = _case()
     del artifacts["verified_facts"]

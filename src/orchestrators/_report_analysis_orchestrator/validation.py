@@ -2453,8 +2453,12 @@ def _unchanged_candidate_claim_issues(
             if section in {"tldr", "executive_summary", "card_tldr_compact"}
             else section.split(".", 1)[0]
         )
+        editorial_factual_issue = (
+            str(issue.rule_id or "").startswith("public_editorial_quality.semantic_")
+            and normalize_claim_classification(issue.classification) == "factual_claim"
+        )
         if (
-            issue.rule_id != "grounding"
+            (issue.rule_id != "grounding" and not editorial_factual_issue)
             or str(issue.severity).lower() != "error"
             or not entity.startswith("soft_copy:")
             or family not in {"summary", "expert_comment", "linkedin_post"}
@@ -2468,6 +2472,10 @@ def _unchanged_candidate_claim_issues(
         if (
             a.artifact_family != family
             or b.artifact_family != family
+            or (
+                editorial_factual_issue
+                and normalize_claim_classification(a.classification) != "factual_claim"
+            )
             or a.text_hash != b.text_hash
             or a.classification != b.classification
             or a.evidence_ids != b.evidence_ids
