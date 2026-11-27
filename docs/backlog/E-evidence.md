@@ -1139,6 +1139,11 @@ categories and forecast framing consistent with those pages. This is not a
 complete review of every generated assertion or a successful HTML review. The
 page-6 internet-access growth contribution was not among the eight retained
 facts; whether its omission materially reduces report coverage remains open.
+For new Windows benchmark runs, compact temporary cohort and canary directory
+names reduce path depth while leaving report IDs, historical locations and
+atomic-generation safeguards unchanged. A native Windows regression exercises
+a real generation commit; an excessively long operator-supplied root can still
+exceed the budget, so use a short root for live runs.
 
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live

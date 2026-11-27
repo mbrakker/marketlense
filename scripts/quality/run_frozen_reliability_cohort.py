@@ -155,7 +155,12 @@ def run_frozen_reliability_cohort(
     if publish_to_wordpress_staging:
         _require_exact_staging_members(members, selected_members)
     runs_root.mkdir(parents=True, exist_ok=True)
-    root = Path(tempfile.mkdtemp(prefix="frozen-reliability-", dir=runs_root))
+    root = Path(
+        tempfile.mkdtemp(
+            prefix="fr-" if sys.platform == "win32" else "frozen-reliability-",
+            dir=runs_root,
+        )
+    )
     root.joinpath("frozen_cohort.json").write_bytes(manifest_bytes)
     selected_ids = [
         f"cohort-{str(member['content_md5']).lower()[:20]}"
@@ -221,9 +226,12 @@ def run_frozen_reliability_cohort(
 
     results: list[dict[str, Any]] = []
     executions: list[dict[str, Any]] = []
-    for report_id, member in zip(selected_ids, selected_members, strict=True):
+    for index, (report_id, member) in enumerate(
+        zip(selected_ids, selected_members, strict=True)
+    ):
+        member_dir = f"r{index}" if sys.platform == "win32" else report_id
         execution = run_cohort_once(
-            runs_root=root / "members" / report_id,
+            runs_root=root / "members" / member_dir,
             sources=[member],
             max_duration_seconds=max_duration_seconds,
             **(

@@ -2,12 +2,82 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
+import tempfile
 from pathlib import Path
 
 import pytest
 
-from scripts.quality.ias_live_canary_runner import summarize_frozen_cohort_results
+from scripts.quality.ias_live_canary_runner import (
+    prepare_isolated_canary_run,
+    summarize_frozen_cohort_results,
+)
 from scripts.quality.run_frozen_reliability_cohort import run_frozen_reliability_cohort
+from src.contracts.report_analysis import AnalysisGenerationCommitRequest
+from src.contracts.run_context import RunContext
+from src.services import report_analysis_store_service
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows atomic path budget")
+def test_windows_cohort_root_fits_real_atomic_generation(tmp_path: Path) -> None:
+    members = []
+    for index in range(5):
+        source = tmp_path / f"report-{index}.pdf"
+        content = f"source-{index}".encode()
+        source.write_bytes(content)
+        members.append(
+            {
+                "source_path": str(source),
+                "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+                "source_domain": "example.test",
+                "report_name": "a" * 44,
+                "landing_page_url": "https://example.test/report",
+                "source_page_url": "https://example.test/report",
+                "publisher_name": "Example",
+                "downloaded_at_utc": "2026-01-01T00:00:00Z",
+            }
+        )
+    manifest = tmp_path / "cohort.json"
+    manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
+    report_id = f"cohort-{members[0]['content_md5'][:20]}"
+
+    def run_once(**kwargs):
+        run = prepare_isolated_canary_run(runs_root=kwargs["runs_root"])
+        ctx = RunContext(
+            schema_version="1.0", run_id="run", task_id="test", span_id="test"
+        )
+        report_analysis_store_service.commit_generation(
+            AnalysisGenerationCommitRequest(
+                schema_version="1.0",
+                output_dir=str(run.root / "output"),
+                report_id=report_id,
+                report_slug=members[0]["report_name"],
+                packs={"first": {"value": 1}},
+            ),
+            ctx,
+        )
+        return {
+            "git_sha": "a" * 40,
+            "run_directory": str(run.root),
+            "reports": [{"report_id": report_id}],
+            "cohort_metrics": {},
+        }
+
+    try:
+        shallow_root = tempfile.TemporaryDirectory(
+            prefix="mlt-", dir=Path(tmp_path.anchor)
+        )
+    except PermissionError:
+        pytest.skip("A writable shallow Windows test root is unavailable")
+    with shallow_root as root:
+        result = run_frozen_reliability_cohort(
+            sources_manifest=manifest,
+            sources_root=tmp_path,
+            runs_root=Path(root),
+            report_ids=(report_id,),
+            run_cohort_once=run_once,
+        )
+        assert result["reports"][0]["report_id"] == report_id
 
 
 def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(

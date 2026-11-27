@@ -9,6 +9,7 @@ import logging
 import math
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import time
 from collections.abc import Mapping
@@ -331,7 +332,10 @@ def prepare_isolated_canary_run(
     root_parent = runs_root.resolve()
     root_parent.mkdir(parents=True, exist_ok=True)
     root = Path(
-        tempfile.mkdtemp(prefix="ias-first-attempt-", dir=root_parent)
+        tempfile.mkdtemp(
+            prefix="ia-" if sys.platform == "win32" else "ias-first-attempt-",
+            dir=root_parent,
+        )
     ).resolve()
     config_path = root / "config" / "app.yaml"
     paths = {
