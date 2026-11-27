@@ -1356,7 +1356,7 @@ or a complete report now succeeds. A fresh end-to-end rerun remains required.
 
 The fresh Activate run at `6dfb3f71` (`C:/v43/fr-pxafzp8a/`) failed after
 3,217.875 seconds, 450 provider calls, eight file-search calls and $0.253167
-estimated cost. Its initial semantic coverage review identified a missing
+estimated cost. Its initial semantic coverage review alleged a missing
 video-revenue category qualification; the targeted rewrite addressed that
 insight, but the subsequent independent review identified an additional SVOD
 context omission and the bounded repair failed closed with
@@ -1370,9 +1370,10 @@ Two fresh diagnostic calls reused the exact retained first-review user input
 and original system prompt, not a full production report replay. One produced
 a schema-valid review identifying both the SVOD and video gaps; the other
 identified both and an additional sample-size omission but was schema-invalid.
-Thus the original single-gap assessment was incomplete relative to at least
-one subsequent valid assessment, but neither observation proves that every
-nominated detail is materially necessary. A trial instruction requesting all
+The assessments differed, and neither observation proves that every
+nominated detail is materially necessary. Subsequent inspection of the exact
+first-review input also found that its video omission allegation was false, as
+corrected below. A trial instruction requesting all
 gaps instead produced a schema-invalid complete verdict and was reverted.
 These controls do not justify weakening the gate, automatically merging
 verdicts or claiming a reliable repair fix. The trial cost $0.004870; the two
@@ -1380,6 +1381,43 @@ original-prompt controls cost $0.003796 and $0.005482. See the isolated diagnost
 ledgers `C:/vcoverage2/` and `C:/vcoverage3/` for measured usage. Activate
 and Capgemini acceptance on the same final implementation remains outstanding;
 E18 remains Active/PARTIAL.
+
+**Correction to the first-review diagnosis:** The retained first-review
+provider input shows that the video insight already stated that ad-supported
+video includes digital TV Everywhere and that paid downloads were updated to
+include rentals. The initial reviewer incorrectly alleged the former was
+missing; this was a false-positive review, not a missing text handoff. The
+later SVOD insight does not contain the separate $14.80 figure, although
+whether its omission is material remains an editorial judgment. Three
+independent scoped diagnostic calls using the retained review input, its
+canonical fact and the alleged video gap all refuted that gap; three using
+the retained second-review input and the SVOD gap all confirmed the figures
+were absent. Together these six calls cost $0.001041. They establish a useful
+diagnostic distinction, not a production-safe adjudication policy or proof of
+first-pass reliability.
+
+A subsequent two-call diagnostic used the same retained first-review input
+with an experimental instruction to consider each canonical fact separately
+and return only the obligation-assessment schema fields. Both outputs were
+schema-valid, but one declared the report complete and the other nominated
+only a gaming sample-size omission; neither nominated the SVOD omission
+raised by an earlier review. The calls cost $0.004711 and $0.002560
+(30,254 input tokens each; 3,371 and 4,514 output tokens respectively).
+Materiality remains a semantic judgment, but these results do not establish
+improved review completeness. The experimental instruction was not added to
+production. A controlled two-scoped-rewrite prototype passed six local
+scenarios but duplicated recovery orchestration inside the generator and would
+not prove first-repair success; it was removed rather than shipped against the
+repository's orchestration ownership rule. The source-reading input remains
+without an approved durable, access-controlled replay artifact. No live report
+was rerun as a result of either experiment.
+
+A second two-call diagnostic required an explicit assessment for every
+verified fact. One correctly treated the existing video qualification as
+covered and returned complete; the other incorrectly repeated the video
+omission allegation. Their costs were $0.005028 and $0.002507. Requiring a
+per-fact response alone therefore did not establish reliable semantic review;
+the experimental response shape was not added to production.
 Independent inspection of all physical pages cited by an earlier run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed
