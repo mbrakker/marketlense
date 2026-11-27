@@ -1180,6 +1180,30 @@ by the official image sizing documentation; no transport change was assumed.
 A separate temporary images-before-text trial corrected one wrong-claim run but
 still verified a reversed mapping in the other; the correct control passed.
 Its measured cost was $0.033538. That transport experiment was also reverted.
+On 2026-11-27, after authorization to evaluate additional LLM assessment, a
+bounded exploratory call used the existing image service and the retained
+full-page Activate renders, but withheld both the original and corrected
+claims from the model's source reading. Three independent single-page and
+three independent three-page readings all reported the correct page-6
+category/value/CAGR mapping; two later source readings used in comparison
+experiments also did so. Given those readings and the same original pages,
+the existing verification prompt rejected the retained reversed claim twice.
+One initial corrected control was rightly rejected because its manually
+reordered wording still attached the Internet-access footnote to paid
+content; after correcting that qualifier, one verification accepted it. This
+is a direct service-level diagnostic, not a production admission or E2E
+result, and neither repeatability nor broader report coverage is established.
+Across the diagnostic, 13 provider calls cost an estimated $0.044253, with
+271,577 input, 34,190 output and 22,008 reasoning tokens and 242.074 seconds
+of summed provider latency; the first call's response could not be printed due
+to the local console encoding, but its usage is included. No publication or
+production artifact mutation occurred. The experiment suggests that a
+claim-blind, page-bound source reading followed by independent comparison is
+worth implementing and testing, but it does not establish a guarantee against
+model error or authorize unreviewed promotion. Any implementation must bind
+the new assessment to source/page and cache identity, fail closed on material
+disagreement or malformed output, preserve legitimate source-supported
+claims, and prevent older results from bypassing the new requirement.
 Independent inspection of all physical pages cited by this run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed
