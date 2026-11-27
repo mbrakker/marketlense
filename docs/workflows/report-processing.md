@@ -84,6 +84,14 @@ service, including the crop-refinement cache; a directory that still cannot fit
 fails with `analysis_pack_path_too_long` instead of a later generic write
 failure.
 
+Immutable analysis-generation files retain the same report directory, full-hash
+layout, manifest, and shared writer lock. On Windows, their destinations and
+atomic-write temporary paths must also fit the Windows safety budget; an
+oversized generation fails before its manifest is changed. On POSIX, generation
+writes use the native filesystem limits and the same atomic replacement
+protocol. A POSIX generation whose paths exceed Windows limits is not portable
+to Windows without relocating the output root; its format is unchanged.
+
 PDF cache paths use the same safety budget for both the final destination and
 the unique atomic-write temporary file. Deep isolated runs compact the cache
 directory and key filename together, so neither `os.replace` target exceeds

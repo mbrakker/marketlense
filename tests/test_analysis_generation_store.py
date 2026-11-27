@@ -1,3 +1,4 @@
+import errno
 import hashlib
 import json
 import subprocess
@@ -12,7 +13,7 @@ from src.contracts.report_analysis import (
     AnalysisGenerationCommitRequest,
     AnalysisGenerationReadRequest,
 )
-from src.services import report_analysis_store_service
+from src.services import file_service, report_analysis_store_service
 from src.utils.errors import AppError
 from tests._test_report_analysis_generator._shared import _runtime
 
@@ -139,6 +140,7 @@ def test_historical_v12_generation_remains_readable_without_migration(tmp_path):
     assert manifest_path.read_text(encoding="utf-8") == manifest
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows path safety budget")
 def test_long_generation_path_fails_before_manifest_commit(tmp_path):
     # Keep the ordinary pack path short enough while the generation path is long.
     output = tmp_path / ("x" * max(1, 150 - len(str(tmp_path.resolve())) - 1))
@@ -157,6 +159,65 @@ def test_long_generation_path_fails_before_manifest_commit(tmp_path):
     assert not (
         output / "report" / "report_analysis" / ".generation-manifest.json"
     ).exists()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX filesystem path behavior")
+def test_posix_long_generation_uses_original_address_and_remains_readable(tmp_path):
+    output = tmp_path / ("x" * max(1, 150 - len(str(tmp_path.resolve())) - 1))
+    ctx = _runtime(tmp_path).ctx
+    args = {
+        "schema_version": "1.0",
+        "output_dir": str(output),
+        "report_id": "report",
+        "report_slug": "report",
+    }
+    first = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(**args, packs={"first": {"value": 1}}), ctx
+    )
+    pack_path = Path(first.pack_paths["first"])
+    assert file_service.atomic_write_temp_path_length(pack_path) > 240
+    directory = output / "report" / "report_analysis"
+    manifest = json.loads((directory / ".generation-manifest.json").read_text())
+    assert manifest["generation"] == first.generation
+    assert json.loads(
+        (directory / ".generations" / (first.generation + ".json")).read_text()
+    )["packs"]["first"] == {"value": 1}
+    assert json.loads(pack_path.read_text()) == {"value": 1}
+    second = report_analysis_store_service.commit_generation(
+        AnalysisGenerationCommitRequest(
+            **args, expected_generation=first.generation, packs={"first": {"value": 2}}
+        ),
+        ctx,
+    )
+    assert (
+        report_analysis_store_service.read_generation_by_id(
+            AnalysisGenerationByIdReadRequest(**args, generation=first.generation), ctx
+        ).generation
+        == first.generation
+    )
+    assert (
+        report_analysis_store_service.read_generation(
+            AnalysisGenerationReadRequest(**args), ctx
+        ).generation
+        == second.generation
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX filesystem path behavior")
+def test_native_path_error_is_typed_before_generation_commit(tmp_path):
+    output = tmp_path / ("\N{GRINNING FACE}" * 65)
+    request = AnalysisGenerationCommitRequest(
+        schema_version="1.0",
+        output_dir=str(output),
+        report_id="report",
+        report_slug="report",
+        packs={"first": {"value": 1}},
+    )
+    with pytest.raises(AppError) as exc:
+        report_analysis_store_service.commit_generation(request, _runtime(tmp_path).ctx)
+    assert exc.value.code == "lock_coordination_failed"
+    assert isinstance(exc.value.cause, OSError)
+    assert exc.value.cause.errno == errno.ENAMETOOLONG
 
 
 def test_manifest_error_after_replacement_returns_committed_generation(tmp_path):
@@ -377,14 +438,31 @@ def test_killed_lock_holder_does_not_prevent_commit(tmp_path):
     assert result.packs == request.packs
 
 
-def test_concurrent_processes_cannot_both_commit_same_parent(tmp_path):
+@pytest.mark.parametrize(
+    "long_path",
+    [
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.skipif(
+                sys.platform == "win32", reason="POSIX filesystem path behavior"
+            ),
+        ),
+    ],
+)
+def test_concurrent_processes_cannot_both_commit_same_parent(tmp_path, long_path):
+    output = (
+        tmp_path / ("x" * max(1, 150 - len(str(tmp_path.resolve())) - 1))
+        if long_path
+        else tmp_path
+    )
     workers = [
         subprocess.Popen(
             [
                 sys.executable,
                 "-m",
                 "tests.test_analysis_generation_store",
-                str(tmp_path),
+                str(output),
                 str(i),
             ]
         )
@@ -402,7 +480,7 @@ def test_concurrent_processes_cannot_both_commit_same_parent(tmp_path):
     observed = report_analysis_store_service.read_generation(
         AnalysisGenerationReadRequest(
             schema_version="1.0",
-            output_dir=str(tmp_path),
+            output_dir=str(output),
             report_id="report",
             report_slug="report",
         ),

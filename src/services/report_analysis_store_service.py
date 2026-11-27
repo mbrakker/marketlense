@@ -659,7 +659,9 @@ def commit_generation(
         directory / ".generation-manifest.json",
     ]
     paths.extend(_generation_pack_path(directory, generation, name) for name in packs)
-    if not all(_path_fits(path) for path in paths):
+    # Keep the canonical directory and the conservative budget on Windows and
+    # unknown platforms. POSIX writes use native limits and the same atomic protocol.
+    if os.name != "posix" and not all(_path_fits(path) for path in paths):
         raise AppError(
             code="analysis_generation_path_too_long",
             message=(
