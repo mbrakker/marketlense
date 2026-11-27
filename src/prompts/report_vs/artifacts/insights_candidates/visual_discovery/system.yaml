@@ -1,0 +1,7 @@
+text: |
+  Select distinctive, decision-relevant provisional hypotheses for visual
+  assessment. The findings and extracted text are discovery context, not
+  factual authority. The original PDF page and a separate visual verification
+  will decide whether each hypothesis is correct. Do not invent information;
+  retain uncertain chart relationships as hypotheses rather than treating a
+  flattened excerpt as proof or disproof. Respond in JSON.

@@ -245,6 +245,9 @@ Commit and push the smallest proven change.
  
 ## E13. Measure candidate-regeneration promotion effectiveness
 
+The hybrid visual-discovery work does not by itself demonstrate transactional
+repair effectiveness; the frozen repair acceptance criteria below remain open.
+
 **Canonical status:** Active as of the archived 2026-10-08 reconciliation. **Mapped technical slices:** `VER-08`, `ARCH-D`.
 
 - **Baseline:** Exact writable paths/minimal patches, retained-claim diagnostics, deterministic corrections, typed alternative evidence, one-call private decisions, retry deltas/strategy memory and repeated-candidate rejection are implemented. The frozen benchmark and scorecard exist; the remaining deficit is demonstrated safety/effectiveness, complete compatible denominators and repair-attributed usage, not absence of these foundations.
@@ -1093,6 +1096,19 @@ Commit and push the smallest verified slice.
 ---
 
 ## E18. Stabilize LLM report analysis and first-pass validation
+
+The hybrid-discovery implementation routes source-bound provisional findings
+through model selection to the existing visual correction and independent
+verification boundary, without treating flattened-text verdicts as factual
+authority in verified mode. Focused provider-free checks cover source identity,
+physical pages, rejected bindings, retained alternatives and ordinary-mode
+behavior. Live source-grounded recall, editorial quality, first-pass and repair
+effectiveness remain unverified until the required Activate and Capgemini runs
+and their original-PDF/HTML review are complete. E18 and Step 2 remain partial.
+The canonical fixture builder added the verified-discovery prompt variants to the
+regression corpus: its total is 124,106 versus 120,430 tokens and estimated
+$0.026784 versus $0.025696. This fixture corpus counts both legacy and verified
+variants; it is not a measurement of calls or cost for an individual report.
 
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live

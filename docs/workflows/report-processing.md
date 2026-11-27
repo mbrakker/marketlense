@@ -665,7 +665,17 @@ Each admitted report must finish with exactly one current state:
 `published_verified`, `publish_ready`, `blocked`, `permanent_failure`,
 `abstained`, `cancelled`, or `superseded`.
 
-After evidence-pack generation, before category or editorial artifact generation,
+In the opt-in visual-authority workflow, text extraction, retrieval and DocMap
+produce source-page-bound provisional hypotheses. These do not receive a
+text-only factual verdict or become canonical evidence. The model selects
+candidates from that provisional pool; the selected original PDF pages are
+visually corrected and independently verified before canonical verified facts
+are admitted. Editorial planning and generation after admission use the
+verified-fact snapshot. Missing or conflicting source bindings and failed visual
+verification fail closed. Provisional discovery is not materialized into the
+ordinary findings or quote-family reuse cache.
+
+In normal mode, after evidence-pack generation and before category or editorial artifact generation,
 the evidence-fidelity gate compares generated findings and quote candidates with
 retained PDF-derived source text. It records hashes, source provenance,
 deterministic quantity/quote/protected-fact checks, semantic execution identity

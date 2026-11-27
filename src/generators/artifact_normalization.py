@@ -172,6 +172,7 @@ def artifact_base_variables(
     evidence_packs: Dict[str, Any],
     *,
     require_fidelity: bool = False,
+    provisional_evidence: Dict[str, Any] | None = None,
 ) -> Dict[str, str]:
     known_evidence_ids, _ = _collect_known_evidence_ids(
         doc_map=doc_map or {}, evidence_packs=evidence_packs or {}
@@ -184,7 +185,9 @@ def artifact_base_variables(
         ),
         "candidate_allowed_evidence_ids_json": _dump_json(
             artifact_candidate_allowed_evidence_ids(
-                evidence_packs or {}, require_fidelity=require_fidelity
+                evidence_packs or {},
+                require_fidelity=require_fidelity,
+                provisional_evidence=provisional_evidence,
             )
         ),
     }
@@ -194,6 +197,7 @@ def artifact_candidate_allowed_evidence_ids(
     evidence_packs: Dict[str, Any],
     *,
     require_fidelity: bool = False,
+    provisional_evidence: Dict[str, Any] | None = None,
 ) -> List[str]:
     """Return the direct, eligible evidence vocabulary for insight candidates.
 
@@ -211,6 +215,21 @@ def artifact_candidate_allowed_evidence_ids(
 
     allowed: List[str] = []
     seen: set[str] = set()
+
+    if (
+        isinstance(provisional_evidence, dict)
+        and provisional_evidence.get("schema_version") == "1.0"
+    ):
+        entries = provisional_evidence.get("findings")
+        for entry in entries if isinstance(entries, list) else []:
+            finding = entry.get("finding") if isinstance(entry, dict) else None
+            refs = entry.get("source_references") if isinstance(entry, dict) else None
+            if not isinstance(finding, dict) or not isinstance(refs, list) or not refs:
+                continue
+            evidence_id = _s(finding.get("id")).strip()
+            if evidence_id and evidence_id.casefold() not in seen:
+                seen.add(evidence_id.casefold())
+                allowed.append(evidence_id)
 
     findings_pack = evidence_packs.get("findings")
     raw_findings = (

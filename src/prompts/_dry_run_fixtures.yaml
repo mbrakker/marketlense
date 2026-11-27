@@ -325,6 +325,17 @@ fixtures:
       evidence_json: *evidence_json
       editorial_plan_json: *editorial_plan_json
       candidate_allowed_evidence_ids_json: '["finding-1", "quote_001"]'
+  - namespace: "report_vs/artifacts/insights_candidates/visual_discovery"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
+    system_variables: {}
+    user_variables:
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+      editorial_plan_json: *editorial_plan_json
+      candidate_allowed_evidence_ids_json: '["finding-1", "quote_001"]'
   - namespace: "report_vs/artifacts/insights_final"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -556,6 +567,19 @@ fixtures:
       findings_target_source_pages_json: "[]"
       source_temporal_relationships_json: >-
         [{"period":"2023","value":"0:48"},{"period":"2024e","value":"0:52"},{"period":"2028e","value":"0:57"}]
+  - namespace: "report_vs/evidence_packs/findings/visual_discovery"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_report_extract
+    system_variables: {}
+    user_variables:
+      findings_targeted_fallback_instruction: ""
+      findings_existing_json: "[]"
+      doc_map_sections_json: >-
+        [{"id":"growth","title":"Forecast growth","summary":"2017E–2021E forecast growth contributions: Internet access $128B at 5.7% CAGR; advertising $108B at 4.7% CAGR; paid content $66B at 2.3% CAGR.","key_points":[],"pages":[6]}]
+      findings_target_source_pages_json: "[]"
+      source_temporal_relationships_json: "[]"
   - namespace: "report_vs/evidence_packs/limitations"
     family: "report"
     model: "openai/gpt-5-mini"

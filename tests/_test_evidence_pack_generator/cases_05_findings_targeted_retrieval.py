@@ -6,8 +6,10 @@ from src.contracts.openai import OpenAIFileSearchResult
 from ._support_cases import *  # noqa: F401,F403,F405
 
 
+@pytest.mark.parametrize("verified", [False, True])
 def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationship(
     tmp_path,
+    verified,
 ):
     from dataclasses import replace
 
@@ -137,6 +139,7 @@ def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationshi
         openai_client=client,
         prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
+        visual_ambiguity_source_identity="source:test" if verified else "",
         findings_retrieval_results_observer=(
             lambda results, stage: observed.append(
                 (stage, [query for result in results for query in result.queries])
@@ -176,14 +179,26 @@ def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationshi
         "Return only findings"
         in prompt_client.findings_variables["findings_targeted_fallback_instruction"]
     )
-    assert (
-        "paired measures"
-        in prompt_client.findings_variables["findings_targeted_fallback_instruction"]
-    )
-    assert (
-        "year over year between"
-        in prompt_client.findings_variables["findings_targeted_fallback_instruction"]
-    )
+    instruction = prompt_client.findings_variables[
+        "findings_targeted_fallback_instruction"
+    ]
+    if verified:
+        assert "provisional hypotheses for visual assessment" in instruction
+        assert "omit any target whose full relationship is not supported" not in (
+            instruction
+        )
+        provisional = [
+            entry["finding"] for entry in packs["_provisional_findings"]["findings"]
+        ]
+        assert any(
+            finding["id"] == "casino-and-slots"
+            and "46%" in finding["text"]
+            and "sessions decreased 5%" in finding["text"]
+            for finding in provisional
+        )
+        return
+    assert "paired measures" in instruction
+    assert "year over year between" in instruction
     assert any(
         finding["id"] == "casino-and-slots"
         and "casino installs" in finding["text"]

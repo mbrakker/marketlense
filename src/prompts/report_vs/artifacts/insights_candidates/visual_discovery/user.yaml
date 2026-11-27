@@ -1,0 +1,31 @@
+schema_snippets:
+  insights_candidates_schema:
+    schema: "artifacts.schema.json"
+    pointer: "/properties/insights_candidates/items"
+text: |
+  Select commercially meaningful provisional hypotheses from these inputs.
+  DocMap is navigation, not evidence. The supplied findings, excerpts and
+  proposed metric relationships can be incomplete or wrong: they will be
+  corrected or rejected against original PDF pages and independently verified.
+  Do not invent values, relationships or qualifications. Preserve source
+  attribution, populations, denominators, periods, forecast status and other
+  qualifications where known; leave unknown fields empty. A relationship that
+  requires the page's visual layout may be nominated without claiming that
+  flattened text establishes it.
+
+  DocMap JSON: {{ doc_map_json }}
+  Provisional evidence packs JSON: {{ evidence_json }}
+  Discovery editorial plan JSON: {{ editorial_plan_json }}
+  Allowed provisional evidence IDs: {{ candidate_allowed_evidence_ids_json }}
+
+  Candidate schema: {{ insights_candidates_schema }}
+
+  Return {"insights_candidates": [...]} with 6–8 distinctive opportunities
+  when available. Copy one primary allowed evidence_id exactly, use stable
+  candidate IDs, and retain physical pages. Use additional evidence_ids only
+  for genuinely linked material propositions. Prefer decision-relevant body
+  findings, meaningful comparisons and counter-signals across themes; do not
+  pad a sparse report. A specific, conditional so_what and now_what may be
+  editorial interpretation, not an asserted source fact. Preserve the schema's
+  metric, scoring and coverage fields without inventing missing bindings.
+  If no meaningful opportunities exist, abstain rather than fabricate them.

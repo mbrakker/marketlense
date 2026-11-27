@@ -96,6 +96,7 @@ def build_visual_authority_admitter(
     settings: Any,
     doc_map: Mapping[str, Any],
     visual_quarantine: Mapping[str, Any] | None = None,
+    provisional_evidence: Mapping[str, Any] | None = None,
     source_spans: Sequence[Mapping[str, Any]] = (),
 ):
     """Build the explicit canary callback consumed by artifact generation."""
@@ -127,10 +128,19 @@ def build_visual_authority_admitter(
         ]
         visual_evidence = deepcopy(dict(evidence_packs))
         bound_page_text: dict[int, list[str]] = {}
-        raw_quarantine = (
-            visual_quarantine if isinstance(visual_quarantine, Mapping) else {}
-        )
+        provisional_mode = provisional_evidence is not None
+        raw_quarantine = provisional_evidence if provisional_mode else visual_quarantine
+        raw_quarantine = raw_quarantine if isinstance(raw_quarantine, Mapping) else {}
         findings = raw_quarantine.get("findings")
+        selected_candidates = evaluation_candidates
+        selected_ids = {
+            evidence_id
+            for item in selected_candidates
+            for evidence_id in _candidate_evidence_ids(item)
+        }
+        bound_findings: dict[str, tuple[str, list[int]]] = {}
+        if provisional_mode:
+            evaluation_candidates = []
         if (
             raw_quarantine.get("schema_version") == "1.0"
             and raw_quarantine.get("source_identity") == source_identity
@@ -159,7 +169,8 @@ def build_visual_authority_admitter(
                     references = entry.get("source_references")
                     if (
                         not finding_id
-                        or finding_id in existing_ids
+                        or (finding_id in existing_ids and not provisional_mode)
+                        or (provisional_mode and finding_id not in selected_ids)
                         or not isinstance(text, str)
                         or not text.strip()
                         or not isinstance(evidence, str)
@@ -213,16 +224,19 @@ def build_visual_authority_admitter(
                             if source_text not in values:
                                 values.append(source_text)
                         finding = {**finding, "evidence": evidence}
-                        evaluation_candidates.append(
-                            {
-                                "id": finding_id,
-                                "text": text,
-                                "evidence_id": finding_id,
-                                "evidence": evidence,
-                                "pages": pages,
-                                "metric": {},
-                            }
-                        )
+                        if provisional_mode:
+                            bound_findings[finding_id] = (evidence, pages)
+                        else:
+                            evaluation_candidates.append(
+                                {
+                                    "id": finding_id,
+                                    "text": text,
+                                    "evidence_id": finding_id,
+                                    "evidence": evidence,
+                                    "pages": pages,
+                                    "metric": {},
+                                }
+                            )
                         pack["findings"].append(deepcopy(finding))
                         continue
         # Candidate pages are discovery metadata until the retained finding
@@ -230,6 +244,52 @@ def build_visual_authority_admitter(
         # before rendering visual pages so a model-supplied stale page cannot
         # become the visual authority.  DocMap sections are deliberately not
         # consulted here: navigation/context is not source evidence.
+        if provisional_mode:
+            unbound_candidates = []
+            for item in selected_candidates:
+                evidence_ids = _candidate_evidence_ids(item)
+                if not evidence_ids or any(
+                    evidence_id not in bound_findings for evidence_id in evidence_ids
+                ):
+                    unbound_candidates.append(item)
+                    continue
+                pages = list(
+                    dict.fromkeys(
+                        page
+                        for evidence_id in evidence_ids
+                        for page in bound_findings[evidence_id][1]
+                    )
+                )
+                evidence = "\n".join(
+                    dict.fromkeys(
+                        bound_findings[evidence_id][0] for evidence_id in evidence_ids
+                    )
+                )
+                evaluation_candidates.append(
+                    {**item, "evidence": evidence, "pages": pages}
+                )
+            if unbound_candidates:
+                audit: Dict[str, Any] = {
+                    "enabled": True,
+                    "expected_count": len(
+                        {
+                            _candidate_id(item)
+                            for item in selected_candidates
+                            if _candidate_id(item)
+                        }
+                    ),
+                    "evaluated_count": 0,
+                    "admitted_count": 0,
+                    "verified_fact_count": 0,
+                    "coverage_complete": False,
+                    "outcome_counts": {},
+                    "quarantined": [],
+                }
+                for item in unbound_candidates:
+                    _record_quarantine(
+                        audit, _candidate_id(item), "source_binding_invalid"
+                    )
+                return _empty_admission(audit, "provisional_source_binding_invalid")
         bind_artifact_evidence_spans(
             summary={},
             insights_candidates=evaluation_candidates,

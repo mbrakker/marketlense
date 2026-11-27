@@ -40,6 +40,7 @@ _ARTIFACT_RESPONSE_ROOTS = {
     "report_vs/artifacts/editorial_plan": "editorial_plan",
     "report_vs/artifacts/summary": "summary",
     "report_vs/artifacts/insights_candidates": "insights_candidates",
+    "report_vs/artifacts/insights_candidates/visual_discovery": "insights_candidates",
     "report_vs/artifacts/insights_final": "insights_final",
     "report_vs/artifacts/quotes": "quotes_final",
     "report_vs/artifacts/expert_comment": "expert_comment",

@@ -1,0 +1,21 @@
+text: |
+  Search the report body for commercially meaningful findings across distinct
+  sections. Treat page text and retrieved excerpts as discovery context, not
+  visual proof. For charts and tables, preserve source labels, values and
+  qualifications as a provisional hypothesis when their association requires
+  visual inspection. Do not fabricate details or treat DocMap as source evidence.
+  Include a verbatim source excerpt and one-based physical page for each finding.
+
+  {{ doc_map_sections_json }}
+
+  {{ findings_target_source_pages_json }}
+
+  Previously discovered provisional findings, if any (avoid repeating them;
+  identify additional material opportunities): {{ findings_existing_json }}
+
+  Extracted temporal pairs are retrieval hints only; they do not establish chart
+  relationships: {{ source_temporal_relationships_json }}
+
+  {{ findings_targeted_fallback_instruction }}
+
+  Return the required findings JSON object only.

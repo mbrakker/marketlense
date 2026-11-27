@@ -1739,6 +1739,7 @@ def generate_artifacts(
     visual_authority_admitter: Optional[
         Callable[[Sequence[Dict[str, Any]]], Any]
     ] = None,
+    provisional_evidence: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
     # MD5 remains available for artifact cache operations below, but never as
@@ -1760,6 +1761,19 @@ def generate_artifacts(
     )
     safe_doc_map = doc_map or {}
     safe_evidence = evidence_packs or {}
+    provisional_mode = visual_authority_admitter is not None and isinstance(
+        provisional_evidence, dict
+    )
+    if provisional_mode and provisional_evidence is not None:
+        safe_evidence = deepcopy(safe_evidence)
+        provisional_entries = provisional_evidence.get("findings", [])
+        provisional_findings = [
+            deepcopy(entry["finding"])
+            for entry in provisional_entries
+            if isinstance(entry, dict) and isinstance(entry.get("finding"), dict)
+        ]
+        safe_evidence["findings"] = {"findings": provisional_findings}
+        safe_evidence.pop("evidence_fidelity", None)
     active_doc_map = safe_doc_map
     active_evidence = safe_evidence
     reference_evidence_packs = {**active_evidence, "doc_map": active_doc_map}
@@ -2067,6 +2081,12 @@ def generate_artifacts(
                 variables=current_task.variables,
                 ctx=current_task.ctx,
                 payload_validator=payload_validator,
+                allow_reuse=not (
+                    provisional_mode and current_task.step_name == "insights_candidates"
+                ),
+                persist_family_output=not (
+                    provisional_mode and current_task.step_name == "insights_candidates"
+                ),
                 repair_namespace=(
                     "report_vs/artifacts/cover_semantics_repair"
                     if current_task.step_name == "cover_semantics"
@@ -2088,7 +2108,11 @@ def generate_artifacts(
         persist_family_output: bool = True,
     ) -> Dict[str, Any]:
         """Resolve one exact retained family before entering model recovery."""
-        root_key = _ARTIFACT_FAMILY_ROOTS[namespace]
+        root_key = (
+            "insights_candidates"
+            if namespace == "report_vs/artifacts/insights_candidates/visual_discovery"
+            else _ARTIFACT_FAMILY_ROOTS[namespace]
+        )
         prepared = prepare_prompt_bundle(
             namespace=namespace,
             settings=settings,
@@ -2592,7 +2616,8 @@ def generate_artifacts(
     base_vars = artifact_base_variables(
         safe_doc_map,
         safe_evidence,
-        require_fidelity=visual_authority_admitter is not None,
+        require_fidelity=visual_authority_admitter is not None and not provisional_mode,
+        provisional_evidence=provisional_evidence if provisional_mode else None,
     )
     canonical_evidence_ids_json = base_vars.pop("canonical_evidence_ids_json", "[]")
     candidate_allowed_evidence_ids_json = base_vars.pop(
@@ -2624,6 +2649,8 @@ def generate_artifacts(
             "canonical_evidence_ids_json": editorial_plan_evidence_ids_json,
         },
         ctx=editorial_plan_ctx,
+        allow_reuse=not provisional_mode,
+        persist_family_output=not provisional_mode,
         payload_validator=lambda payload: validate_editorial_plan(
             payload, editorial_plan_ctx
         ),
@@ -2693,7 +2720,7 @@ def generate_artifacts(
         limit=candidate_pool_target,
         editorial_plan=editorial_plan,
         evidence_fidelity=safe_evidence.get("evidence_fidelity"),
-        require_fidelity=visual_authority_admitter is not None,
+        require_fidelity=visual_authority_admitter is not None and not provisional_mode,
     )
     candidate_evidence_sufficient = (
         len(eligible_candidate_findings) >= MIN_FINAL_ARTIFACT_INSIGHTS
@@ -2781,7 +2808,11 @@ def generate_artifacts(
         ArtifactRenderTask(
             schema_version="1.0",
             step_name="insights_candidates",
-            namespace="report_vs/artifacts/insights_candidates",
+            namespace=(
+                "report_vs/artifacts/insights_candidates/visual_discovery"
+                if provisional_mode
+                else "report_vs/artifacts/insights_candidates"
+            ),
             variables={
                 **base_vars,
                 **editorial_plan_dependency_vars,
@@ -2935,13 +2966,17 @@ def generate_artifacts(
             attempt_diagnostics
         )
     fallback_limit = candidate_pool_target
-    primary_selected_candidates = select_artifact_insights(
-        final_insights=insights_candidates,
-        candidate_insights=[],
-        editorial_plan=editorial_plan,
-        preserve_all=visual_authority_admitter is not None,
-        source_findings=safe_evidence.get("findings"),
-        max_count=candidate_pool_target,
+    primary_selected_candidates = (
+        insights_candidates
+        if provisional_mode
+        else select_artifact_insights(
+            final_insights=insights_candidates,
+            candidate_insights=[],
+            editorial_plan=editorial_plan,
+            preserve_all=visual_authority_admitter is not None,
+            source_findings=safe_evidence.get("findings"),
+            max_count=candidate_pool_target,
+        )
     )
     primary_selection_adequate = _candidate_selection_covers_plan(
         primary_selected_candidates,
@@ -2981,6 +3016,8 @@ def generate_artifacts(
         candidate_supplement_limit,
         len(eligible_candidate_evidence_ids - candidate_evidence_ids),
     )
+    if provisional_mode:
+        candidate_supplement_limit = 0
     fallback_attempted = candidate_supplement_limit > 0
     fallback_candidates: List[Dict[str, Any]] = []
     if candidate_supplement_limit > 0:
@@ -2996,9 +3033,10 @@ def generate_artifacts(
             editorial_plan=editorial_plan,
             evidence_fidelity=safe_evidence.get("evidence_fidelity"),
             covered_evidence_ids=covered_candidate_evidence_ids,
-            require_fidelity=visual_authority_admitter is not None,
+            require_fidelity=visual_authority_admitter is not None
+            and not provisional_mode,
         )
-    if primary_selection_adequate and not fallback_candidates:
+    if provisional_mode or (primary_selection_adequate and not fallback_candidates):
         insights_candidates = primary_selected_candidates
         fallback_reason = "primary_adequate"
     else:
@@ -5176,6 +5214,8 @@ def generate_artifacts(
         )
 
     family_order = tuple(_ARTIFACT_FAMILY_ROOTS)
+    if provisional_mode:
+        family_order += ("report_vs/artifacts/insights_candidates/visual_discovery",)
     family_reuse = {
         family: family_reuse[family]
         for family in family_order

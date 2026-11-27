@@ -18,6 +18,7 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyMaterializationRequest,
     PromptFamilyReuseRequest,
 )
+from src.contracts.provisional_evidence import ProvisionalEvidence, ProvisionalFinding
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
@@ -264,12 +265,42 @@ def _findings_target_pages(target: dict[str, object]) -> list[int]:
     ]
 
 
-def _findings_retrieval_targets(doc_map: dict) -> list[dict[str, object]]:
+def _findings_retrieval_targets(
+    doc_map: dict, *, provisional: bool = False
+) -> list[dict[str, object]]:
     """Select bounded substantive sections as retrieval targets, never evidence."""
 
     raw_sections = doc_map.get("sections")
     if not isinstance(raw_sections, list):
         return []
+    if provisional:
+        targets: list[dict[str, object]] = []
+        for section in raw_sections:
+            if not isinstance(section, dict):
+                continue
+            section_id = str(section.get("id") or "").strip()
+            title = str(section.get("title") or "").strip()
+            if not section_id or not title:
+                continue
+            points = section.get("key_points")
+            key_points = (
+                [str(point).strip() for point in points if str(point).strip()]
+                if isinstance(points, list)
+                else []
+            )
+            summary = str(section.get("summary") or "").strip()
+            if not key_points and summary:
+                key_points = [summary]
+            targets.append(
+                {
+                    "id": section_id,
+                    "title": title,
+                    "pages": _findings_target_pages(section),
+                    "key_point": key_points[0] if key_points else "",
+                    "key_points": key_points,
+                }
+            )
+        return targets
     ranked: list[tuple[float, int, dict[str, object]]] = []
     for index, raw_section in enumerate(raw_sections):
         if not isinstance(raw_section, dict):
@@ -335,7 +366,10 @@ def _findings_retrieval_targets(doc_map: dict) -> list[dict[str, object]]:
 
 
 def _findings_target_source_pages(
-    targets: list[dict[str, object]], source_spans: list[dict[str, object]]
+    targets: list[dict[str, object]],
+    source_spans: list[dict[str, object]],
+    *,
+    provisional: bool = False,
 ) -> list[dict[str, object]]:
     """Return bounded PDF page text for missed DocMap targets, never DocMap proof."""
 
@@ -353,15 +387,24 @@ def _findings_target_source_pages(
     seen_pages: set[int] = set()
     total_chars = 0
     for target in targets:
-        candidate_pages = _findings_target_physical_source_pages(target, page_spans)
-        expected_numbers = {
-            marker
-            for key_point in _findings_target_key_points(target)
-            for marker in _findings_target_number_markers(key_point)
-            if not (
-                marker.rstrip("e").isdigit() and 1900 <= int(marker.rstrip("e")) <= 2100
-            )
-        }
+        candidate_pages = (
+            _findings_target_pages(target)
+            if provisional
+            else _findings_target_physical_source_pages(target, page_spans)
+        )
+        expected_numbers = (
+            set()
+            if provisional
+            else {
+                marker
+                for key_point in _findings_target_key_points(target)
+                for marker in _findings_target_number_markers(key_point)
+                if not (
+                    marker.rstrip("e").isdigit()
+                    and 1900 <= int(marker.rstrip("e")) <= 2100
+                )
+            }
+        )
         if expected_numbers:
             complete_relationship_pages = [
                 page
@@ -388,8 +431,12 @@ def _findings_target_source_pages(
             remaining_chars = _MAX_FINDINGS_TARGET_SOURCE_CHARS - total_chars
             page_content = "\n".join(text for _span_id, text in page_spans[page])
             excerpt_limit = min(_MAX_FINDINGS_TARGET_SOURCE_PAGE_CHARS, remaining_chars)
-            excerpt_start = _findings_relevant_excerpt_start(
-                page_content, target, excerpt_limit
+            excerpt_start = (
+                0
+                if provisional
+                else _findings_relevant_excerpt_start(
+                    page_content, target, excerpt_limit
+                )
             )
             excerpt = page_content[excerpt_start : excerpt_start + excerpt_limit]
             if not excerpt:
@@ -715,6 +762,32 @@ def _attach_verified_finding_pages(
     return supported_ids
 
 
+def _provisional_page_bound_ids(findings, source_spans):
+    """Select valid declared source pages without judging their propositions."""
+    pages = {
+        span.get("page")
+        for span in source_spans
+        if isinstance(span, dict)
+        and isinstance(span.get("id"), str)
+        and span["id"].strip()
+        and type(span.get("page")) is int
+        and isinstance(span.get("text"), str)
+        and span["text"].strip()
+    }
+    conflicts = conflicting_finding_ids(findings)
+    return {
+        str(item.get("id") or "").strip()
+        for item in findings
+        if isinstance(item, dict)
+        and str(item.get("id") or "").strip()
+        and normalize_text(item.get("id")).removeprefix("evidence:findings:")
+        not in conflicts
+        and isinstance(item.get("pages"), list)
+        and item["pages"]
+        and all(type(page) is int and page in pages for page in item["pages"])
+    }
+
+
 def _attach_verified_quote_pages(quotes: list[dict[str, object]], fidelity) -> set[str]:
     """Bind a quote only when fidelity resolves it to one physical PDF page."""
 
@@ -864,6 +937,7 @@ def _findings_prompt_user_variables(
         ),
         "findings_target_source_pages_json": "",
         "findings_targeted_fallback_instruction": "",
+        "findings_existing_json": "[]",
     }
 
 
@@ -1064,7 +1138,6 @@ def generate_evidence_packs(
     )
     strategies = _resolve_pack_steps(settings)
     results: Dict[str, dict] = {}
-    visual_quarantine: dict = {}
     pack_contexts: dict[str, RunContext] = {}
     deferred_materializations: dict[
         str, tuple[PromptFamilyMaterializationRequest, RunContext, bool]
@@ -1187,14 +1260,18 @@ def generate_evidence_packs(
     findings_prompt_user_variables: Dict[str, str] = {}
     findings_retrieval_targets: list[dict[str, object]] = []
     if any(strategy.pack_name == "findings" for strategy in parallel_strategies):
-        findings_retrieval_targets = _findings_retrieval_targets(results["doc_map"])
+        findings_retrieval_targets = _findings_retrieval_targets(
+            results["doc_map"], provisional=bool(visual_ambiguity_source_identity)
+        )
         findings_prompt_user_variables = _findings_prompt_user_variables(
             results["doc_map"], source_text
         )
         findings_prompt_user_variables["findings_target_source_pages_json"] = (
             json.dumps(
                 _findings_target_source_pages(
-                    findings_retrieval_targets, validated_source_spans
+                    findings_retrieval_targets,
+                    validated_source_spans,
+                    provisional=bool(visual_ambiguity_source_identity),
                 ),
                 ensure_ascii=False,
             )
@@ -1372,7 +1449,96 @@ def generate_evidence_packs(
             retryable=False,
             context={"report_id": report_id, "pack": "quote_candidates"},
         )
-    if validated_source_spans:
+    provisional = None
+    if visual_ambiguity_source_identity:
+        raw = findings_pack.get("findings") if isinstance(findings_pack, dict) else []
+        findings = list(raw) if isinstance(raw, list) else []
+        raw_quotes = (
+            quote_pack.get("quote_candidates") if isinstance(quote_pack, dict) else []
+        )
+        if isinstance(raw_quotes, list):
+            for quote in raw_quotes:
+                if not isinstance(quote, dict):
+                    continue
+                page = quote.get("page")
+                text = quote.get("text")
+                if not str(quote.get("id") or "").strip() or not isinstance(text, str):
+                    continue
+                findings.append(
+                    {
+                        "id": quote["id"],
+                        "text": text,
+                        "evidence": text,
+                        "pages": [page],
+                        "source": quote.get("source", ""),
+                    }
+                )
+        conflicts = conflicting_finding_ids(findings)
+        spans_by_id: dict[str, list[dict]] = {}
+        for span in validated_source_spans:
+            span_id = span.get("id") if isinstance(span, dict) else None
+            if isinstance(span_id, str):
+                spans_by_id.setdefault(span_id.strip(), []).append(span)
+        provisional_findings = []
+        seen: set[str] = set()
+        for finding in findings:
+            if not isinstance(finding, dict):
+                continue
+            finding_id = str(finding.get("id") or "").strip()
+            excerpt = str(finding.get("evidence") or "").strip()
+            pages = finding.get("pages")
+            key = normalize_text(finding_id).removeprefix("evidence:findings:")
+            if (
+                not key
+                or key in conflicts
+                or key in seen
+                or not str(finding.get("text") or "").strip()
+                or not excerpt
+                or not isinstance(pages, list)
+                or not pages
+                or any(type(page) is not int or page <= 0 for page in pages)
+            ):
+                continue
+            references: list[dict[str, object]] = []
+            for page in sorted(set(pages)):
+                matches = [
+                    group[0]
+                    for group in spans_by_id.values()
+                    if len(group) == 1
+                    and group[0].get("page") == page
+                    and isinstance(group[0].get("text"), str)
+                    and group[0]["text"].strip()
+                ]
+                if not matches:
+                    break
+                references.extend(
+                    {
+                        "evidence_id": span["id"],
+                        "page": page,
+                        "text_hash": sha256_json(span["text"].strip()),
+                    }
+                    for span in matches
+                )
+            else:
+                seen.add(key)
+                provisional_findings.append(
+                    ProvisionalFinding(deepcopy(finding), references)
+                )
+        provisional = ProvisionalEvidence(
+            "1.0", visual_ambiguity_source_identity, provisional_findings
+        )
+        if isinstance(findings_pack, dict):
+            results["findings"] = {**findings_pack, "findings": []}
+        else:
+            results["findings"] = {"findings": []}
+
+    if visual_ambiguity_source_identity:
+        # Raw quote candidates are not eligible for publication in verified mode.
+        # Do not run text-only fidelity on them or materialize them as facts.
+        results.pop("quote_candidates", None)
+        deferred_materializations.pop("quote_candidates", None)
+
+    if validated_source_spans and not visual_ambiguity_source_identity:
         initial_fidelity = validate_evidence_fidelity(
             results, source_spans=validated_source_spans
         )
@@ -1407,16 +1573,13 @@ def generate_evidence_packs(
                 source_url=source_url,
                 report_id=report_id,
                 source_id=source_identity_id,
-                visual_ambiguity_mode=bool(visual_ambiguity_source_identity),
             )
             batch_results = {}
             for candidate in candidates:
                 support = outcome.metric_support.get(candidate.claim_id)
                 if support is not None:
                     batch_results[candidate.claim_id] = (
-                        bool(support.supported)
-                        if not visual_ambiguity_source_identity or support.disposition
-                        else False,
+                        bool(support.supported),
                         support.reason,
                         outcome.execution_identity,
                         support.disposition or "",
@@ -1447,53 +1610,6 @@ def generate_evidence_packs(
                 if isinstance(finding, dict)
             ]
             _attach_verified_finding_pages(findings, fidelity)
-            if visual_ambiguity_source_identity:
-                pending = [
-                    result
-                    for result in findings_validation_results
-                    if result.status == "unresolved"
-                    and result.semantic_classification == "visual_ambiguity"
-                    and result.semantic_execution_identity
-                ]
-                pending_fidelity = replace(fidelity, results=pending)
-                bound_ids = _attach_verified_finding_pages(
-                    findings, pending_fidelity, allow_semantic_pending=True
-                )
-                quarantined = []
-                for result in pending:
-                    finding_id = result.candidate.claim_id.removeprefix(
-                        "evidence:findings:"
-                    )
-                    refs = result.candidate.evidence_references
-                    matches = [
-                        finding
-                        for finding in findings
-                        if str(finding.get("id") or "").strip() == finding_id
-                    ]
-                    if (
-                        finding_id not in bound_ids
-                        or len(matches) != 1
-                        or not refs
-                        or any(
-                            type(ref.page) is not int
-                            or ref.page <= 0
-                            or not ref.text_hash
-                            for ref in refs
-                        )
-                    ):
-                        continue
-                    quarantined.append(
-                        {
-                            "finding": deepcopy(matches[0]),
-                            "source_references": [asdict(ref) for ref in refs],
-                        }
-                    )
-                if quarantined:
-                    visual_quarantine = {
-                        "schema_version": "1.0",
-                        "source_identity": visual_ambiguity_source_identity,
-                        "findings": quarantined,
-                    }
             findings_pack["findings"] = findings
         quote_candidates_pack = results.get("quote_candidates")
         if isinstance(quote_candidates_pack, dict) and isinstance(
@@ -1552,6 +1668,8 @@ def generate_evidence_packs(
     # Store and materialize only the authoritative post-fidelity outputs. These
     # are the same payloads returned to report-analysis and artifact generation.
     for pack_name, payload in results.items():
+        if provisional is not None and pack_name == "findings":
+            continue
         _store_pack(
             analysis_store=analysis_store,
             output_dir=settings.output_dir,
@@ -1580,8 +1698,8 @@ def generate_evidence_packs(
             fields={"report_id": report_id, "packs": list(results.keys())},
         )
     )
-    if visual_quarantine:
-        results["_visual_ambiguity_quarantine"] = visual_quarantine
+    if provisional is not None:
+        results["_provisional_findings"] = asdict(provisional)
     return results
 
 
@@ -1613,6 +1731,8 @@ def _generate_pack(
     source_identity_id = str(ctx.source_identity_id or "").strip()
     pack_name = strategy.pack_name
     prompt_namespace = _prompt_namespace_for_strategy(strategy)
+    if pack_name == "findings" and disable_findings_reuse:
+        prompt_namespace += "/visual_discovery"
     schema_name = strategy.schema_name
     logger.info(
         log_event(
@@ -1711,7 +1831,9 @@ def _generate_pack(
         if (
             not source_identity_id
             or not vector_provenance_verified
-            or (pack_name == "findings" and disable_findings_reuse)
+            or (
+                pack_name in {"findings", "quote_candidates"} and disable_findings_reuse
+            )
         ):
             return
         deferred_materializations[pack_name] = (
@@ -1762,7 +1884,9 @@ def _generate_pack(
     if (
         source_identity_id
         and vector_provenance_verified
-        and not (pack_name == "findings" and disable_findings_reuse)
+        and not (
+            pack_name in {"findings", "quote_candidates"} and disable_findings_reuse
+        )
         and not (pack_name == "doc_map" and require_retrieval_results)
     ):
         reuse = prompt_family_reuse_reader(
@@ -2098,17 +2222,27 @@ def _generate_pack(
         ]
         targets = findings_retrieval_targets or []
         if targets:
-            initial_fidelity = validate_evidence_fidelity(
-                {"findings": {"findings": findings}}, source_spans=source_spans
+            initial_fidelity = (
+                None
+                if disable_findings_reuse
+                else validate_evidence_fidelity(
+                    {"findings": {"findings": findings}}, source_spans=source_spans
+                )
             )
-            grounded_finding_ids = _attach_verified_finding_pages(
-                findings, initial_fidelity
+            grounded_finding_ids = (
+                _provisional_page_bound_ids(findings, source_spans)
+                if disable_findings_reuse
+                else _attach_verified_finding_pages(findings, initial_fidelity)
             )
             result_payload["findings"] = findings
-            missing_targets = _missing_findings_retrieval_targets(
-                targets, findings, grounded_finding_ids
-            )
+            if disable_findings_reuse:
+                missing_targets = targets
+            else:
+                missing_targets = _missing_findings_retrieval_targets(
+                    targets, findings, grounded_finding_ids
+                )
             if missing_targets:
+                fidelity_results = initial_fidelity.results if initial_fidelity else []
                 logger.info(
                     log_event(
                         ctx,
@@ -2127,18 +2261,15 @@ def _generate_pack(
                             "initial_validation_statuses": {
                                 status: sum(
                                     result.status == status
-                                    for result in initial_fidelity.results
+                                    for result in fidelity_results
                                 )
                                 for status in sorted(
-                                    {
-                                        result.status
-                                        for result in initial_fidelity.results
-                                    }
+                                    {result.status for result in fidelity_results}
                                 )
                             },
                             "source_reference_count": sum(
                                 len(result.candidate.evidence_references)
-                                for result in initial_fidelity.results
+                                for result in fidelity_results
                             ),
                         },
                     )
@@ -2147,6 +2278,10 @@ def _generate_pack(
                     ctx, task_id=f"{ctx.task_id}:targeted_fallback"
                 )
                 fallback_variables = dict(prompt_user_variables or {})
+                if disable_findings_reuse:
+                    fallback_variables["findings_existing_json"] = json.dumps(
+                        findings, ensure_ascii=False
+                    )
                 fallback_target_ids = {
                     str(target.get("id") or "") for target in missing_targets
                 }
@@ -2165,7 +2300,9 @@ def _generate_pack(
                     ensure_ascii=False,
                 )
                 fallback_source_pages = _findings_target_source_pages(
-                    missing_targets, source_spans
+                    missing_targets,
+                    source_spans,
+                    provisional=disable_findings_reuse,
                 )
                 source_instruction = (
                     "Use only the independently extracted source-page excerpts below, "
@@ -2193,6 +2330,18 @@ def _generate_pack(
                     "limit over the report-wide coverage instructions above; return "
                     "no unrelated findings and only the requested JSON object."
                 )
+                if disable_findings_reuse:
+                    fallback_variables["findings_targeted_fallback_instruction"] = (
+                        "Bounded recovery: DocMap guides retrieval, not evidence. "
+                        + source_instruction
+                        + "Return only findings from the mapped sections, including "
+                        "material source opportunities beyond the listed key points. "
+                        "Preserve verbatim source excerpts and "
+                        "physical pages. Chart relationships not established by "
+                        "flattened text are provisional hypotheses for visual "
+                        "assessment; "
+                        "do not invent missing facts or assert certainty."
+                    )
                 fallback_variables["findings_target_source_pages_json"] = json.dumps(
                     fallback_source_pages, ensure_ascii=False
                 )
@@ -2287,9 +2436,10 @@ def _generate_pack(
                             item["section_title"] = matched_target["title"]
                         if str(item.get("section_id") or "").strip() not in target_ids:
                             continue
-                        item["text"] = _normalize_targeted_finding_text(
-                            str(item.get("text") or "")
-                        )
+                        if not disable_findings_reuse:
+                            item["text"] = _normalize_targeted_finding_text(
+                                str(item.get("text") or "")
+                            )
                         item_id = str(item.get("id") or "").strip()
                         if not item_id or item_id in existing_ids:
                             base_id = item_id or str(
@@ -2307,14 +2457,22 @@ def _generate_pack(
                     directly_supported_fallback_count = 0
                     source_bound_fallback_count = 0
                     if fallback_findings:
-                        fallback_fidelity = validate_evidence_fidelity(
-                            {"findings": {"findings": fallback_findings}},
-                            source_spans=source_spans,
+                        fallback_fidelity = (
+                            None
+                            if disable_findings_reuse
+                            else validate_evidence_fidelity(
+                                {"findings": {"findings": fallback_findings}},
+                                source_spans=source_spans,
+                            )
                         )
-                        source_bound_fallback_ids = _attach_verified_finding_pages(
-                            fallback_findings,
-                            fallback_fidelity,
-                            allow_semantic_pending=True,
+                        source_bound_fallback_ids = (
+                            _provisional_page_bound_ids(fallback_findings, source_spans)
+                            if disable_findings_reuse
+                            else _attach_verified_finding_pages(
+                                fallback_findings,
+                                fallback_fidelity,
+                                allow_semantic_pending=True,
+                            )
                         )
                         source_bound_fallback_count = len(source_bound_fallback_ids)
                         directly_supported_fallback_count = sum(
@@ -2323,7 +2481,9 @@ def _generate_pack(
                                 "evidence:findings:"
                             )
                             in source_bound_fallback_ids
-                            for result in fallback_fidelity.results
+                            for result in (
+                                fallback_fidelity.results if fallback_fidelity else []
+                            )
                         )
                         supported_fallback_findings = [
                             item

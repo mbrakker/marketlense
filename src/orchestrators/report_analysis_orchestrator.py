@@ -783,12 +783,17 @@ def run_report_analysis(
             )
         raise
 
-    visual_quarantine = packs.pop("_visual_ambiguity_quarantine", None)
+    packs.pop("_visual_ambiguity_quarantine", None)
+    provisional_evidence = packs.pop("_provisional_findings", None)
     mode_evidence_paths = pack_paths(
         runtime.settings.output_dir,
         runtime.file.file_id,
         runtime.report_name,
-        list(packs.keys()),
+        [
+            name
+            for name in packs
+            if not (provisional_evidence is not None and name == "findings")
+        ],
         mode_ctx,
         dependencies,
     )
@@ -1112,10 +1117,11 @@ def run_report_analysis(
                     ctx=artifact_ctx,
                     settings=runtime.settings,
                     doc_map=artifact_doc_map,
-                    visual_quarantine=visual_quarantine,
+                    provisional_evidence=provisional_evidence,
                     source_spans=source_spans,
                 )
             )
+            artifact_kwargs["provisional_evidence"] = provisional_evidence
         with ArtifactStepTaskScheduler(runtime.settings) as artifact_executor:
             artifact_kwargs["artifact_step_executor"] = artifact_executor
             artifacts_payload = dependencies.generate_artifacts(

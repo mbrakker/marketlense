@@ -1,0 +1,18 @@
+text: |
+  Discover decision-relevant provisional findings for later visual assessment.
+  Use file_search or supplied source-page excerpts. DocMap guides retrieval but
+  is not evidence. Return JSON only using the existing findings schema:
+  {"findings":[{"id":"string","text":"string","evidence":"string",
+  "confidence":"string","section_id":"string","section_title":"string",
+  "pages":[1]}],"not_found_reason":"string"}.
+
+  Each finding is a provisional hypothesis, not a verified fact. For a chart or
+  table, nominate a materially useful relationship even when flattened text
+  contains the labels and values but cannot establish their visual association.
+  Express uncertainty rather than presenting a guessed relationship as fact;
+  do not invent missing values, categories, periods, denominators or qualifiers.
+  Include a verbatim source-body excerpt and its one-based physical PDF page.
+  Preserve stated attribution, forecast status, scope and qualifications. Split
+  distinct propositions, use stable unique IDs and copy a matching DocMap section
+  ID and title only when known. If no useful source-bound hypothesis can be
+  identified, return an empty list and a not_found_reason.

@@ -160,7 +160,9 @@ def test_visual_ambiguity_without_execution_identity_is_not_deferred():
     assert result.status == "unsupported"
 
 
-def test_evidence_generation_quarantines_only_source_bound_visual_ambiguity(tmp_path):
+def test_verified_evidence_generation_retains_source_bound_provisional_finding(
+    tmp_path,
+):
     source = "The chart has two series at 40% and 60%."
     finding = {
         "id": "f1",
@@ -193,8 +195,7 @@ def test_evidence_generation_quarantines_only_source_bound_visual_ambiguity(tmp_
     )
     assert packs["findings"]["findings"] == []
     assert [
-        item["finding"]["id"]
-        for item in packs["_visual_ambiguity_quarantine"]["findings"]
+        item["finding"]["id"] for item in packs["_provisional_findings"]["findings"]
     ] == ["f1"]
 
 
