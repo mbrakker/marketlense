@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.contracts.prompts import PromptLoadRequest
 from src.contracts.run_context import RunContext
 from src.contracts.verified_claims import VisualClaimEvaluationResult
 from src.generators.verified_claims_visual_generator import (
@@ -21,6 +22,20 @@ CORRECTION = "report_vs/validate/visual_claim_correction"
 VERIFICATION = "report_vs/validate/visual_claim_verification"
 OBSERVATION = "The chart shows a blue bar for the northern region."
 MISSING = object()
+
+
+def test_visual_verifier_preserves_material_chart_values_in_authoritative_fact():
+    prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/validate/visual_claim_verification",
+            force_reload=True,
+        ),
+        RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+    )
+    text = " ".join(prompt.system.text.split())
+    assert "include those source-supported values in the verified fact" in text
+    assert "do not infer or add ambiguous or unrelated values" in text
 
 
 def _evaluate(tmp_path, assessment, verifier_assessment=MISSING):
@@ -121,7 +136,9 @@ def _evaluate(tmp_path, assessment, verifier_assessment=MISSING):
                 payload["source_reading_assessment"] = {
                     "outcome": "supported",
                     "supporting_physical_pages": [5],
-                    "explanation": "The independent observation supports the claim on page 5.",
+                    "explanation": (
+                        "The independent observation supports the claim on page 5."
+                    ),
                 }
             elif verifier_assessment is not None:
                 payload["source_reading_assessment"] = verifier_assessment
@@ -145,7 +162,9 @@ def _evaluate(tmp_path, assessment, verifier_assessment=MISSING):
                 "outcome": "supported",
                 "supporting_physical_pages": [5],
                 "source_reading_digest": sha256_json(reading),
-                "explanation": "The source reading supports the claim and proposed fact.",
+                "explanation": (
+                    "The source reading supports the claim and proposed fact."
+                ),
             },
             request_id="comparison-id",
             model=model_request.model,

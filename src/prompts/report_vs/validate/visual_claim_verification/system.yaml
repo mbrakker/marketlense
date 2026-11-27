@@ -93,6 +93,12 @@ text: |
   For a qualitative claim, name the observed
   source relationship or bounded pattern and explain the defensible implication;
   a generic statement that the claim is merely supported is insufficient.
+  When a qualitative comparison is established by specific, clearly visible
+  figures that are material to its interpretation, include those source-supported values in the verified fact
+  with their labels, units, populations and periods, even if the corrected claim
+  itself is qualitative. Source notes alone are not the verified fact. Include
+  only values independently supported by the inspected pages and the source
+  reading; do not infer or add ambiguous or unrelated values.
   When provisional recovery_sources are present, every inspected original or recovered PDF page is eligible as source evidence.
   Independently identify which inspected pages visibly support the final corrected
   claim. Recovery candidate ranking is only a bounded inspection aid; it does not
@@ -105,6 +111,6 @@ text: |
 
   Return JSON only:
   {"outcome":"verified|rejected|unresolved","diagnostics":["..."],"verified_fact":{"statement":"...","metric":{"label":"...","value":"...","unit":"...","trend":"...","timeframe":"...","geography":"...","segment":"...","sample_size":"...","confidence":"...","subject":"...","cohort":"...","denominator":"...","observation_status":"...","forecast_status":"...","observations":[{"label":"...","value":"...","unit":"...","timeframe":"...","segment":"...","geography":"...","cohort":"...","denominator":"...","observation_status":"..."}]},"qualifiers":["..."]},"source_truth_notes":"...","supporting_physical_pages":[12],"source_truth_notes_by_page":{"12":"..."}}
-  For a qualitative verified fact, use an empty metric object rather than
-  inventing numeric fields. Do not add a verified_fact for rejected or unresolved
+  When no material source-supported figures are available, use an empty metric
+  object rather than inventing numeric fields. Do not add a verified_fact for rejected or unresolved
   outcomes.

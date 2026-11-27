@@ -1302,6 +1302,31 @@ mypy, architecture-import and contract-snapshot checks passed. The prompt
 fixture gate passed when rerun without concurrent suite load; an earlier
 concurrent run failed its runtime threshold with identical token and cost
 totals. These local results do not replace hosted CI or report acceptance.
+
+The fresh isolated Activate run at `f402503e` failed after 3,022.469 seconds,
+512 provider calls, eight file-search calls and $0.491538 estimated cost. Six
+of seven visual candidates were admitted and one quarantined; this is not an
+independent factual accuracy score. The first validation found an unsupported
+numeric claim and editorial-depth issues; its first repair was rolled back
+with material coverage and semantic-review failures. The missing-quotes
+finding was only a warning. The terminal failure was
+`analysis_generation_path_too_long`: the selected Windows output root made the
+atomic generation path exceed the existing safety budget. The safety check was
+not relaxed. Run artifacts: `C:/visual-e2e-f402-activate/fr-r34awxg1/`.
+
+On physical PDF page 54, the source visibly shows YouTube 83%/17% and Facebook
+52%/48% for the specified Q2 2017 top-creator cohort. The visual verifier's
+page notes retained these values, but the authoritative `insight-04` fact held
+only a qualitative comparison. Grounding therefore rejected a later numeric
+editorial claim; the first repair removed the figures and editorial review
+then identified the resulting material coverage gap. The visual verification
+prompt now asks for clearly supported, material numeric context in the fact,
+not merely the notes, while preserving the separate source comparison. A
+fresh four-call isolated replay of the same retained finding and page admitted
+all four correct platform/category shares with their context; it cost $0.006506
+(31,517 input and 6,709 output tokens). This is one targeted model-backed
+replay, not proof of repeatability or report readiness. The shorter-root
+end-to-end rerun and independent review remain outstanding.
 Independent inspection of all physical pages cited by this run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed

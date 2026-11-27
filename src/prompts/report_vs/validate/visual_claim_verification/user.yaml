@@ -45,6 +45,7 @@ text: |
   only the verification JSON required by the system prompt. For a verified
   outcome, include an authoritative verified_fact with a source-grounded
   statement, a structured metric object when applicable, and bounded qualifiers.
-  For a qualitative fact, use an empty metric object. Diagnostics must
+  For a qualitative fact without material source-supported figures, use an
+  empty metric object. Diagnostics must
   name exact unsupported or conflicting values, labels, populations, periods,
   status or analytical conclusions when rejecting the claim.
