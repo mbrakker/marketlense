@@ -1,3 +1,5 @@
+import sys
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -145,6 +147,31 @@ def test_admitted_generation_fails_before_dependency_or_provider_work(
 
     assert exc_info.value.code == "report_canonical_identity_missing"
     assert exc_info.value.context["missing_fields"] == [missing_field]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows path budget")
+def test_fresh_generation_rejects_unsafe_generation_path_before_source_work(
+    tmp_path, ingest_settings
+):
+    output = tmp_path / ("x" * max(1, 150 - len(str(tmp_path.resolve())) - 1))
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="report",
+        name="report.pdf",
+        modified_time=None,
+        md5_checksum="content-md5",
+    )
+    ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+    with pytest.raises(AppError) as exc:
+        run_report_generation(
+            file,
+            "missing-source.pdf",
+            replace(ingest_settings, output_dir=str(output)),
+            "content-md5",
+            ctx,
+        )
+    assert exc.value.code == "analysis_generation_path_too_long"
+    assert not output.exists()
 
 
 def test_runtime_source_identity_uses_verified_admission_context_when_store_is_empty(

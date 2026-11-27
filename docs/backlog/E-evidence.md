@@ -1327,6 +1327,32 @@ all four correct platform/category shares with their context; it cost $0.006506
 (31,517 input and 6,709 output tokens). This is one targeted model-backed
 replay, not proof of repeatability or report readiness. The shorter-root
 end-to-end rerun and independent review remain outstanding.
+
+The shorter-root Activate rerun at `b9d88ab8` avoided the path error but failed
+after 3,268.953 seconds, 479 provider calls, nine file-search calls and
+$0.451367 estimated cost. All eight shortlisted visual candidates were
+admitted; independent inspection of their fact statements against the cited
+pages found their material reported values and relationships consistent with
+those pages. This is not a review of every downstream assertion. The initial
+validation reported no grounding-rule failure but did report eight blocking
+editorial-depth, distinctness and generic-filler findings. A first repair did
+not complete: its final provider response failed the repair-decision schema at
+`changed_paths` with `minLength`. The resulting terminal code was
+`artifact_structured_output_invalid`; no publication occurred. The ledger
+reported zero completed automatic repairs despite provider calls for repair.
+Artifacts are retained at `C:/v42/fr-gc82e9on/`.
+
+The failure exposed a contract mismatch: downstream repair validation already
+derives the duplicate `changed_paths` summary from the actual patch, but the
+earlier response schema rejected an invalid summary before that derivation.
+The response boundary now derives the summary from well-formed patch paths;
+actual operations still undergo schema, exact writable-path, evidence and
+protected-field validation. A provider-boundary regression covers the empty
+summary and rejects malformed operations. A read-only generation-path
+preflight now checks fresh full-report paths before source processing using the
+same budget as the commit-time check; existing generation paths and resume-only
+routes are unchanged. These are focused fixes, not evidence that first repair
+or a complete report now succeeds. A fresh end-to-end rerun remains required.
 Independent inspection of all physical pages cited by this run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed

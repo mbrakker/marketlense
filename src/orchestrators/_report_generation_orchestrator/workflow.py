@@ -10,6 +10,7 @@ from src.contracts.analytics_projection import (
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.minimal_execution_plan import MinimalExecutionPlan
+from src.contracts.report_analysis import AnalysisGenerationReadRequest
 from src.contracts.report_generation import (
     ReportGenerationClientBundle,
     require_report_generation_client_bundle,
@@ -22,6 +23,7 @@ from src.contracts.report_store import (
     SourcePublicationMetadata,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import (
     ReportGenerationDependencies,
@@ -41,7 +43,7 @@ from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
-from src.services import llm_service
+from src.services import llm_service, report_analysis_store_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.report_identity import (
@@ -671,6 +673,16 @@ def run_report_generation(
             stop_after_stage=requested_stop_stage,
             projection_only=projection_only,
             visual_authority_canary=visual_authority_canary,
+        )
+    if requested_stop_stage not in {STAGE_SOURCE_PREPARED, STAGE_SELECTION_COMPLETE}:
+        report_analysis_store_service.validate_generation_path(
+            AnalysisGenerationReadRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                report_slug=runtime.report_name,
+            ),
+            runtime.ctx,
         )
     logger.info(
         log_event(

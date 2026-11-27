@@ -7,6 +7,7 @@ import pytest
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.remediation import RemediationListRequest
 from src.contracts.structured_output import StructuredOutputExecutionRequest
+from src.generators._artifact_generator.rendering import render_artifact_json_model
 from src.generators.artifact_normalization import (
     validate_final_insight_editorial_coverage,
 )
@@ -16,7 +17,90 @@ from src.services.state_service import list_remediation_records
 from src.services.structured_output_service import execute_structured_output
 from src.utils.errors import AppError
 from src.utils.structured_output import StructuredOutputFailure
-from tests._test_artifact_generator._shared import _ctx
+from tests._test_artifact_generator._shared import FakePromptClient, _ctx, _settings
+
+
+def test_repair_response_derives_duplicate_path_summary_from_patch(tmp_path):
+    path = "insights_final[item=insight-1].so_what"
+    payload = {
+        "repair_decision": {
+            "schema_version": "1.0",
+            "repair_action": "replace",
+            "repair_strategy": "current",
+            "evidence_ids_used": [],
+            "changed_paths": [""],
+            "minimal_patch": [{"op": "replace", "path": path, "value": "Revised."}],
+        }
+    }
+
+    class Provider:
+        def openai_chat_json(self, request, ctx):
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                model=request.model,
+                text=json.dumps(payload),
+                parsed_json=payload,
+            )
+
+    result = render_artifact_json_model(
+        namespace="report_vs/artifacts/regenerate/insights_final",
+        variables={"doc_map_json": "{}"},
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=Provider(),
+        prompt_client=FakePromptClient(),
+        allow_vector_store=False,
+        vector_store_id=None,
+        response_contract_name="regeneration_repair_decision",
+    )
+
+    assert result["repair_decision"]["changed_paths"] == [path]
+    assert (
+        result["repair_decision"]["minimal_patch"]
+        == payload["repair_decision"]["minimal_patch"]
+    )
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        [{"op": "replace", "path": "", "value": "x"}],
+        [{"op": "remove", "path": "safe", "value": "x"}],
+    ],
+)
+def test_repair_path_normalization_never_accepts_invalid_patch(tmp_path, patch):
+    payload = {
+        "repair_decision": {
+            "schema_version": "1.0",
+            "repair_action": "replace",
+            "repair_strategy": "current",
+            "evidence_ids_used": [],
+            "changed_paths": [""],
+            "minimal_patch": patch,
+        }
+    }
+
+    class Provider:
+        def openai_chat_json(self, request, ctx):
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                model=request.model,
+                text=json.dumps(payload),
+                parsed_json=payload,
+            )
+
+    with pytest.raises(StructuredOutputFailure):
+        render_artifact_json_model(
+            namespace="report_vs/artifacts/regenerate/insights_final",
+            variables={"doc_map_json": "{}"},
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=Provider(),
+            prompt_client=FakePromptClient(),
+            allow_vector_store=False,
+            vector_store_id=None,
+            response_contract_name="regeneration_repair_decision",
+        )
 
 
 @pytest.mark.parametrize(

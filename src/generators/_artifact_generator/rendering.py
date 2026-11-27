@@ -70,6 +70,26 @@ _SCOPED_INSIGHT_OPTIONAL_FIELDS = (
 )
 
 
+def _normalize_repair_path_summary(payload: Any) -> Any:
+    """Derive duplicate path metadata without changing the proposed patch."""
+    if not isinstance(payload, dict):
+        return payload
+    decision = payload.get("repair_decision")
+    if not isinstance(decision, dict) or not isinstance(
+        decision.get("changed_paths"), list
+    ):
+        return dict(payload)
+    patch = decision.get("minimal_patch")
+    if not isinstance(patch, list) or not patch:
+        return dict(payload)
+    paths = [item.get("path") if isinstance(item, dict) else None for item in patch]
+    if not all(isinstance(path, str) and path.strip() for path in paths):
+        return dict(payload)
+    if len(paths) != len(set(paths)):
+        return dict(payload)
+    return {**payload, "repair_decision": {**decision, "changed_paths": paths}}
+
+
 def _soft_copy_provider_output_schema(root_key: str) -> dict[str, Any]:
     """Require private bindings in model output without making them public prose."""
 
@@ -389,7 +409,13 @@ def render_artifact_json_model(
         ctx,
         call_model=call_model,
         normalize_payload=(
-            (lambda payload: dict(payload) if isinstance(payload, dict) else payload)
+            (
+                _normalize_repair_path_summary
+                if response_contract_name == "regeneration_repair_decision"
+                else lambda payload: (
+                    dict(payload) if isinstance(payload, dict) else payload
+                )
+            )
             if response_contract_name
             else (
                 lambda payload: _normalize_artifact_response(

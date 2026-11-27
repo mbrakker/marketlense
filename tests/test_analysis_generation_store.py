@@ -18,6 +18,20 @@ from src.utils.errors import AppError
 from tests._test_report_analysis_generator._shared import _runtime
 
 
+def test_generation_path_preflight_accepts_fitting_path_without_writing(tmp_path):
+    output = tmp_path / "output"
+    report_analysis_store_service.validate_generation_path(
+        AnalysisGenerationReadRequest(
+            schema_version="1.0",
+            output_dir=str(output),
+            report_id="report",
+            report_slug="report",
+        ),
+        _runtime(tmp_path).ctx,
+    )
+    assert not output.exists()
+
+
 def test_generation_commit_and_read_are_coherent(tmp_path):
     ctx = _runtime(tmp_path).ctx
     request = AnalysisGenerationCommitRequest(
@@ -138,6 +152,23 @@ def test_historical_v12_generation_remains_readable_without_migration(tmp_path):
         )
     assert exc.value.code == "analysis_generation_identity_unbound"
     assert manifest_path.read_text(encoding="utf-8") == manifest
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows path safety budget")
+def test_generation_path_preflight_fails_before_any_write(tmp_path):
+    output = tmp_path / ("x" * max(1, 150 - len(str(tmp_path.resolve())) - 1))
+    request = AnalysisGenerationReadRequest(
+        schema_version="1.0",
+        output_dir=str(output),
+        report_id="report",
+        report_slug="report",
+    )
+    with pytest.raises(AppError) as exc:
+        report_analysis_store_service.validate_generation_path(
+            request, _runtime(tmp_path).ctx
+        )
+    assert exc.value.code == "analysis_generation_path_too_long"
+    assert not output.exists()
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows path safety budget")

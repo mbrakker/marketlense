@@ -507,6 +507,34 @@ def _generation_pack_path(directory: Path, generation: str, name: str) -> Path:
     return directory / ".generations" / generation / (name_hash + ".json")
 
 
+def _validate_generation_paths(
+    directory: Path, generation: str, names: list[str]
+) -> None:
+    paths = [
+        directory / ".generations" / (generation + ".json"),
+        directory / ".generation-manifest.json",
+        *(_generation_pack_path(directory, generation, name) for name in names),
+    ]
+    if os.name != "posix" and not all(_path_fits(path) for path in paths):
+        raise AppError(
+            code="analysis_generation_path_too_long",
+            message=(
+                "Generation paths exceed the supported atomic-write path budget; "
+                "shorten the output root"
+            ),
+            retryable=False,
+        )
+
+
+def validate_generation_path(
+    request: AnalysisGenerationReadRequest, ctx: RunContext
+) -> None:
+    """Check the immutable generation path budget without writing artifacts."""
+    directory = _generation_directory(request, ctx)
+    # All generation and pack identifiers have fixed digest lengths.
+    _validate_generation_paths(directory, "0" * 64, ["artifacts"])
+
+
 def _require_no_legacy_promotion(directory: Path) -> None:
     try:
         (directory / ".promotion-pending").lstat()
@@ -654,22 +682,9 @@ def commit_generation(
             "report_id": request.report_id,
         }
     )
-    paths = [
-        directory / ".generations" / (generation + ".json"),
-        directory / ".generation-manifest.json",
-    ]
-    paths.extend(_generation_pack_path(directory, generation, name) for name in packs)
     # Keep the canonical directory and the conservative budget on Windows and
     # unknown platforms. POSIX writes use native limits and the same atomic protocol.
-    if os.name != "posix" and not all(_path_fits(path) for path in paths):
-        raise AppError(
-            code="analysis_generation_path_too_long",
-            message=(
-                "Generation paths exceed the supported atomic-write path budget; "
-                "shorten the output root"
-            ),
-            retryable=False,
-        )
+    _validate_generation_paths(directory, generation, list(packs))
     with _generation_writer_lock(directory):
         _require_no_legacy_promotion(directory)
         manifest = directory / ".generation-manifest.json"
