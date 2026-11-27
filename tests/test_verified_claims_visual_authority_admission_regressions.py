@@ -30,6 +30,9 @@ from tests.test_verified_claims_visual_authority_canary import (
     _metric,
     _response,
     _result,
+    _source_reading,
+    _source_reading_assessment,
+    _source_reading_comparison,
     _verified_admission,
 )
 
@@ -299,11 +302,21 @@ def test_multi_page_verified_fact_pack_matches_canonical_snapshot_order():
         result,
         physical_pages=[4, 2],
         inspected_physical_pages=[4, 2],
+        source_reading=_source_reading(SOURCE_IDENTITY, [4, 2]),
+        source_reading_assessment=_source_reading_assessment(
+            _source_reading(SOURCE_IDENTITY, [4, 2]), [4, 2]
+        ),
         supporting_physical_pages=[4, 2],
         source_truth_notes_by_page={
             "4": "The source supports the fact.",
             "2": "The source supports the same fact.",
         },
+    )
+    result = replace(
+        result,
+        source_reading_comparison=_source_reading_comparison(
+            result.source_reading, result.final_claim, result.verified_fact
+        ),
     )
 
     admission = admit_visual_authority_candidates(
@@ -336,11 +349,21 @@ def test_multi_page_admission_digest_matches_canonical_snapshot():
         result,
         physical_pages=[4, 2],
         inspected_physical_pages=[4, 2],
+        source_reading=_source_reading(SOURCE_IDENTITY, [4, 2]),
+        source_reading_assessment=_source_reading_assessment(
+            _source_reading(SOURCE_IDENTITY, [4, 2]), [4, 2]
+        ),
         supporting_physical_pages=[4, 2],
         source_truth_notes_by_page={
             "4": "The source supports the fact.",
             "2": "The source supports the same fact.",
         },
+    )
+    result = replace(
+        result,
+        source_reading_comparison=_source_reading_comparison(
+            result.source_reading, result.final_claim, result.verified_fact
+        ),
     )
 
     admission = admit_visual_authority_candidates(

@@ -6,15 +6,16 @@ import copy
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from src.contracts.files import FileBundleHashRequest
 from src.contracts.llm import LLMContextCompactionPolicy
-from src.contracts.openai import OpenAIJSONImagePromptRequest
+from src.contracts.openai import OpenAIJSONImagePromptRequest, OpenAIJSONPromptRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_assets import CropRefinePageRenderRequest
+from src.contracts.run_budget import RunBudget
 from src.contracts.run_context import RunContext
 from src.contracts.verified_claims import (
     VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
@@ -24,6 +25,9 @@ from src.contracts.verified_claims import (
     VisualClaimEvaluationResponse,
     VisualClaimEvaluationResult,
     VisualClaimVerificationAttempt,
+    source_assessment_matches_binding,
+    source_reading_matches_binding,
+    visual_fact_comparison_content,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.verified_claims_recovery import candidate_roster_digest
@@ -31,6 +35,7 @@ from src.services import llm_service
 from src.services.file_service import hash_file_bundle as service_hash_file_bundle
 from src.services.pdf_service import render_page_for_crop_refine
 from src.services.prompt_service import load_prompt_set, render_prompt
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
@@ -38,6 +43,8 @@ LOGGER = logging.getLogger("market_lense.verified_claims_visual_generator")
 
 CORRECTION_NAMESPACE = "report_vs/validate/visual_claim_correction"
 VERIFICATION_NAMESPACE = "report_vs/validate/visual_claim_verification"
+SOURCE_READING_NAMESPACE = "report_vs/validate/visual_source_reading"
+SOURCE_COMPARISON_NAMESPACE = "report_vs/validate/visual_source_comparison"
 _CORRECTION_STATUSES = frozenset({"corrected", "unresolved", "failed"})
 _VERIFICATION_OUTCOMES = frozenset({"verified", "rejected", "unresolved"})
 _MAX_RECOVERY_PAGES_PER_CLAIM = 3
@@ -78,6 +85,8 @@ class VerifiedClaimsVisualDependencies:
     hash_file_bundle: Callable[[FileBundleHashRequest, RunContext], Any] = (
         service_hash_file_bundle
     )
+    openai_chat_json: Callable[[OpenAIJSONPromptRequest, RunContext], Any] | None = None
+    run_budget: RunBudget | None = None
 
     @classmethod
     def default(cls) -> "VerifiedClaimsVisualDependencies":
@@ -86,6 +95,7 @@ class VerifiedClaimsVisualDependencies:
             render_prompt=render_prompt,
             render_page_for_crop_refine=render_page_for_crop_refine,
             openai_chat_json_with_images=llm_service.openai_chat_json_with_images,
+            openai_chat_json=llm_service.openai_chat_json,
             hash_file_bundle=service_hash_file_bundle,
         )
 
@@ -492,7 +502,7 @@ def _response_json(response: Any) -> dict[str, Any] | None:
 
 
 def _response_metadata(
-    response: Any, request: OpenAIJSONImagePromptRequest
+    response: Any, request: OpenAIJSONImagePromptRequest | OpenAIJSONPromptRequest
 ) -> tuple[str, str]:
     request_id = (
         _text(response.get("request_id"))
@@ -744,6 +754,7 @@ def _request(
     report_name: str,
     user_prompt: str,
     namespace: str,
+    run_budget: RunBudget | None,
 ) -> OpenAIJSONImagePromptRequest:
     return OpenAIJSONImagePromptRequest(
         schema_version="1.0",
@@ -772,6 +783,7 @@ def _request(
         source_url="",
         prompt_namespace=namespace,
         prompt_hash=bundle.prompt_content_hash,
+        run_budget=run_budget,
         usage_db_path=_text(
             getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
         ),
@@ -801,6 +813,9 @@ def _record_result(
     source_truth_notes_by_page: Mapping[str, str] | None = None,
     verified_fact: Mapping[str, Any] | None = None,
     canonical_approval_status: str = "not_approved",
+    source_reading: Mapping[str, Any] | None = None,
+    source_reading_assessment: Mapping[str, Any] | None = None,
+    source_reading_comparison: Mapping[str, Any] | None = None,
 ) -> VisualClaimEvaluationResult:
     original_physical_pages = _physical_pages(claim) if physical_page > 0 else []
     supporting_pages = list(supporting_physical_pages or [])
@@ -816,7 +831,9 @@ def _record_result(
         verified_fact=verified_fact,
         supporting_physical_pages=supporting_pages,
         inspected_physical_pages=list(
-            inspected_physical_pages or original_physical_pages
+            original_physical_pages
+            if inspected_physical_pages is None
+            else inspected_physical_pages
         ),
         source_truth_notes_by_page=source_truth_notes_by_page or {},
     )
@@ -834,6 +851,9 @@ def _record_result(
         physical_page=physical_page,
         physical_pages=_physical_pages(claim) if physical_page > 0 else [],
         outcome=outcome,
+        source_reading=copy.deepcopy(dict(source_reading or {})),
+        source_reading_assessment=copy.deepcopy(dict(source_reading_assessment or {})),
+        source_reading_comparison=copy.deepcopy(dict(source_reading_comparison or {})),
         evidence_ids=original_evidence_ids,
         evidence_spans=original_evidence_spans,
         original_metric_binding=original_metric_binding,
@@ -855,7 +875,9 @@ def _record_result(
         failure_reason=failure_reason,
         original_physical_pages=original_physical_pages,
         inspected_physical_pages=list(
-            inspected_physical_pages or original_physical_pages
+            original_physical_pages
+            if inspected_physical_pages is None
+            else inspected_physical_pages
         ),
         recovered_physical_pages=list(recovered_physical_pages or []),
         recovery_reason=recovery_reason,
@@ -865,6 +887,69 @@ def _record_result(
         canonical_approval_status=canonical_approval_status,
         verified_fact=authoritative_verified_fact,
     )
+
+
+def _source_reading_attempt(
+    *,
+    request: VisualClaimEvaluationRequest,
+    image_paths: list[str],
+    inspected_physical_pages: list[int],
+    settings: Any,
+    ctx: RunContext,
+    dependencies: VerifiedClaimsVisualDependencies,
+    bundle: Any,
+) -> dict[str, Any]:
+    rendered = dependencies.render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=bundle.prompt_set.user,
+            variables={
+                "image_page_map": _image_page_map_text(inspected_physical_pages)
+            },
+        ),
+        ctx,
+    )
+    model_request = _request(
+        bundle=bundle,
+        settings=settings,
+        image_paths=image_paths,
+        report_name=request.report_name,
+        user_prompt=rendered.text,
+        namespace=SOURCE_READING_NAMESPACE,
+        run_budget=dependencies.run_budget,
+    )
+    # The shared provider cache stores responses before this boundary validates
+    # their status and shape; never retain unresolved or malformed readings.
+    model_request = replace(model_request, response_cache_enabled=False)
+    response = dependencies.openai_chat_json_with_images(model_request, ctx)
+    incomplete_reason = (
+        response.get("incomplete_reason")
+        if isinstance(response, Mapping)
+        else getattr(response, "incomplete_reason", "")
+    )
+    if incomplete_reason == "max_output_tokens":
+        raise AppError(
+            code="source_reading_output_incomplete",
+            message="Source reading exceeded its output limit",
+            retryable=True,
+            context={"incomplete_reason": "max_output_tokens"},
+        )
+    payload = _response_json(response)
+    request_id, model = _response_metadata(response, model_request)
+    if not isinstance(payload, dict) or payload.get("status") != "read":
+        return {}
+    reading = {
+        "schema_version": "1.0",
+        "source_identity": request.source_identity,
+        "request_id": request_id,
+        "model": model,
+        "pages": copy.deepcopy(payload.get("pages")),
+    }
+    if not source_reading_matches_binding(
+        reading, request.source_identity, inspected_physical_pages
+    ):
+        return {}
+    return reading
 
 
 def _correction_attempt(
@@ -920,6 +1005,7 @@ def _correction_attempt(
         report_name=request.report_name,
         user_prompt=rendered.text,
         namespace=CORRECTION_NAMESPACE,
+        run_budget=dependencies.run_budget,
     )
     try:
         response = dependencies.openai_chat_json_with_images(model_request, ctx)
@@ -1000,6 +1086,7 @@ def _verification_attempt(
     bundle: Any,
     inspected_physical_pages: list[int],
     recovery_candidates: list[dict[str, Any]],
+    source_reading: Mapping[str, Any],
 ) -> VisualClaimVerificationAttempt:
     original_physical_pages = _physical_pages(claim)
     source_payload = {
@@ -1025,6 +1112,7 @@ def _verification_attempt(
         ),
         "recovery_sources": _recovery_prompt_sources(recovery_candidates),
         "image_page_map": _image_page_map(inspected_physical_pages),
+        "independent_source_reading": source_reading,
     }
     rendered = dependencies.render_prompt(
         PromptRenderRequest(
@@ -1048,6 +1136,7 @@ def _verification_attempt(
         report_name=request.report_name,
         user_prompt=rendered.text,
         namespace=VERIFICATION_NAMESPACE,
+        run_budget=dependencies.run_budget,
     )
     try:
         response = dependencies.openai_chat_json_with_images(model_request, ctx)
@@ -1127,6 +1216,17 @@ def _verification_attempt(
         diagnostics = [*diagnostics, "verification_response_invalid"]
     elif outcome == "verified":
         quality_issues: list[str] = []
+        assessment = payload.get("source_reading_assessment")
+        reading_digest = sha256_json(source_reading)
+        bound_assessment = (
+            {**dict(assessment), "source_reading_digest": reading_digest}
+            if isinstance(assessment, Mapping)
+            else {}
+        )
+        if not source_assessment_matches_binding(
+            bound_assessment, supporting_pages, reading_digest
+        ):
+            quality_issues.append("verification_source_reading_assessment_invalid")
         if not notes.strip():
             quality_issues.append("verification_explanation_missing")
         elif not _source_truth_notes_present(notes):
@@ -1153,6 +1253,14 @@ def _verification_attempt(
         supporting_pages = []
         notes_by_page = {}
         verified_fact = {}
+    assessment_result = (
+        {
+            **dict(payload["source_reading_assessment"]),
+            "source_reading_digest": sha256_json(source_reading),
+        }
+        if outcome == "verified"
+        else {}
+    )
     return VisualClaimVerificationAttempt(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         attempt=attempt,
@@ -1164,6 +1272,129 @@ def _verification_attempt(
         verified_fact=verified_fact,
         request_id=request_id,
         model=model,
+        source_reading_assessment=assessment_result,
+    )
+
+
+def _source_comparison_attempt(
+    *,
+    source_reading: Mapping[str, Any],
+    corrected_claim: str,
+    verified_fact: Mapping[str, Any],
+    supporting_pages: list[int],
+    settings: Any,
+    ctx: RunContext,
+    dependencies: VerifiedClaimsVisualDependencies,
+    bundle: Any,
+    report_name: str,
+) -> tuple[dict[str, Any], str]:
+    if dependencies.openai_chat_json is None:
+        raise AppError(
+            code="source_comparison_client_missing",
+            message="Independent source comparison client is unavailable",
+            retryable=False,
+        )
+    reading_digest = sha256_json(source_reading)
+    fact_content = visual_fact_comparison_content(verified_fact)
+    comparison_input = {
+        "source_reading": source_reading,
+        "source_reading_digest": reading_digest,
+        "supporting_physical_pages": supporting_pages,
+    }
+    rendered = dependencies.render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=bundle.prompt_set.user,
+            variables={
+                "source_reading_json": json.dumps(
+                    comparison_input, ensure_ascii=False, sort_keys=True
+                ),
+                "corrected_claim": corrected_claim,
+                "verified_fact_json": json.dumps(
+                    fact_content, ensure_ascii=False, sort_keys=True
+                ),
+            },
+        ),
+        ctx,
+    )
+    model_request = OpenAIJSONPromptRequest(
+        schema_version="1.0",
+        system_prompt=bundle.system_prompt,
+        user_prompt=rendered.text,
+        model=bundle.resolved_model,
+        temperature=bundle.effective_temperature,
+        api_key=_text(getattr(settings, "openai_api_key", "")),
+        reasoning_effort=bundle.effective_reasoning_effort,
+        seed=bundle.effective_seed,
+        timeout_seconds=bundle.effective_timeout_seconds,
+        max_output_tokens=bundle.effective_max_output_tokens,
+        cost_ledger_path=_text(
+            getattr(settings, "cost_ledger_path", "./out/cost-ledger.jsonl")
+        ),
+        cost_daily_path=_text(
+            getattr(settings, "cost_daily_path", "./out/cost-daily.json")
+        ),
+        model_pricing=getattr(settings, "model_pricing", {}) or {},
+        response_cache_enabled=False,
+        report_name=report_name,
+        prompt_namespace=SOURCE_COMPARISON_NAMESPACE,
+        prompt_hash=bundle.prompt_content_hash,
+        run_budget=dependencies.run_budget,
+        usage_db_path=_text(
+            getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
+        ),
+        context_compaction_policy=LLMContextCompactionPolicy(
+            schema_version="1.0", enabled=False
+        ),
+    )
+    response = dependencies.openai_chat_json(model_request, ctx)
+    incomplete_reason = (
+        response.get("incomplete_reason")
+        if isinstance(response, Mapping)
+        else getattr(response, "incomplete_reason", "")
+    )
+    if incomplete_reason == "max_output_tokens":
+        raise AppError(
+            code="source_comparison_output_incomplete",
+            message="Independent source comparison exceeded its output limit",
+            retryable=True,
+        )
+    payload = _response_json(response)
+    request_id, model = _response_metadata(response, model_request)
+    outcome = payload.get("outcome") if isinstance(payload, Mapping) else None
+    if isinstance(outcome, str) and outcome in {"contradicted", "unresolved"}:
+        status = outcome
+    elif isinstance(payload, Mapping) and source_assessment_matches_binding(
+        payload, supporting_pages, reading_digest
+    ):
+        status = "supported"
+    else:
+        status = "invalid"
+    LOGGER.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="source_comparison_result",
+            module=LOGGER.name,
+            fields={"outcome": status, "request_id": request_id, "model": model},
+        )
+    )
+    if status != "supported":
+        return {}, (
+            f"source_comparison_{status}"
+            if status != "invalid"
+            else "source_comparison_response_invalid"
+        )
+    assert isinstance(payload, Mapping)
+    return (
+        {
+            **dict(payload),
+            "claim_digest": sha256_json(corrected_claim),
+            "fact_content_digest": sha256_json(fact_content),
+            "request_id": request_id,
+            "model": model,
+        },
+        "",
     )
 
 
@@ -1177,6 +1408,8 @@ def _evaluate_claim(
     dependencies: VerifiedClaimsVisualDependencies,
     correction_bundle: Any,
     verification_bundle: Any,
+    source_reading_bundle: Any,
+    source_comparison_bundle: Any,
     inspected_physical_pages: list[int],
     recovery_candidates: list[dict[str, Any]],
 ) -> VisualClaimEvaluationResult:
@@ -1221,6 +1454,36 @@ def _evaluate_claim(
             physical_page=physical_page,
             outcome="skipped",
             failure_reason="claim_text_missing",
+            inspected_physical_pages=inspected_physical_pages,
+        )
+    try:
+        source_reading = _source_reading_attempt(
+            request=request,
+            image_paths=image_paths,
+            inspected_physical_pages=inspected_physical_pages,
+            settings=settings,
+            ctx=child_context(ctx, task_id=f"{ctx.task_id}:source_reading"),
+            dependencies=dependencies,
+            bundle=source_reading_bundle,
+        )
+    except AppError as error:
+        if error.retryable:
+            raise
+        return _record_result(
+            claim=claim,
+            request=request,
+            physical_page=physical_page,
+            outcome="unresolved",
+            failure_reason=f"source_reading_provider_error:{error.code}",
+            inspected_physical_pages=inspected_physical_pages,
+        )
+    if not source_reading:
+        return _record_result(
+            claim=claim,
+            request=request,
+            physical_page=physical_page,
+            outcome="unresolved",
+            failure_reason="source_reading_unresolved",
             inspected_physical_pages=inspected_physical_pages,
         )
     correction_attempts: list[VisualClaimCorrectionAttempt] = []
@@ -1308,9 +1571,46 @@ def _evaluate_claim(
             bundle=verification_bundle,
             inspected_physical_pages=inspected_physical_pages,
             recovery_candidates=recovery_candidates,
+            source_reading=source_reading,
         )
         verification_attempts.append(verification)
         if verification.outcome == "verified":
+            try:
+                comparison, comparison_failure = _source_comparison_attempt(
+                    source_reading=source_reading,
+                    corrected_claim=corrected_claim,
+                    verified_fact=verification.verified_fact,
+                    supporting_pages=verification.supporting_physical_pages,
+                    settings=settings,
+                    ctx=child_context(ctx, task_id=f"{ctx.task_id}:source_comparison"),
+                    dependencies=dependencies,
+                    bundle=source_comparison_bundle,
+                    report_name=request.report_name,
+                )
+            except AppError as error:
+                if error.retryable:
+                    raise
+                return _record_result(
+                    claim=claim,
+                    request=request,
+                    physical_page=physical_page,
+                    outcome="unresolved",
+                    failure_reason=f"source_comparison_provider_error:{error.code}",
+                    correction_attempts=correction_attempts,
+                    verification_attempts=verification_attempts,
+                    inspected_physical_pages=inspected_physical_pages,
+                )
+            if not comparison:
+                return _record_result(
+                    claim=claim,
+                    request=request,
+                    physical_page=physical_page,
+                    outcome="unresolved",
+                    failure_reason=comparison_failure,
+                    correction_attempts=correction_attempts,
+                    verification_attempts=verification_attempts,
+                    inspected_physical_pages=inspected_physical_pages,
+                )
             return _record_result(
                 claim=claim,
                 request=request,
@@ -1330,6 +1630,9 @@ def _evaluate_claim(
                 supporting_physical_pages=verification.supporting_physical_pages,
                 source_truth_notes_by_page=verification.source_truth_notes_by_page,
                 verified_fact=verification.verified_fact,
+                source_reading=source_reading,
+                source_reading_assessment=verification.source_reading_assessment,
+                source_reading_comparison=comparison,
                 recovery_reason=_text(recovery_candidates[0].get("reason"))
                 if recovery_candidates
                 else "",
@@ -1389,6 +1692,7 @@ def evaluate_shortlisted_claims(
     settings: Any,
     ctx: RunContext,
     dependencies: VerifiedClaimsVisualDependencies | None = None,
+    run_budget: RunBudget | None = None,
 ) -> VisualClaimEvaluationResponse:
     """Evaluate shortlisted claims in shadow mode without mutating the source artifact.
 
@@ -1402,6 +1706,7 @@ def evaluate_shortlisted_claims(
             retryable=False,
         )
     dependencies = dependencies or VerifiedClaimsVisualDependencies.default()
+    dependencies = replace(dependencies, run_budget=run_budget)
     evaluation_ctx = child_context(ctx, task_id=f"{ctx.task_id}:verified_claims_visual")
     _verify_source_pdf_identity(
         request=request,
@@ -1415,6 +1720,24 @@ def evaluate_shortlisted_claims(
             "attempt": 1,
             "retry_feedback": "[]",
             "image_page_map": "",
+        },
+        settings=settings,
+        ctx=evaluation_ctx,
+        dependencies=dependencies,
+    )
+    source_reading_bundle = _bundle(
+        namespace=SOURCE_READING_NAMESPACE,
+        variables={"image_page_map": ""},
+        settings=settings,
+        ctx=evaluation_ctx,
+        dependencies=dependencies,
+    )
+    source_comparison_bundle = _bundle(
+        namespace=SOURCE_COMPARISON_NAMESPACE,
+        variables={
+            "source_reading_json": "{}",
+            "corrected_claim": "",
+            "verified_fact_json": "{}",
         },
         settings=settings,
         ctx=evaluation_ctx,
@@ -1472,6 +1795,7 @@ def evaluate_shortlisted_claims(
             )
             continue
         missing_page = False
+        render_failure_reason = "page_render_failed"
         for page in inspected_physical_pages:
             if page in rendered_pages:
                 continue
@@ -1491,7 +1815,13 @@ def evaluate_shortlisted_claims(
                     render_ctx,
                 )
                 image_path = _rendered_image_path(render_response, request.output_dir)
-            except Exception:
+            except AppError as error:
+                if error.retryable:
+                    raise
+                render_failure_reason = f"page_render_failed:{error.code}"
+                image_path = ""
+            except Exception as error:
+                render_failure_reason = f"page_render_failed:{type(error).__name__}"
                 image_path = ""
             if not image_path:
                 missing_page = True
@@ -1504,9 +1834,9 @@ def evaluate_shortlisted_claims(
                     request=request,
                     physical_page=physical_page or 0,
                     outcome="skipped",
-                    failure_reason="page_render_failed",
-                    inspected_physical_pages=inspected_physical_pages,
-                    recovered_physical_pages=recovered_pages,
+                    failure_reason=render_failure_reason,
+                    inspected_physical_pages=[],
+                    recovered_physical_pages=[],
                     recovery_reason=_text(recovery_candidates[0].get("reason"))
                     if recovery_candidates
                     else "",
@@ -1530,6 +1860,8 @@ def evaluate_shortlisted_claims(
                 dependencies=dependencies,
                 correction_bundle=correction_bundle,
                 verification_bundle=verification_bundle,
+                source_reading_bundle=source_reading_bundle,
+                source_comparison_bundle=source_comparison_bundle,
                 inspected_physical_pages=inspected_physical_pages,
                 recovery_candidates=recovery_candidates,
             )

@@ -27,6 +27,6 @@ def test_selected_page_text_reaches_correction_without_unselected_pages(tmp_path
     )
 
     assert result.claims[0].outcome != "verified"
-    assert "Selected page context with a forecast caveat." in requests[0].user_prompt
-    assert "Unselected page context" not in requests[0].user_prompt
-    assert requests[0].image_paths
+    assert "Selected page context with a forecast caveat." in requests[1].user_prompt
+    assert "Unselected page context" not in requests[1].user_prompt
+    assert requests[1].image_paths

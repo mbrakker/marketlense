@@ -13,6 +13,7 @@ from src.generators.verified_claims_canary import (
     VisualAuthorityCanaryConfig,
     build_visual_authority_admitter,
 )
+from src.generators.verified_claims_visual_generator import CORRECTION_NAMESPACE
 from src.utils.cache_utils import sha256_json
 from tests._test_artifact_generator._shared import (
     FakeAnalysisStore as ArtifactStore,
@@ -293,8 +294,9 @@ def test_verified_quote_hypothesis_reaches_visual_assessment(tmp_path):
             }
         ]
     )
-    assert requests and requests[0].image_paths
-    assert "A 99 percent forecast." in requests[0].user_prompt
+    correction = next(r for r in requests if r.prompt_namespace == CORRECTION_NAMESPACE)
+    assert correction.image_paths
+    assert "A 99 percent forecast." in correction.user_prompt
     assert not result.verified_facts
 
 
@@ -350,8 +352,8 @@ def test_visual_admission_assesses_only_selected_provisional_findings(tmp_path):
         ]
     )
     assert not result.verified_facts
-    assert requests
-    assert "A contributes 40." in requests[0].user_prompt
+    correction = next(r for r in requests if r.prompt_namespace == CORRECTION_NAMESPACE)
+    assert "A contributes 40." in correction.user_prompt
     assert all("B contributes 60." not in request.user_prompt for request in requests)
 
 
@@ -421,9 +423,11 @@ def test_visual_admission_preserves_distinct_claims_bound_to_same_finding(tmp_pa
         ]
     )
     assert not result.verified_facts
-    assert len(requests) == 4
-    assert "First forecast measure." in requests[0].user_prompt
-    assert "Second forecast measure." in requests[2].user_prompt
+    corrections = [r for r in requests if r.prompt_namespace == CORRECTION_NAMESPACE]
+    assert len(requests) == 6
+    assert len(corrections) == 4
+    assert "First forecast measure." in corrections[0].user_prompt
+    assert "Second forecast measure." in corrections[2].user_prompt
 
 
 def test_visual_admission_preserves_all_bound_pages_for_multifact_candidate(tmp_path):

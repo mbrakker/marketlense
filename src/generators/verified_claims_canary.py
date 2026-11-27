@@ -12,7 +12,13 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence
 
-from src.contracts.verified_claims import VisualClaimEvaluationResponse
+from src.contracts.run_budget import RunBudget
+from src.contracts.verified_claims import (
+    VisualClaimEvaluationResponse,
+    source_assessment_matches_binding,
+    source_reading_matches_binding,
+    visual_fact_comparison_content,
+)
 from src.generators.artifact_normalization import bind_artifact_evidence_spans
 from src.generators.verified_claims_recovery import (
     build_verified_claims_shadow_request,
@@ -25,7 +31,7 @@ from src.generators.verified_claims_visual_generator import (
 )
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import stripped_string_value
-from src.utils.errors import AppError
+from src.utils.errors import SAFE_ERROR_CONTEXT_TOKEN_CHARS, AppError
 from src.utils.text_normalization import normalize_for_lookup
 from src.utils.verified_facts import (
     PROTECTED_METRIC_FIELDS,
@@ -98,6 +104,7 @@ def build_visual_authority_admitter(
     visual_quarantine: Mapping[str, Any] | None = None,
     provisional_evidence: Mapping[str, Any] | None = None,
     source_spans: Sequence[Mapping[str, Any]] = (),
+    run_budget: RunBudget | None = None,
 ):
     """Build the explicit canary callback consumed by artifact generation."""
 
@@ -323,6 +330,7 @@ def build_visual_authority_admitter(
             settings=settings,
             ctx=ctx,
             dependencies=config.dependencies,
+            run_budget=run_budget,
         )
         return admit_visual_authority_candidates(
             candidates=evaluation_candidates,
@@ -493,6 +501,15 @@ def admit_visual_authority_candidates(
         outcome = _result_field(result, "outcome").lower()
         if outcome not in _TERMINAL_VERIFIED_OUTCOMES:
             _record_quarantine(audit, candidate_id, f"outcome_{outcome}")
+            failure_reason = _result_field(result, "failure_reason")
+            if (
+                failure_reason
+                and len(failure_reason) <= 128
+                and all(
+                    char in SAFE_ERROR_CONTEXT_TOKEN_CHARS for char in failure_reason
+                )
+            ):
+                audit["quarantined"][-1]["failure_reason"] = failure_reason
             continue
         reason, fact = _verified_fact_from_result(
             candidate=candidate,
@@ -591,6 +608,11 @@ def _verified_fact_from_result(
     )
     if not inspected_pages:
         return "verified_fact_inspected_pages_missing", {}
+    source_reading = _result_mapping(result, "source_reading")
+    if not source_reading_matches_binding(
+        source_reading, expected_source_identity, inspected_pages
+    ):
+        return "verified_fact_source_reading_invalid", {}
     result_supporting_pages = _result_pages(result, ("supporting_physical_pages",))
     fact_supporting_pages = _pages(raw_fact.get("supporting_physical_pages"))
     if (
@@ -607,6 +629,22 @@ def _verified_fact_from_result(
         return "verified_fact_supporting_pages_missing", {}
     if inspected_pages and not set(supporting_pages).issubset(inspected_pages):
         return "verified_fact_supporting_page_not_inspected", {}
+    source_assessment = _result_mapping(result, "source_reading_assessment")
+    if not source_assessment_matches_binding(
+        source_assessment, supporting_pages, sha256_json(source_reading)
+    ):
+        return "verified_fact_source_reading_assessment_invalid", {}
+    source_comparison = _result_mapping(result, "source_reading_comparison")
+    if (
+        not source_assessment_matches_binding(
+            source_comparison, supporting_pages, sha256_json(source_reading)
+        )
+        or source_comparison.get("claim_digest")
+        != sha256_json(_result_field(result, "final_claim"))
+        or source_comparison.get("fact_content_digest")
+        != sha256_json(visual_fact_comparison_content(raw_fact))
+    ):
+        return "verified_fact_source_comparison_invalid", {}
 
     corrected_binding_reason = _corrected_binding_conflict_reason(
         candidate=candidate,
@@ -659,6 +697,11 @@ def _verified_fact_from_result(
             "source_truth_notes_by_page": deepcopy(source_notes),
             "discovery_candidate_id": _candidate_id(candidate),
             "discovery_evidence_ids": _candidate_evidence_ids(candidate),
+            "source_reading_digest": sha256_json(source_reading),
+            "source_reading_request_id": _field_text(source_reading, "request_id"),
+            "source_reading_model": _field_text(source_reading, "model"),
+            "source_reading_assessment": deepcopy(source_assessment),
+            "source_reading_comparison": deepcopy(source_comparison),
         },
     }
     return "", fact

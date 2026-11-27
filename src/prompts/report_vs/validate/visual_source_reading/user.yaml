@@ -1,0 +1,10 @@
+text: |
+  Read the complete original PDF page images attached to this request and
+  record their visible contents independently.
+
+  Image-to-page mapping (one-based physical PDF pages, in attachment order):
+  {{ image_page_map }}
+
+  Use the mapping for physical_page, not a page number printed in a header or
+  footer. If an image or its mapping cannot be read reliably, return unresolved
+  and describe the uncertainty. Return only the JSON specified by the system.

@@ -3,10 +3,77 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping, Sequence
 
 VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION = "1.1"
 VERIFIED_FACT_SCHEMA_VERSION = "1.0"
+VISUAL_ADMISSION_POLICY_VERSION = "source-comparison-v1"
+
+
+def source_reading_matches_binding(
+    reading: Mapping[str, Any], source_identity: str, inspected_pages: Sequence[int]
+) -> bool:
+    """Check the source and complete physical-page binding of a visual reading."""
+    pages = reading.get("pages")
+    if (
+        reading.get("schema_version") != "1.0"
+        or reading.get("source_identity") != source_identity
+        or not isinstance(pages, list)
+        or len(pages) != len(inspected_pages)
+        or not pages
+    ):
+        return False
+    seen: set[int] = set()
+    for page in pages:
+        if not isinstance(page, Mapping):
+            return False
+        number = page.get("physical_page")
+        observations = page.get("observations")
+        uncertainties = page.get("uncertainties")
+        if (
+            type(number) is not int
+            or number not in inspected_pages
+            or number in seen
+            or not isinstance(observations, list)
+            or not observations
+            or any(
+                not isinstance(item, str) or not item.strip() for item in observations
+            )
+            or not isinstance(uncertainties, list)
+            or any(
+                not isinstance(item, str) or not item.strip() for item in uncertainties
+            )
+        ):
+            return False
+        seen.add(number)
+    return seen == set(inspected_pages)
+
+
+def source_assessment_matches_binding(
+    assessment: Mapping[str, Any], supporting_pages: Sequence[int], reading_digest: str
+) -> bool:
+    pages = assessment.get("supporting_physical_pages")
+    explanation = assessment.get("explanation")
+    return bool(
+        assessment.get("outcome") == "supported"
+        and assessment.get("source_reading_digest") == reading_digest
+        and isinstance(explanation, str)
+        and explanation.strip()
+        and isinstance(pages, list)
+        and pages
+        and all(type(page) is int for page in pages)
+        and len(set(pages)) == len(pages)
+        and set(pages) == set(supporting_pages)
+    )
+
+
+def visual_fact_comparison_content(fact: Mapping[str, Any]) -> Dict[str, Any]:
+    """Return all factual fields that the independent comparison must cover."""
+    return {
+        "statement": fact.get("statement", ""),
+        "metric": fact.get("metric", {}),
+        "qualifiers": fact.get("qualifiers", []),
+    }
 
 
 @dataclass(frozen=True)
@@ -131,6 +198,10 @@ class VisualClaimVerificationAttempt:
     )
     request_id: str = field(default="", metadata={"doc": "Provider request ID."})
     model: str = field(default="", metadata={"doc": "Resolved provider model."})
+    source_reading_assessment: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Verifier's assessment of the independent source reading."},
+    )
 
 
 @dataclass(frozen=True)
@@ -273,6 +344,22 @@ class VisualClaimEvaluationResult:
                 "Authoritative visual fact; original candidate fields remain "
                 "diagnostic lineage only."
             )
+        },
+    )
+    source_reading: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Claim-blind source reading bound to the inspected PDF pages."
+        },
+    )
+    source_reading_assessment: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Source-reading assessment from the successful verifier."},
+    )
+    source_reading_comparison: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Independent semantic comparison bound to the reading and final claim."
         },
     )
 

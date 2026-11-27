@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import re
 from types import SimpleNamespace
 
@@ -17,6 +18,9 @@ from src.generators.verified_claims_visual_generator import (
 )
 from src.services.prompt_service import load_prompt_set, render_prompt
 from src.utils.errors import AppError
+from tests._test_verified_claims_visual_generator.source_reading_helpers import (
+    _source_reading,
+)
 
 
 def _ctx() -> RunContext:
@@ -234,6 +238,8 @@ def _dependencies(responses, render_calls, requests):
     def call_model(request: OpenAIJSONImagePromptRequest, _ctx):
         nonlocal latest_corrected_claim
         requests.append(request)
+        if request.prompt_namespace == "report_vs/validate/visual_source_reading":
+            return _source_reading(request)
         payload = next(responses)
         if (
             isinstance(payload, dict)
@@ -276,9 +282,37 @@ def _dependencies(responses, render_calls, requests):
                     "qualifiers": [],
                 },
             }
+        if isinstance(payload, dict) and payload.get("outcome") == "verified":
+            payload = {
+                **payload,
+                "source_reading_assessment": {
+                    "outcome": "supported",
+                    "supporting_physical_pages": payload.get(
+                        "supporting_physical_pages", []
+                    ),
+                    "explanation": "The source reading supports the verified claim.",
+                },
+            }
         return SimpleNamespace(
             parsed_json=payload,
             request_id=f"request-{len(requests)}",
+            model=request.model,
+        )
+
+    def compare_source(request, _ctx):
+        requests.append(request)
+        source_input = request.user_prompt.split(
+            "Visually transcribed source reading:", 1
+        )[1].lstrip()
+        binding, _ = json.JSONDecoder().raw_decode(source_input)
+        return SimpleNamespace(
+            parsed_json={
+                "outcome": "supported",
+                "explanation": "The source reading supports the verified claim.",
+                "source_reading_digest": binding["source_reading_digest"],
+                "supporting_physical_pages": binding["supporting_physical_pages"],
+            },
+            request_id="source-comparison",
             model=request.model,
         )
 
@@ -287,6 +321,7 @@ def _dependencies(responses, render_calls, requests):
         render_prompt=render_prompt,
         render_page_for_crop_refine=render_page,
         openai_chat_json_with_images=call_model,
+        openai_chat_json=compare_source,
     )
 
 
@@ -336,19 +371,47 @@ def test_first_verification_failure_is_repaired_once_and_then_verified(tmp_path)
     assert len(item.correction_attempts) == 2
     assert len(item.verification_attempts) == 2
     assert len(render_calls) == 1
-    assert [request.image_paths for request in requests] == [
+    assert [request.prompt_namespace for request in requests] == [
+        "report_vs/validate/visual_source_reading",
+        "report_vs/validate/visual_claim_correction",
+        "report_vs/validate/visual_claim_verification",
+        "report_vs/validate/visual_claim_correction",
+        "report_vs/validate/visual_claim_verification",
+        "report_vs/validate/visual_source_comparison",
+    ]
+    assert (
+        "The source page visibly records a relevant finding." in requests[2].user_prompt
+    )
+    assert item.source_reading["pages"] == [
+        {
+            "physical_page": 5,
+            "observations": ["The source page visibly records a relevant finding."],
+            "uncertainties": [],
+        }
+    ]
+    assert [request.image_paths for request in requests[:-1]] == [
         [str(tmp_path / "report/crop_refine_pages/page-4.png")]
-    ] * 4
+    ] * 5
+    assert not getattr(requests[-1], "image_paths", None)
     assert claims == original
     assert all(request.reasoning_effort == "high" for request in requests)
-    assert all(request.response_cache_enabled for request in requests)
-    assert [request.max_output_tokens for request in requests] == [
-        4096,
-        16384,
-        4096,
-        16384,
+    assert [request.response_cache_enabled for request in requests] == [
+        False,
+        True,
+        True,
+        True,
+        True,
+        False,
     ]
-    assert "Original claim" in requests[1].user_prompt
+    assert [request.max_output_tokens for request in requests] == [
+        2048,
+        4096,
+        16384,
+        4096,
+        16384,
+        2048,
+    ]
+    assert "Original claim" in requests[2].user_prompt
 
 
 def test_first_unresolved_correction_receives_one_bounded_retry(tmp_path):
@@ -481,10 +544,10 @@ def test_verifier_receives_original_direction_and_keeps_authoritative_binding(
     assert item.physical_page == 5
     assert item.evidence_ids == ["f1"]
     assert item.evidence_spans == claims[0]["evidence_spans"]
-    assert "Original claim" in requests[0].user_prompt
     assert "Original claim" in requests[1].user_prompt
-    assert "pdf-sha256" in requests[1].user_prompt
-    assert "f1" in requests[1].user_prompt
+    assert "Original claim" in requests[2].user_prompt
+    assert "pdf-sha256" in requests[2].user_prompt
+    assert "f1" in requests[2].user_prompt
 
 
 def test_invalid_correction_and_verification_outputs_fail_closed(tmp_path):
@@ -546,6 +609,7 @@ def test_multi_page_binding_renders_and_sends_each_complete_page(tmp_path):
         str(tmp_path / "report/crop_refine_pages/page-5.png"),
     ]
     assert requests[1].image_paths == requests[0].image_paths
+    assert requests[2].image_paths == requests[0].image_paths
 
 
 def test_visual_prompt_labels_each_image_with_one_based_physical_page(tmp_path):
@@ -585,14 +649,14 @@ def test_visual_prompt_labels_each_image_with_one_based_physical_page(tmp_path):
     )
 
     assert result.claims[0].outcome == "verified"
-    assert "image 1 = physical PDF page 14" in requests[0].user_prompt
-    assert "image 2 = physical PDF page 15" in requests[0].user_prompt
     assert "image 1 = physical PDF page 14" in requests[1].user_prompt
     assert "image 2 = physical PDF page 15" in requests[1].user_prompt
-    assert "authoritative" in requests[0].user_prompt.lower()
-    assert "printed footer" in requests[0].user_prompt.lower()
+    assert "image 1 = physical PDF page 14" in requests[2].user_prompt
+    assert "image 2 = physical PDF page 15" in requests[2].user_prompt
+    assert "authoritative" in requests[1].user_prompt.lower()
+    assert "printed footer" in requests[1].user_prompt.lower()
     assert (
-        "cite this page, not any printed page label" in requests[0].user_prompt.lower()
+        "cite this page, not any printed page label" in requests[1].user_prompt.lower()
     )
 
 
@@ -925,36 +989,3 @@ def test_conflicting_claim_source_identity_fails_closed(tmp_path):
     assert result.claims[0].outcome == "skipped"
     assert result.claims[0].failure_reason == "source_binding_conflict"
     assert requests == []
-
-
-def test_doc_map_only_claim_page_is_eligible_for_provisional_visual_inspection(
-    tmp_path,
-):
-    claim = _claim("doc-map-only", "Original claim")
-    claim["evidence_spans"][0]["source_pack"] = "doc_map"
-    requests = []
-    responses = iter(
-        [
-            {"claim": "Corrected claim", "status": "corrected", "issues": []},
-            {
-                "outcome": "verified",
-                "diagnostics": [],
-                "source_truth_notes": (
-                    "The page shows the corrected metric and cohort relationship."
-                ),
-            },
-        ]
-    )
-    dependencies = _dependencies(responses, [], requests)
-
-    result = evaluate_shortlisted_claims(
-        request=_request(tmp_path, [claim]),
-        settings=_settings(tmp_path),
-        ctx=_ctx(),
-        dependencies=dependencies,
-    )
-
-    assert result.claims[0].outcome == "verified"
-    assert result.claims[0].evidence_ids == ["f1"]
-    assert result.claims[0].evidence_spans == claim["evidence_spans"]
-    assert len(requests) == 2

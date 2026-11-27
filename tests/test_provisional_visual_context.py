@@ -55,6 +55,6 @@ def test_canary_supplies_bound_page_text_without_recovery(tmp_path):
         ],
     )
     assert not admit([]).verified_facts
-    assert text in requests[0].user_prompt
-    assert "Unselected page text" not in requests[0].user_prompt
-    assert requests[0].image_paths
+    assert text in requests[1].user_prompt
+    assert "Unselected page text" not in requests[1].user_prompt
+    assert requests[1].image_paths

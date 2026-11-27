@@ -49312,6 +49312,18 @@
         "source_identity": {
           "type": "string"
         },
+        "source_reading": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "source_reading_assessment": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "source_reading_comparison": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "source_truth_notes_by_page": {
           "additionalProperties": {
             "type": "string"
@@ -49368,6 +49380,10 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "source_reading_assessment": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "source_truth_notes": {
           "type": "string"

@@ -5,7 +5,47 @@ from types import SimpleNamespace
 from src.generators.verified_claims_visual_generator import evaluate_shortlisted_claims
 from src.utils.errors import AppError
 
-from .cases_01_visual import _claim, _ctx, _dependencies, _request, _settings
+from .cases_01_visual import (
+    _claim,
+    _ctx,
+    _dependencies,
+    _request,
+    _settings,
+    _source_reading,
+)
+
+
+def test_doc_map_only_claim_page_is_eligible_for_provisional_visual_inspection(
+    tmp_path,
+):
+    claim = _claim("doc-map-only", "Original claim")
+    claim["evidence_spans"][0]["source_pack"] = "doc_map"
+    requests = []
+    responses = iter(
+        [
+            {"claim": "Corrected claim", "status": "corrected", "issues": []},
+            {
+                "outcome": "verified",
+                "diagnostics": [],
+                "source_truth_notes": (
+                    "The page shows the corrected metric and cohort relationship."
+                ),
+            },
+        ]
+    )
+    dependencies = _dependencies(responses, [], requests)
+
+    result = evaluate_shortlisted_claims(
+        request=_request(tmp_path, [claim]),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        dependencies=dependencies,
+    )
+
+    assert result.claims[0].outcome == "verified"
+    assert result.claims[0].evidence_ids == ["f1"]
+    assert result.claims[0].evidence_spans == claim["evidence_spans"]
+    assert len(requests) == 4
 
 
 def test_rejected_claim_does_not_require_supporting_pages(tmp_path):
@@ -43,8 +83,8 @@ def test_rejected_claim_does_not_require_supporting_pages(tmp_path):
         attempt.diagnostics == ["The category and value are swapped."]
         for attempt in result.claims[0].verification_attempts
     )
-    assert "The category and value are swapped." in requests[2].user_prompt
-    assert "verification_supporting_pages_invalid" not in requests[2].user_prompt
+    assert "The category and value are swapped." in requests[3].user_prompt
+    assert "verification_supporting_pages_invalid" not in requests[3].user_prompt
 
 
 def test_verified_outcome_requires_structural_source_truth_notes(tmp_path):
@@ -164,6 +204,8 @@ def test_typed_provider_error_details_are_retained(tmp_path):
     claims = [_claim("candidate-1", "Original claim")]
 
     def raising_model(request, _ctx):
+        if request.prompt_namespace == "report_vs/validate/visual_source_reading":
+            return _source_reading(request)
         raise AppError(
             code="llm_budget_exceeded",
             message="budget exceeded",
@@ -202,6 +244,8 @@ def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp
 
     def model(request, _ctx):
         nonlocal calls
+        if request.prompt_namespace == "report_vs/validate/visual_source_reading":
+            return _source_reading(request)
         calls += 1
         if calls == 2:
             raise AppError(
@@ -225,6 +269,11 @@ def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp
                     "relationship."
                 ),
                 "supporting_physical_pages": [5],
+                "source_reading_assessment": {
+                    "outcome": "supported",
+                    "supporting_physical_pages": [5],
+                    "explanation": "The source reading supports the corrected claim.",
+                },
                 "source_truth_notes_by_page": {
                     "5": (
                         "The source page confirms the corrected value and cohort "
@@ -246,6 +295,7 @@ def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp
         render_prompt=base.render_prompt,
         render_page_for_crop_refine=base.render_page_for_crop_refine,
         openai_chat_json_with_images=model,
+        openai_chat_json=base.openai_chat_json,
     )
 
     result = evaluate_shortlisted_claims(

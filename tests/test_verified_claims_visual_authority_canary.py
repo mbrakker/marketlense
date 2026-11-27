@@ -19,13 +19,12 @@ from src.generators._artifact_generator.generation import generate_artifacts
 from src.generators.artifact_normalization import (
     artifact_evidence_span_index,
     bind_artifact_evidence_spans,
-    build_verified_fact_doc_map,
     page_bound_direct_evidence_packs,
-    remap_editorial_plan_to_verified_facts,
 )
 from src.generators.verified_claims_canary import (
     admit_visual_authority_candidates,
 )
+from src.utils.cache_utils import sha256_json
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient,
     FakeAnalysisStore,
@@ -38,6 +37,9 @@ from tests._test_artifact_generator.cases_05_docmap_insight_selection import (
     _generation_evidence,
     _insight,
     _verified_generation_responses,
+)
+from tests._verified_claims_visual_authority_context import (
+    test_verified_fact_context_removes_discovery_facts_and_omits_unmapped_themes,  # noqa: F401
 )
 
 SOURCE_IDENTITY = f"frozen-report|pdf-sha256:{'a' * 64}"
@@ -106,6 +108,51 @@ def _evidence_packs(*candidates: dict) -> dict:
                 for item in candidates
             ],
         }
+    }
+
+
+def _source_reading(source_identity: str, pages: list[int]) -> dict:
+    return {
+        "schema_version": "1.0",
+        "source_identity": source_identity,
+        "pages": [
+            {
+                "physical_page": page,
+                "observations": [
+                    "Online research before purchase rose to 42% in 2026."
+                ],
+                "uncertainties": [],
+            }
+            for page in pages
+        ],
+    }
+
+
+def _source_reading_assessment(source_reading: dict, pages: list[int]) -> dict:
+    return {
+        "outcome": "supported",
+        "supporting_physical_pages": list(pages),
+        "explanation": "The source reading supports the verified fact.",
+        "source_reading_digest": sha256_json(source_reading),
+    }
+
+
+def _source_reading_comparison(
+    source_reading: dict, final_claim: str, fact: dict
+) -> dict:
+    return {
+        "outcome": "supported",
+        "supporting_physical_pages": list(fact.get("supporting_physical_pages", [])),
+        "explanation": "The source reading supports the final claim and verified fact.",
+        "source_reading_digest": sha256_json(source_reading),
+        "claim_digest": sha256_json(final_claim),
+        "fact_content_digest": sha256_json(
+            {
+                "statement": fact.get("statement", ""),
+                "metric": fact.get("metric", {}),
+                "qualifiers": fact.get("qualifiers", []),
+            }
+        ),
     }
 
 
@@ -183,6 +230,8 @@ def _result(
             }
         ]
         corrected_metric_binding = deepcopy(corrected_metric or candidate["metric"])
+    source_reading = _source_reading(source_identity, corrected_pages)
+    supporting_pages = fact_payload.get("supporting_physical_pages") or corrected_pages
     return VisualClaimEvaluationResult(
         schema_version=VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION,
         candidate_id=candidate["id"],
@@ -191,6 +240,13 @@ def _result(
         physical_page=page,
         physical_pages=corrected_pages,
         outcome=outcome,
+        source_reading=source_reading,
+        source_reading_assessment=_source_reading_assessment(
+            source_reading, supporting_pages
+        ),
+        source_reading_comparison=_source_reading_comparison(
+            source_reading, final_claim or candidate["text"], fact_payload
+        ),
         evidence_ids=[evidence_id],
         evidence_spans=deepcopy(candidate["evidence_spans"]),
         original_metric_binding=deepcopy(candidate["metric"]),
@@ -878,62 +934,6 @@ def test_generation_uses_admitted_pool_and_authority_digest(tmp_path):
             "evidence_json", ""
         )
     )
-
-
-def test_verified_fact_context_removes_discovery_facts_and_omits_unmapped_themes():
-    source_doc_map = {
-        "doc_id": "report-1",
-        "title": "Report title",
-        "region": "Global",
-        "covered_period": "2026",
-        "sections": [
-            {
-                "id": "section-1",
-                "title": "Market signal",
-                "summary": "Discovery summary must not flow downstream.",
-                "key_points": ["Discovery point."],
-                "pages": [4],
-            }
-        ],
-    }
-    facts = [
-        {
-            "fact_id": "candidate-1",
-            "provenance": {
-                "discovery_candidate_id": "candidate-1",
-                "discovery_evidence_ids": ["finding-1"],
-            },
-        },
-        {
-            "fact_id": "candidate-2",
-            "provenance": {
-                "discovery_candidate_id": "candidate-2",
-                "discovery_evidence_ids": ["finding-2"],
-            },
-        },
-    ]
-    plan = {
-        "report_thesis": "The report has a planning thesis.",
-        "themes": [
-            {"theme": "Theme 1", "priority": 1, "evidence_ids": ["finding-1"]},
-            {"theme": "Theme 2", "priority": 2, "evidence_ids": ["missing"]},
-            {"theme": "Theme 3", "priority": 3, "evidence_ids": ["finding-2"]},
-        ],
-    }
-
-    sanitized = build_verified_fact_doc_map(source_doc_map)
-    remapped = remap_editorial_plan_to_verified_facts(plan, facts)
-
-    assert sanitized == {
-        "schema_version": "verified_fact_context:1.0",
-        "doc_id": "report-1",
-        "title": "Report title",
-        "sections": [{"id": "section-1", "title": "Market signal"}],
-    }
-    assert [theme["evidence_ids"] for theme in remapped["themes"]] == [
-        ["verified-fact:candidate-1"],
-        ["verified-fact:candidate-2"],
-    ]
 
 
 def test_canary_replay_does_not_bypass_admission_with_cached_artifacts(tmp_path):

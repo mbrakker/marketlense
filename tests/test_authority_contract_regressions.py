@@ -179,6 +179,9 @@ def test_verified_authority_reentry_accepts_only_matching_saved_snapshot(
         ctx=replace(base_runtime.ctx, source_identity_id=source_identity),
     )
     artifacts = _authority_artifacts()
+    artifacts["_cache"]["visual_authority_canary"]["admission_policy_version"] = (
+        "source-comparison-v1"
+    )
     authority = build_verified_authority_context(
         artifacts, expected_source_identity=source_identity
     )

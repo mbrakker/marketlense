@@ -1128,6 +1128,7 @@ def run_report_analysis(
                     doc_map=artifact_doc_map,
                     provisional_evidence=provisional_evidence,
                     source_spans=source_spans,
+                    run_budget=report_runtime_run_budget(runtime),
                 )
             )
             artifact_kwargs["provisional_evidence"] = provisional_evidence

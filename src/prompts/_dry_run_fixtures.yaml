@@ -713,6 +713,24 @@ fixtures:
       metrics_json: *metrics_json
       quotes_json: *quotes_json
       evidence_json: *evidence_json
+  - namespace: "report_vs/validate/visual_source_reading"
+    family: "validation"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_validation
+    system_variables: {}
+    user_variables:
+      image_page_map: "image 1 = physical PDF page 4"
+  - namespace: "report_vs/validate/visual_source_comparison"
+    family: "validation"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_validation
+    system_variables: {}
+    user_variables:
+      source_reading_json: '{"status":"read","pages":[{"physical_page":4,"observations":["In 2025, 40% of surveyed businesses used digital wallets for checkout."],"uncertainties":[]}]}'
+      corrected_claim: "In 2025, 40% of surveyed businesses used digital wallets for checkout."
+      verified_fact_json: '{"statement":"In 2025, 40% of surveyed businesses used digital wallets for checkout.","metric":{},"qualifiers":[]}'
   - namespace: "report_vs/validate/visual_claim_correction"
     family: "validation"
     model: "openai/gpt-5-mini"

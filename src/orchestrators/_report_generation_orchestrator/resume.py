@@ -50,6 +50,7 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.validation import ValidationRequest
 from src.contracts.vector_store import VectorStoreDeleteRequest
+from src.contracts.verified_claims import VISUAL_ADMISSION_POLICY_VERSION
 from src.generators.artifact_normalization import normalize_artifact_editorial_plan
 from src.generators.artifact_prompt_provenance import (
     artifact_family_for_producing_namespace,
@@ -1162,6 +1163,13 @@ def _require_verified_authority_snapshot(
                 "Verified-facts checkpoint reuse requires a persisted authority "
                 "snapshot"
             ),
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        )
+    if metadata.get("admission_policy_version") != VISUAL_ADMISSION_POLICY_VERSION:
+        raise AppError(
+            code="verified_facts_admission_policy_stale",
+            message="Verified-facts checkpoint requires current visual admission",
             retryable=False,
             context={"file_id": runtime.file.file_id},
         )

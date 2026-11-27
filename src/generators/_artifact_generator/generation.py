@@ -23,6 +23,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_bindings_match_public_text_grid,
     soft_copy_prompt_family_materialization_from_payload,
 )
+from src.contracts.verified_claims import VISUAL_ADMISSION_POLICY_VERSION
 from src.generators._artifact_generator.family_policy import (
     apply_artifact_family_policy,
 )
@@ -5321,6 +5322,7 @@ def generate_artifacts(
                 {
                     "visual_authority_canary": {
                         "enabled": True,
+                        "admission_policy_version": VISUAL_ADMISSION_POLICY_VERSION,
                         "digest": visual_authority_digest,
                         "verified_fact_digest": visual_authority_digest,
                         "verified_facts": deepcopy(visual_authority_verified_facts),

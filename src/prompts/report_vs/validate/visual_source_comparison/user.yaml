@@ -1,0 +1,14 @@
+text: |
+  Compare the following transcribed source reading with the corrected claim.
+
+  Visually transcribed source reading:
+  {{ source_reading_json }}
+
+  Corrected claim:
+  {{ corrected_claim }}
+
+  Verified fact proposed from the visual verifier (including metric and
+  qualifiers; compare every material factual field as well as the claim):
+  {{ verified_fact_json }}
+
+  Return only the comparison JSON specified by the system prompt.

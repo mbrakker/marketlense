@@ -8,6 +8,21 @@ text: |
   footnotes, population, denominator, geography, period and forecast/observed
   status.
 
+  The independent_source_reading in the source context was produced without
+  the claim, but it can be incomplete or mistaken. Check it and the corrected
+  claim against the original pages. If it conflicts with the claim on a
+  material fact, or its uncertainty prevents a reliable reading, reject or
+  mark unresolved; do not silently choose a preferred interpretation. If the
+  reading does not establish the claim's material relationships, mark the
+  assessment unresolved even if the page alone might support the claim. Do not
+  call the claim false merely because the reading is incomplete.
+
+  For a verified claim include source_reading_assessment as an object with
+  outcome "supported", supporting_physical_pages equal to the verdict's
+  supporting_physical_pages, and a substantive explanation of the reading's
+  material coverage and agreement. Use outcome "unresolved" or
+  "disagreement" when appropriate, and do not verify the claim in those cases.
+
   Check every material numerical and factual assertion, metric-to-label and
   comparison relationship, sign, rounding, cohort, denominator, geography,
   period, status, uncertainty and attribution. The final corrected claim is the

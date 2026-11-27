@@ -1204,6 +1204,104 @@ model error or authorize unreviewed promotion. Any implementation must bind
 the new assessment to source/page and cache identity, fail closed on material
 disagreement or malformed output, preserve legitimate source-supported
 claims, and prevent older results from bypassing the new requirement.
+The subsequent uncommitted implementation was exercised through the actual
+visual admission boundary on the retained Activate pages. The previously
+reversed claim was corrected and admitted after one verification retry; an
+independently corrected control was admitted on the first attempt. Inspection
+of both admitted statements confirmed the page-6 category/value/CAGR mapping,
+forecast framing, source pages and Internet-access footnote. These are two
+isolated cases, not a report-level or final-commit success rate. The reversed
+case used five calls ($0.018726, 137,799 input and 9,892 output tokens); the
+control used three ($0.011595, 81,420 input and 6,907 output tokens). The
+first replay started before subsequent local cache/audit changes, so neither
+is a final-commit comparison. No publication write occurred.
+
+The new fixture namespace and verification instruction increased the fixture
+corpus from 124,106 to 126,240 tokens and estimated cost from $0.026784 to
+$0.027302; the validation family rose from 14,273 to 16,407 tokens and from
+$0.002340 to $0.002858. The existing baseline builder regenerated the fixture
+baseline after the authorized addition, without changing thresholds. These
+fixture numbers do not measure a report's actual additional provider cost.
+Source readings now bypass the provider response cache so an unresolved or
+malformed response cannot poison later attempts. The recorded fact contains a
+reading digest, request ID and model, but the full reading is not retained as
+an access-controlled replay artifact; exact reconstruction remains a gap.
+Old admission-policy checkpoints fail closed during new re-entry; automatic
+isolated regeneration without affecting historical approvals is not yet
+implemented. E18 remains **Active/PARTIAL** pending safe recovery, full
+regression gates and same-commit Activate/Capgemini end-to-end acceptance.
+An additional isolated live pair after introducing a required structured
+source-reading comparison produced a **false admission**: the wrong Activate
+page-6 category/value/CAGR mapping was admitted on the first attempt, and the
+verifier's explicit comparison incorrectly said it was supported. The correct
+control was also admitted. The two cases used six calls, $0.024639 estimated
+cost, 163,244 input tokens, 16,627 output tokens and 9,000 reasoning tokens.
+The source-reading response was not retained locally by that run. Subsequent
+read-only retrieval using its provider response ID recovered the original
+reading, and its reconstructed digest matched the admitted fact's reading
+digest. A diagnostic extraction found the correct page-6 value/category
+pairs: $128B Internet access, $108B ad revenue and $66B paid content. The
+verifier nevertheless endorsed the inverse claim and asserted that it agreed
+with that reading. Thus at least these material category bindings failed at
+the comparison stage; this does not establish correctness of every other
+reading field. Provider retrieval is not a durable local replay artifact. This
+result contradicts the proposed improvement and blocks promotion and end-to-end
+acceptance. No production publication occurred. Retained case results are in
+`C:/vd868c/activate-source-first-hybrid-coverage-20261127-wrong/` and the
+corresponding `-correct/` directory.
+One further isolated traced run corrected and admitted the wrong input in three
+calls ($0.011821; 81,660 input and 7,310 output tokens). Its in-memory
+co-occurrence summary was ambiguous because multiple labels and values appeared
+in the same source-reading observation; that attempt does not establish
+reliability.
+Another isolated trace used three calls ($0.012868; 81,569 input and 9,420
+output tokens). A bounded diagnostic of the in-memory page-6 reading found
+the correct nearby category/value pairs, and the final admitted fact was also
+correct. This is a separate stochastic attempt and does not negate the false
+admission above.
+A separate text-only comparison experiment supplied that recovered reading
+and the actual admitted statements without PDF images. Two independent
+comparisons marked the reversed claim contradicted; two marked the corrected
+control supported. The four calls cost $0.001024 (5,152 input, 1,480 output,
+910 reasoning tokens). This is component-level evidence for investigating a
+separate semantic comparison, not an implemented gate, a guarantee, or a
+substitute for testing additional sources and the complete report workflow.
+The subsequent uncommitted implementation added an independent text-only
+comparison bound to the exact reading, corrected claim, proposed verified-fact
+content and supporting pages. Two isolated integrated Activate replays used
+eight calls ($0.024777, 170,221 input and 15,509 output tokens); both admitted
+facts had the correct page-6 value/category mapping. In the wrong-input case
+correction fixed the claim before the comparator ran, so this pair does not
+demonstrate that the integrated comparator rejects a visually misverified
+claim. Its ability to reject the retained false claim is supported only by the
+separate component experiment above. Both cases remain component probes, not
+full-report acceptance or a claim of repeatable zero-error performance.
+The exact retained real source-reading, correction and false visual-verifier
+responses were then replayed through the production admission boundary with a
+fresh text-comparison call. Four wrong-claim replays admitted no fact; the
+last three explicitly returned `contradicted` and retained that typed reason
+in quarantine. Two replays of retained source-consistent responses admitted the
+correct control. The six fresh comparison calls cost $0.002597 estimated, with
+21,754 input and 3,488 output tokens; image-stage responses were reused, not
+regenerated. This is a targeted retained-response regression, not a fresh
+full-report result or a guarantee against other false verifications.
+An independent review also found that visual model requests were falling back
+to the provider's default budget instead of receiving the report runtime's
+scoped limits. The report analysis boundary now supplies its existing budget to
+all four visual stages; a focused provider-boundary regression observes the
+same budget on each request. This verifies propagation, not an end-to-end
+budget-exhaustion scenario. Durable source-reading replay still requires an
+approved access-controlled store with explicit retention and redaction; hashes
+and provider request IDs alone do not reconstruct the call.
+The Python 3.12 default suite completed with 9,287 passed, 19 skipped,
+49 deselected and two failures: its unusually short temporary root prevented
+the long-path compaction that those two tests assert. Both affected tests
+passed when rerun with a longer isolated root. This is not a clean full-suite
+pass. The focused visual/admission/checkpoint selection passed 107 tests;
+mypy, architecture-import and contract-snapshot checks passed. The prompt
+fixture gate passed when rerun without concurrent suite load; an earlier
+concurrent run failed its runtime threshold with identical token and cost
+totals. These local results do not replace hosted CI or report acceptance.
 Independent inspection of all physical pages cited by this run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed
