@@ -1918,7 +1918,14 @@ def public_editorial_report_review_scope(
                 evidence_id,
                 {"evidence_id": evidence_id, "texts": []},
             )
-            if evidence_text and evidence_text not in entry["texts"]:
+            # Joint item evidence is not attributable to any one fact. The
+            # complete text stays on the item and each canonical fact stays in
+            # verified_facts; do not mislabel the joint text as single-source.
+            if (
+                evidence_text
+                and not (facts and len(evidence_ids) > 1)
+                and evidence_text not in entry["texts"]
+            ):
                 entry["texts"].append(evidence_text)
         public_content.append(
             {

@@ -84,6 +84,51 @@ def test_public_review_scope_retains_final_insight_identity_and_bindings() -> No
     ]
 
 
+def test_public_review_scope_does_not_attribute_joint_evidence_to_each_fact() -> None:
+    facts = [
+        {"fact_id": "f1", "source_identity": "report", "proposition": "First fact"},
+        {"fact_id": "f2", "source_identity": "report", "proposition": "Second fact"},
+    ]
+    items = [
+        {
+            "public_item_id": "expert:combined",
+            "evidence_ids": ["verified-fact:f1", "verified-fact:f2"],
+            "evidence_text": "First fact; second fact",
+        },
+        {
+            "public_item_id": "insight:single",
+            "evidence_ids": ["verified-fact:f1"],
+            "evidence_text": "First fact",
+        },
+    ]
+
+    scope = public_editorial_report_review_scope(
+        {"_verified_fact_index": {fact["fact_id"]: fact for fact in facts}}, items
+    )
+
+    assert scope["evidence_context"] == [
+        {"evidence_id": "verified-fact:f1", "texts": ["First fact"]},
+        {"evidence_id": "verified-fact:f2", "texts": []},
+    ]
+    assert scope["verified_facts"]["verified-fact:f2"] == facts[1]
+    assert items[0]["evidence_text"] == "First fact; second fact"
+
+
+def test_legacy_public_review_scope_keeps_joint_evidence_behavior() -> None:
+    items = [
+        {
+            "public_item_id": "item",
+            "evidence_ids": ["a", "b"],
+            "evidence_text": "joint source text",
+        }
+    ]
+    scope = public_editorial_report_review_scope({}, items)
+    assert scope["evidence_context"] == [
+        {"evidence_id": "a", "texts": ["joint source text"]},
+        {"evidence_id": "b", "texts": ["joint source text"]},
+    ]
+
+
 def _obligation_review_scope() -> dict:
     return {
         "authority": "canonical_verified_facts",
