@@ -1353,7 +1353,34 @@ preflight now checks fresh full-report paths before source processing using the
 same budget as the commit-time check; existing generation paths and resume-only
 routes are unchanged. These are focused fixes, not evidence that first repair
 or a complete report now succeeds. A fresh end-to-end rerun remains required.
-Independent inspection of all physical pages cited by this run's seven
+
+The fresh Activate run at `6dfb3f71` (`C:/v43/fr-pxafzp8a/`) failed after
+3,217.875 seconds, 450 provider calls, eight file-search calls and $0.253167
+estimated cost. Its initial semantic coverage review identified a missing
+video-revenue category qualification; the targeted rewrite addressed that
+insight, but the subsequent independent review identified an additional SVOD
+context omission and the bounded repair failed closed with
+`semantic_theme_repair_exhausted`. The retained source page supports the
+separate $14.80 willingness-to-pay observation and its 2016 population scope;
+whether its omission is material is an editorial judgment. The SVOD insight
+was not the target of the intervening rewrite. No final HTML or publication
+was produced; this is not first-repair acceptance.
+
+Two fresh diagnostic calls reused the exact retained first-review user input
+and original system prompt, not a full production report replay. One produced
+a schema-valid review identifying both the SVOD and video gaps; the other
+identified both and an additional sample-size omission but was schema-invalid.
+Thus the original single-gap assessment was incomplete relative to at least
+one subsequent valid assessment, but neither observation proves that every
+nominated detail is materially necessary. A trial instruction requesting all
+gaps instead produced a schema-invalid complete verdict and was reverted.
+These controls do not justify weakening the gate, automatically merging
+verdicts or claiming a reliable repair fix. The trial cost $0.004870; the two
+original-prompt controls cost $0.003796 and $0.005482. See the isolated diagnostic
+ledgers `C:/vcoverage2/` and `C:/vcoverage3/` for measured usage. Activate
+and Capgemini acceptance on the same final implementation remains outstanding;
+E18 remains Active/PARTIAL.
+Independent inspection of all physical pages cited by an earlier run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed
 incorrect admitted fact. This is not a complete review of every downstream
