@@ -2838,16 +2838,12 @@ def _read_result(
         **({"failure_diagnostic": failure_diagnostic} if failure_diagnostic else {}),
     }
     if require_verified_facts:
-        result["verified_facts_architecture_evidence"] = (
-            verified_facts_evidence
-            or {
-                "passed": False,
-                "failure_code": "verified_facts_architecture_evidence_missing",
-            }
-        )
+        result["verified_facts_architecture_evidence"] = verified_facts_evidence or {
+            "passed": False,
+            "failure_code": "verified_facts_architecture_evidence_missing",
+        }
         result["verified_facts_architecture_passed"] = bool(
-            verified_facts_evidence
-            and verified_facts_evidence.get("passed") is True
+            verified_facts_evidence and verified_facts_evidence.get("passed") is True
         )
     return result
 
@@ -3113,15 +3109,10 @@ def _read_remediation_failure_diagnostic(
     claim_or_entity_id = _first_diagnostic_identifier(context)
     bounded_context = _bounded_failure_context(context)
     projected_context = {
-        key: (
-            _diagnostic_token(value)
-            if isinstance(value, str)
-            else value
-        )
+        key: (_diagnostic_token(value) if isinstance(value, str) else value)
         for key, value in sorted(bounded_context.items())
-        if isinstance(value, dict) or (
-            isinstance(value, str) and _diagnostic_token(value)
-        )
+        if isinstance(value, dict)
+        or (isinstance(value, str) and _diagnostic_token(value))
     }
     return {
         "stage": _failure_stage(
@@ -3253,9 +3244,7 @@ def _read_verified_facts_architecture_evidence(
         }
     cache = payload.get("_cache")
     canary = (
-        cache.get("visual_authority_canary")
-        if isinstance(cache, Mapping)
-        else None
+        cache.get("visual_authority_canary") if isinstance(cache, Mapping) else None
     )
     if not isinstance(canary, Mapping) or canary.get("enabled") is not True:
         return {
