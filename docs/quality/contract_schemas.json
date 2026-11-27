@@ -32443,6 +32443,50 @@
       ],
       "type": "object"
     },
+    "src.contracts.provisional_evidence.ProvisionalEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.provisional_evidence.ProvisionalFinding"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_identity",
+        "findings"
+      ],
+      "type": "object"
+    },
+    "src.contracts.provisional_evidence.ProvisionalFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "finding": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "source_references": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "finding",
+        "source_references"
+      ],
+      "type": "object"
+    },
     "src.contracts.public_editorial_quality.PublicEditorialQualityIssue": {
       "additionalProperties": false,
       "properties": {
