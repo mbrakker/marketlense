@@ -1510,6 +1510,32 @@ allowed path, task and complete linked fact survive compaction. The test failed
 before the correction and passed afterward. Atomic path and evidence checks
 are unchanged. This controlled regression does not prove that arbitrary larger
 inputs fit, nor does it establish live first-repair success.
+
+**Activate E2E at `e0f5a44b` — FAIL.** The fresh original-PDF run at
+`C:/v45/fr-01wn3k9w/` finished `validation_failed` after one automatic
+regeneration attempt; no WordPress write occurred. Its terminal ledger records
+503 provider calls, seven structured-output recovery calls, $0.436534 estimated
+cost and 3,253.281 seconds. The ledger's zero unsupported and unresolved
+retained factual claims is an automated diagnostic, not independent review of
+the complete report. The unrelated ZIP was restored and its SHA-256 verified.
+
+The actual provider inputs for three observed item-repair calls contained both
+the previously missing repair context and task; their returned patch paths used
+the canonical `insights_final[item=...].field` form. All seven retained repair
+decisions used `current_evidence`, with no prior
+`changed_path_outside_allowed_paths` rejection. This is live evidence for the
+specific handoff correction, not first-repair acceptance. The candidate still
+failed revalidation: one analyst interpretation was classified as an
+unsupported causal outcome, a retail exclusion was missing from expert copy,
+and several implications/actions were judged generic or repetitive. These
+are separate unresolved factual/editorial review and repair problems.
+
+Hosted CI on `e0f5a44b` passed both mutation partitions but failed the tests job
+because the new regression increased an existing test module to 1,130 lines,
+above the unchanged 1,000-line ownership gate. The remaining 9,325 hosted tests
+passed, with 19 skipped; release evidence failed its test prerequisite. The
+regression is relocated rather than weakening that gate. The live run is on
+the earlier SHA and cannot establish same-SHA acceptance for a later commit.
 Independent inspection of all physical pages cited by an earlier run's seven
 verified facts found the other six facts' reported values and attached source
 qualifiers consistent with the pages; the page-6 reversal remains one confirmed
