@@ -107,11 +107,19 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
             rule_id="grounding",
             affected_section="summary.card_tldr_compact",
             entity_id=(
-                "soft_copy:summary:"
-                + hashlib.sha256(compact.encode()).hexdigest()[:16]
+                "soft_copy:summary:" + hashlib.sha256(compact.encode()).hexdigest()[:16]
             ),
             classification="factual_claim",
             violation_type="not_established",
+        )
+    if scenario == "summary_claim_draft":
+        issue = replace(
+            issue,
+            affected_section="summary.executive_summary",
+            entity_id="soft_copy:summary:bbdb623aebab39ca",
+            evidence_ids=["verified-fact:global-revenue-outlook"],
+            classification="factual_claim",
+            violation_type="source_integrity",
         )
     if scenario in {"sibling", "sibling_missing", "sibling_acceptance"}:
         issue = replace(
@@ -146,6 +154,29 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
             self.editorial_attempts = []
 
         def openai_chat_json(self, request, context):
+            if (
+                scenario == "linkedin_nomination"
+                and request.artifact_family == "linkedin_post"
+            ):
+                assert canonical_path.read_bytes() == original_bytes
+                self.repair_prompts.append(request.user_prompt)
+                payload = {
+                    "claim_repair_proposal": {
+                        "schema_version": "1.0",
+                        "action": "replace",
+                        "replacement_text": (
+                            "MarketLense recommendation: Compare planning scenarios "
+                            "against the forecast period of 2017E–2021E."
+                        ),
+                        "evidence_ids_used": ["verified-fact:global-revenue-outlook"],
+                    }
+                }
+                return OpenAIResponseResult(
+                    schema_version="1.0",
+                    text=json.dumps(payload),
+                    parsed_json=payload,
+                    request_id="local-linkedin-claim",
+                )
             if (
                 scenario in {"sibling", "sibling_missing", "sibling_acceptance"}
                 and request.artifact_family == "insights_final"
@@ -190,6 +221,32 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
                         retryable=True,
                     )
                 self.repair_prompts.append(request.user_prompt)
+                if scenario == "summary_claim_draft":
+                    value = (
+                        "Activate forecasts global consumer Internet and media "
+                        "revenues of $1.7 trillion in 2017E and $2.0 trillion "
+                        "in 2021E, a $302 billion increase."
+                        if len(self.repair_prompts) == 1
+                        else "Activate forecasts global consumer Internet and media "
+                        "revenues of $1.7 trillion in 2017E and $2.0 trillion "
+                        "in 2021E, a $302 billion increase at 4.1% CAGR."
+                    )
+                    payload = {
+                        "claim_repair_proposal": {
+                            "schema_version": "1.0",
+                            "action": "replace",
+                            "replacement_text": value,
+                            "evidence_ids_used": [
+                                "verified-fact:global-revenue-outlook"
+                            ],
+                        }
+                    }
+                    return OpenAIResponseResult(
+                        schema_version="1.0",
+                        text=json.dumps(payload),
+                        parsed_json=payload,
+                        request_id="local-summary-claim",
+                    )
                 value = (
                     "Among U.S. adults watching sports weekly, sports fans "
                     "account for 90% of viewers."
@@ -245,6 +302,8 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
                 )
             response = super().openai_chat_json(request, context)
             if request.artifact_family == "public_editorial_quality":
+                if scenario == "linkedin_nomination" and context.repair_attempt == 1:
+                    assert canonical_path.read_bytes() == original_bytes
                 self.editorial_prompts.append(request.user_prompt)
                 self.editorial_attempts.append(context.repair_attempt)
                 payload = deepcopy(response.parsed_json)
@@ -293,7 +352,10 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
                 payload["original_essential_obligation_assessments"] = assessments
                 if context.repair_attempt == 1 or (
                     context.repair_attempt in {2, 3}
-                    and scenario in {"exhaustion", "repeated_draft"}
+                    and (
+                        scenario in {"exhaustion", "repeated_draft"}
+                        or scenario.startswith("linkedin_negative_")
+                    )
                 ):
                     verdict = (
                         next(
@@ -304,6 +366,31 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
                         )
                         if scenario
                         in {"sibling", "sibling_missing", "sibling_acceptance"}
+                        else next(
+                            v
+                            for v in payload["verdicts"]
+                            if v["item_id"]
+                            in {
+                                item["item_id"]
+                                for item in items
+                                if item.get("artifact") == "linkedin_post"
+                                and "MarketLense recommendation:"
+                                in item.get("text", "")
+                            }
+                        )
+                        if scenario == "linkedin_nomination"
+                        or scenario.startswith("linkedin_negative_")
+                        else next(
+                            v
+                            for v in payload["verdicts"]
+                            if v["item_id"]
+                            in {
+                                item["item_id"]
+                                for item in items
+                                if item.get("field") == "executive_summary"
+                            }
+                        )
+                        if scenario == "summary_claim_draft"
                         else next(
                             v
                             for v in payload["verdicts"]
@@ -325,7 +412,9 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
                         status="fail",
                         severity="error",
                         classification=(
-                            "factual_claim"
+                            "prescriptive_recommendation"
+                            if scenario == "linkedin_nomination"
+                            else "factual_claim"
                             if scenario in {"factual", "factual_mislabeled"}
                             else "analyst_interpretation"
                         ),
@@ -357,13 +446,47 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
                         reason=(
                             "The source does not establish this factual claim."
                             if scenario in {"factual", "factual_mislabeled"}
+                            else (
+                                "The final recommendation sentence, 'MarketLense "
+                                "recommendation: If using this figure in planning, "
+                                "keep its forecast status and 2017E–2021E period "
+                                "attached.', needs a more actionable planning step."
+                            )
+                            if scenario == "linkedin_nomination"
                             else "The implication remains generic."
                         ),
-                        repair_target="insights_bundle"
+                        repair_target="linkedin_post"
+                        if scenario == "linkedin_nomination"
+                        else "insights_bundle"
                         if scenario
                         in {"sibling", "sibling_missing", "sibling_acceptance"}
                         else "summary",
                     )
+                    if scenario.startswith("linkedin_negative_"):
+                        verdict.update(
+                            classification="prescriptive_recommendation",
+                            repair_target="linkedin_post",
+                            reason=(
+                                "The LinkedIn recommendation requires source review."
+                            ),
+                        )
+                        if scenario == "linkedin_negative_factual":
+                            verdict.update(
+                                classification="factual_claim",
+                                hard_fail_class="source_integrity",
+                                rule_id="public_editorial_quality.semantic_unsupported_claim",
+                            )
+                        elif scenario == "linkedin_negative_source_integrity":
+                            verdict.update(
+                                hard_fail_class="source_integrity",
+                                rule_id="public_editorial_quality.semantic_unsupported_claim",
+                            )
+                        elif scenario == "linkedin_negative_empty_evidence":
+                            verdict["evidence_ids"] = []
+                        elif scenario == "linkedin_negative_unknown_evidence":
+                            verdict["evidence_ids"] = ["verified-fact:unknown"]
+                        elif scenario == "linkedin_negative_unknown_identity":
+                            verdict["item_id"] = "soft_copy:linkedin_post:unknown"
                     if (
                         scenario in {"sibling", "sibling_acceptance"}
                         and context.repair_attempt == 1
@@ -482,7 +605,8 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
             assert canonical_path.read_bytes() == original_bytes
             assert caplog is not None
             events = [
-                record.message for record in caplog.records
+                record.message
+                for record in caplog.records
                 if "validation_regen_pre_candidate_failure" in record.message
             ]
             assert len(events) == 1
@@ -507,6 +631,100 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
         json.loads(Path(a.candidate_audit_path).read_text(encoding="utf-8"))
         for a in attempts
     ]
+    if scenario.startswith("linkedin_negative_"):
+        first_validation = json.loads(
+            Path(attempts[0].candidate_audit_path)
+            .with_name("validation_regen_candidate_1.json")
+            .read_text(encoding="utf-8")
+        )
+        assert client.editorial_attempts[0] == 1
+        assert any(
+            item["severity"] == "error"
+            and item["rule_id"].startswith("public_editorial_quality.semantic_")
+            for item in first_validation["issues"]
+        )
+        assert all(
+            not any(path.startswith("linkedin_post") for path in audit["allowed_paths"])
+            for audit in audits[1:]
+        )
+        assert all(
+            audit["before_sha256"] == audits[0]["before_sha256"] for audit in audits[1:]
+        )
+        assert all(audit["promotion_outcome"] != "promoted" for audit in audits)
+        assert promoted == snapshot
+        assert canonical_path.read_bytes() == original_bytes
+        assert len(client.repair_prompts) == 1
+        return
+    if scenario == "linkedin_nomination":
+        first_candidate = json.loads(
+            Path(audits[0]["candidate_artifacts_path"]).read_text(encoding="utf-8")
+        )
+        assert audits[0]["promotion_outcome"] == "candidate"
+        assert first_candidate["linkedin_post"] == snapshot["linkedin_post"]
+        first_validation = json.loads(
+            Path(attempts[0].candidate_audit_path)
+            .with_name("validation_regen_candidate_1.json")
+            .read_text(encoding="utf-8")
+        )
+        assert any(
+            issue["affected_section"] == "linkedin_post"
+            and issue["violation_type"] == "editorial_only"
+            and "verified-fact:global-revenue-outlook" in issue["evidence_ids"]
+            for issue in first_validation["issues"]
+            if issue["severity"] == "error"
+        )
+        assert len(audits) == 2, "LinkedIn editorial issue was not refined"
+        assert audits[1]["before_sha256"] == audits[0]["after_sha256"]
+        assert "linkedin_post[claim_index=2]" in audits[1]["allowed_paths"]
+        assert validation.status == "pass"
+        assert attempts[-1].promotion_outcome == "promoted"
+        assert promoted["linkedin_post"] == (
+            "Activate forecasts global consumer Internet and media revenues to "
+            "increase by $302 billion over 2017E–2021E.\n\n"
+            "That is projected growth for the stated period, not an observed "
+            "revenue change.\n\n"
+            "MarketLense recommendation: Compare planning scenarios against "
+            "the forecast period of 2017E–2021E."
+        )
+        return
+    if scenario == "summary_claim_draft":
+        first_candidate = json.loads(
+            Path(audits[0]["candidate_artifacts_path"]).read_text(encoding="utf-8")
+        )
+        original_summary = snapshot["summary"]["executive_summary"]
+        sibling = (
+            "In 2016, video was the largest category of daily media attention "
+            "for U.S. adults age 18+, occupying 20 of 48 fifteen-minute "
+            "intervals in a typical 12:04-hour media day, with behaviors "
+            "averaged over 7 days."
+        )
+        assert sibling in original_summary
+        assert sibling in first_candidate["summary"]["executive_summary"]
+        assert "summary.executive_summary" in audits[0]["allowed_paths"]
+        assert audits[0]["repair_delta"]["mutation_scope_result"] == "pass"
+        first_validation = json.loads(
+            Path(attempts[0].candidate_audit_path)
+            .with_name("validation_regen_candidate_1.json")
+            .read_text(encoding="utf-8")
+        )
+        assert [
+            (issue["rule_id"], issue["affected_section"], issue["violation_type"])
+            for issue in first_validation["issues"]
+            if issue["severity"] == "error"
+        ] == [
+            (
+                "public_editorial_quality.semantic_generic_copy",
+                "executive_summary",
+                "editorial_only",
+            )
+        ]
+        assert audits[0]["promotion_outcome"] == "candidate"
+        assert len(audits) == 2
+        assert audits[1]["before_sha256"] == audits[0]["after_sha256"]
+        assert sibling in promoted["summary"]["executive_summary"]
+        assert validation.status == "pass"
+        assert attempts[-1].promotion_outcome == "promoted"
+        return
     if scenario in {"typed_editorial", "legacy_editorial"}:
         first_validation = json.loads(
             Path(attempts[0].candidate_audit_path)
@@ -714,6 +932,28 @@ def _run_draft_scenario(tmp_path, scenario, caplog=None):
 
 def test_editorial_failure_can_be_refined_as_private_draft(tmp_path):
     _run_draft_scenario(tmp_path, "promotion")
+
+
+def test_claim_scoped_summary_reconstruction_can_refine_private_draft(tmp_path):
+    _run_draft_scenario(tmp_path, "summary_claim_draft")
+
+
+def test_private_draft_refines_newly_reviewed_linkedin_sentence(tmp_path):
+    _run_draft_scenario(tmp_path, "linkedin_nomination")
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "factual",
+        "source_integrity",
+        "empty_evidence",
+        "unknown_evidence",
+        "unknown_identity",
+    ],
+)
+def test_private_draft_rejects_unsafe_linkedin_review(tmp_path, case):
+    _run_draft_scenario(tmp_path, f"linkedin_negative_{case}")
 
 
 def test_pre_candidate_summary_projection_failure_is_recorded(tmp_path, caplog):

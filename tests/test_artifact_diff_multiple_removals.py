@@ -65,3 +65,53 @@ def test_ambiguous_multiple_idless_removal_does_not_grant_scope() -> None:
         ),
     )
     assert scope.status == "fail"
+
+
+def test_declared_summary_reconstruction_does_not_authorize_sibling_changes() -> None:
+    before = {"summary": {"executive_summary": "First sentence. Second sentence."}}
+    plan = SimpleNamespace(
+        targets=[
+            SimpleNamespace(
+                target_section="summary",
+                repair_action="REGENERATE_ITEM",
+                allowed_paths=["summary.executive_summary[claim_index=1]"],
+            )
+        ]
+    )
+    repaired = {"summary": {"executive_summary": "First sentence. Improved second."}}
+    tampered = {"summary": {"executive_summary": "Changed first. Improved second."}}
+    assert (
+        _scope_validation_report(
+            before=before,
+            after=repaired,
+            plan=plan,
+            deterministic_mutation_paths=["summary.executive_summary"],
+        ).status
+        == "pass"
+    )
+    assert (
+        _scope_validation_report(
+            before=before,
+            after=tampered,
+            plan=plan,
+            deterministic_mutation_paths=["summary.executive_summary"],
+        ).status
+        == "fail"
+    )
+    malformed_before = {
+        **before,
+        "soft_copy_claim_provenance": {"claims": "not-a-claim-list"},
+    }
+    malformed_repaired = {
+        **repaired,
+        "soft_copy_claim_provenance": {"claims": "not-a-claim-list"},
+    }
+    assert (
+        _scope_validation_report(
+            before=malformed_before,
+            after=malformed_repaired,
+            plan=plan,
+            deterministic_mutation_paths=["summary.executive_summary"],
+        ).status
+        == "fail"
+    )

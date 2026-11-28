@@ -1632,6 +1632,35 @@ The conditional-interpretation grounding conflict, broader reviewer stability,
 independent PDF/HTML inspection and same-SHA Activate and Capgemini runs remain
 open. E18 and Step 2 remain **PARTIAL/NO-GO**.
 
+The subsequent fresh Activate run at `73b517b6`
+(`C:/v48/fr-ap04b6t7/cohort_result.json`) admitted 6 of 8 visual candidates
+and failed publication readiness after one evaluated transactional candidate;
+no WordPress write or final HTML occurred. It used 521 provider calls,
+3,234,989 input and 461,886 output tokens, an estimated $0.546966 and
+3,498.672 seconds. The candidate passed factual and scope validation, but
+editorial re-review found four issues, including a previously unflagged
+repetitive insight pair and generic LinkedIn sentence. The private candidate
+was rolled back; the next planning pass skipped. The cohort's reported repair
+count of three is not evidence of three evaluated transactional candidates.
+
+Two provider-free retained-input regressions now exercise claim-scoped summary
+reconstruction and a newly reviewed, evidence-bound LinkedIn sentence during
+private refinement. Cumulative scope, sibling preservation, factual checks and
+atomic promotion remain required. These tests do not prove live first-repair
+success. A separate page-6 probe accepted a deliberately swapped mapping despite
+a correct independent source reading; it did not exercise the complete current
+visual admission chain. Robust visual comparison, independent final-output
+inspection and same-SHA Activate and Capgemini acceptance remain open.
+
+A subsequent controlled production-boundary diagnostic used the same manually
+checked page-6 reading for correct and swapped mappings. An initially broader
+claim was unresolved because it omitted the source's sector and metric scope;
+the swapped claim was contradicted. With those scopes restored, the correct
+claim was supported and the swapped claim contradicted. Four calls used 2,848
+input and 1,974 output tokens at an estimated $0.001272. This concise,
+manually transcribed input is not a visual-reader test or a full retained-fact
+replay, and does not resolve the earlier comparator false-acceptance probe.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the

@@ -4921,6 +4921,23 @@ def _run_validation_regeneration_loop(
         if draft_plan is not None:
             for issue in current_validation_report.issues:
                 if (
+                    issue.rule_id.startswith("public_editorial_quality.semantic_")
+                    and issue.severity == "error"
+                    and issue.violation_type == "editorial_only"
+                    and normalize_claim_classification(issue.classification)
+                    in {"analyst_interpretation", "prescriptive_recommendation"}
+                    and issue.evidence_ids
+                    and issue.repair_target == "linkedin_post"
+                    and issue.affected_section == "linkedin_post"
+                ):
+                    nominated_draft_paths.update(
+                        _soft_copy_claim_paths(
+                            family="linkedin_post",
+                            entity_id=issue.entity_id,
+                            artifacts=working_artifacts,
+                        )
+                    )
+                if (
                     issue.rule_id
                     != "public_editorial_quality.semantic_collective_editorial_repair"
                     or issue.severity != "error"
@@ -5243,6 +5260,22 @@ def _run_validation_regeneration_loop(
         deterministic_mutation_paths = tuple(
             getattr(regeneration_response, "deterministic_mutation_paths", []) or []
         )
+        planned_summary_reconstructions = {
+            match.group(1)
+            for target in plan.targets
+            if target.repair_action == "REGENERATE_ITEM"
+            for path in target.allowed_paths
+            if (
+                match := re.fullmatch(
+                    r"(summary\.(?:tldr|card_tldr_compact|executive_summary))"
+                    r"\[claim_index=\d+\]",
+                    path,
+                )
+            )
+        }
+        unsafe_deterministic_mutations = (
+            set(deterministic_mutation_paths) - planned_summary_reconstructions
+        )
         repair_decisions = tuple(
             getattr(regeneration_response, "repair_decisions", []) or []
         )
@@ -5449,7 +5482,7 @@ def _run_validation_regeneration_loop(
             or abstained_noop_candidate
             or (
                 draft_plan is not None
-                and bool(payload_overrides or deterministic_mutation_paths)
+                and bool(payload_overrides or unsafe_deterministic_mutations)
             )
         )
         claim_reuse_eligible = bool(
@@ -5810,7 +5843,7 @@ def _run_validation_regeneration_loop(
                         for target in plan.targets
                     )
                     and not deterministic_candidate_rejection
-                    and not deterministic_mutation_paths
+                    and not unsafe_deterministic_mutations
                     and not payload_overrides
                     and candidate_changed
                     and not repeated_candidate_hash
