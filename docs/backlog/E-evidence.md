@@ -1592,6 +1592,46 @@ qualifiers consistent with the pages; the page-6 reversal remains one confirmed
 incorrect admitted fact. This is not a complete review of every downstream
 assertion, and no final HTML was produced.
 
+**Activate grouped-theme coverage follow-up — 2026-11-28:** The fresh isolated
+run at `1c910500` (`C:/v47/fr-6znuhlsr/cohort_result.json`) admitted 8/8
+visual candidates, then failed closed with `artifact_final_insight_coverage_invalid`
+after one targeted rewrite. It made 457 provider calls, used 1,070,386 input
+and 274,621 output tokens, cost an estimated $0.264225, and ran 2,884.765
+seconds. No final HTML, completed grounding, readiness approval or WordPress
+write resulted. The user's modified ZIP was restored and its SHA-256 verified.
+
+The retained provider requests and responses show that both alleged missing
+facts were actually developed in separate, correctly bound final insights in
+both coverage requests. The model nevertheless cited only the first insight
+for the grouped essential theme. The previous targeted rewrite changed the
+insights but the reviewer repeated the false omission. This is a concrete
+coverage-assessment failure, not evidence that the final report was sound.
+
+The coverage input now retains the full canonical fact roster once and the
+exact fact IDs on every insight, rather than embedding each complete fact a
+second time inside its insight. The reviewer is explicitly instructed to
+assess collective support across all final insights. A provider-boundary
+integration regression checks the complete shared roster and bindings. Six
+bounded provider replays of the retained assessment input cost $0.031850 in
+total across 193,088 input and 25,083 output tokens; one earlier probe was
+rejected before inference due to an invalid schema name. With the final prompt
+and production projection, the complete roster was judged covered with all
+three supporting IDs; the existing coverage validator accepted that response.
+The deliberately omitted two-insight control was judged partial and identified
+both missing facts. Its isolated validator replay failed closed, but because
+the reconstructed candidate inputs lacked the full production candidate
+structure, that rejection is not proof of the normal semantic-negative path.
+The separately varied prompt-only and deduplicated-context-only complete-roster
+probes also returned covered. These are bounded component replays, not live
+end-to-end acceptance or a claim that all factual or editorial review is stable.
+
+The unchanged prompt-fixture gate passed: corpus 127,657 to 127,748 tokens and
+estimated $0.027723 to $0.027732. Hosted CI passed for the prior `1c910500`
+tree; the changed tree still requires its own CI and fresh report acceptance.
+The conditional-interpretation grounding conflict, broader reviewer stability,
+independent PDF/HTML inspection and same-SHA Activate and Capgemini runs remain
+open. E18 and Step 2 remain **PARTIAL/NO-GO**.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the

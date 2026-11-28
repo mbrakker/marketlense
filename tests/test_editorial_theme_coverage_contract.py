@@ -146,6 +146,7 @@ def test_verified_ten_fact_roster_can_retain_seven_material_planned_themes(tmp_p
         covered_evidence_ids=set(plan_ids),
     )
 
+    prompts = CapturingPromptClient()
     payload = generate_artifacts(
         report_id="verified-ten-fact-theme-roster",
         report_name="Verified ten-fact theme roster",
@@ -154,7 +155,7 @@ def test_verified_ten_fact_roster_can_retain_seven_material_planned_themes(tmp_p
         settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=FakeOpenAI(responses),
-        prompt_client=CapturingPromptClient(),
+        prompt_client=prompts,
         analysis_store=FakeAnalysisStore(),
         visual_authority_admitter=lambda shortlisted: _verified_admission(
             shortlisted, digest="t" * 64
@@ -169,9 +170,22 @@ def test_verified_ten_fact_roster_can_retain_seven_material_planned_themes(tmp_p
     coverage = payload["_cache"]["candidate_generation"]["editorial_plan_coverage"]
     assert coverage["final_selected_theme_coverage"]["omitted_themes"] == []
     assert len(coverage["final_selected_theme_coverage"]["theme_coverage"]) == 7
+    variables = prompts.variables_for_namespace(
+        "report_vs/artifacts/editorial_theme_coverage"
+    )
+    roster = json.loads(variables["insights_final_json"])
+    facts = json.loads(variables["verified_facts_json"])
+    facts_by_id = {fact["fact_id"]: fact for fact in facts}
+    assert len(roster) == 7
+    assert len(facts_by_id) == 10
+    for insight in roster:
+        assert "verified_facts" not in insight
+        for fact_id in insight["verified_fact_ids"]:
+            assert fact_id in facts_by_id
+            assert facts_by_id[fact_id]["source_identity"]
 
 
-def test_verified_theme_coverage_receives_all_facts_bound_to_one_insight(tmp_path):
+def test_verified_theme_coverage_references_all_facts_bound_to_one_insight(tmp_path):
     facts = [
         {
             "fact_id": "fact-1",
@@ -199,6 +213,5 @@ def test_verified_theme_coverage_receives_all_facts_bound_to_one_insight(tmp_pat
     )
     first = rendered[0]
     assert first["verified_fact_ids"] == ["fact-1", "fact-2"]
-    assert [fact["fact_id"] for fact in first["verified_facts"]] == ["fact-1", "fact-2"]
-    assert first["verified_facts"][1]["metric"]["value"] == "18"
+    assert "verified_facts" not in first
     assert "metric" not in first

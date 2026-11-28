@@ -1705,7 +1705,6 @@ def _semantic_theme_coverage_insights_json(
             item["verified_fact_ids"] = [
                 _s(authority.get("fact_id")).strip() for authority in authorities
             ]
-            item["verified_facts"] = deepcopy(authorities)
             if len(authorities) == 1:
                 authority = authorities[0]
                 item["metric"] = deepcopy(authority.get("metric") or {})

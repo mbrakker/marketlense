@@ -6,6 +6,12 @@ text: |
   authoritative context; do not invent evidence, facts, insight IDs, or theme
   names.
 
+  A planned theme may be covered collectively by multiple final insights.
+  Examine the complete insight roster and identify every relevant supporting
+  insight. Use each insight's evidence and verified-fact IDs to resolve its
+  authority from the complete canonical fact roster; do not treat an insight
+  as absent merely because another insight addresses the same theme.
+
   Use exactly one status for each planned theme:
   - `covered`: the final wording develops the intended proposition.
   - `partial`: the wording is materially related but omits a required relationship,
