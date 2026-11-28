@@ -228,6 +228,7 @@ def _claim(candidate_id, text, page=5):
 
 def _dependencies(responses, render_calls, requests):
     latest_corrected_claim = ""
+    blind_verified_payload = None
 
     def render_page(request, _ctx):
         render_calls.append(request)
@@ -236,11 +237,18 @@ def _dependencies(responses, render_calls, requests):
         )
 
     def call_model(request: OpenAIJSONImagePromptRequest, _ctx):
-        nonlocal latest_corrected_claim
+        nonlocal latest_corrected_claim, blind_verified_payload
         requests.append(request)
         if request.prompt_namespace == "report_vs/validate/visual_source_reading":
             return _source_reading(request)
-        payload = next(responses)
+        if (
+            request.prompt_namespace == "report_vs/validate/visual_claim_verification"
+            and "independent_source_reading" in request.user_prompt
+            and blind_verified_payload is not None
+        ):
+            payload = copy.deepcopy(blind_verified_payload)
+        else:
+            payload = next(responses)
         if (
             isinstance(payload, dict)
             and payload.get("status") == "corrected"
@@ -293,6 +301,8 @@ def _dependencies(responses, render_calls, requests):
                     "explanation": "The source reading supports the verified claim.",
                 },
             }
+            if "independent_source_reading" not in request.user_prompt:
+                blind_verified_payload = copy.deepcopy(payload)
         return SimpleNamespace(
             parsed_json=payload,
             request_id=f"request-{len(requests)}",
@@ -377,10 +387,11 @@ def test_first_verification_failure_is_repaired_once_and_then_verified(tmp_path)
         "report_vs/validate/visual_claim_verification",
         "report_vs/validate/visual_claim_correction",
         "report_vs/validate/visual_claim_verification",
+        "report_vs/validate/visual_claim_verification",
         "report_vs/validate/visual_source_comparison",
     ]
     assert (
-        "The source page visibly records a relevant finding." in requests[2].user_prompt
+        "The source page visibly records a relevant finding." in requests[5].user_prompt
     )
     assert item.source_reading["pages"] == [
         {
@@ -391,12 +402,13 @@ def test_first_verification_failure_is_repaired_once_and_then_verified(tmp_path)
     ]
     assert [request.image_paths for request in requests[:-1]] == [
         [str(tmp_path / "report/crop_refine_pages/page-4.png")]
-    ] * 5
+    ] * 6
     assert not getattr(requests[-1], "image_paths", None)
     assert claims == original
     assert all(request.reasoning_effort == "high" for request in requests)
     assert [request.response_cache_enabled for request in requests] == [
         False,
+        True,
         True,
         True,
         True,
@@ -408,6 +420,7 @@ def test_first_verification_failure_is_repaired_once_and_then_verified(tmp_path)
         4096,
         16384,
         4096,
+        16384,
         16384,
         2048,
     ]
@@ -604,12 +617,14 @@ def test_multi_page_binding_renders_and_sends_each_complete_page(tmp_path):
     assert result.claims[0].outcome == "verified"
     assert result.claims[0].physical_pages == [5, 6]
     assert [call.page for call in render_calls] == [4, 5]
-    assert requests[0].image_paths == [
+    images = [
         str(tmp_path / "report/crop_refine_pages/page-4.png"),
         str(tmp_path / "report/crop_refine_pages/page-5.png"),
     ]
-    assert requests[1].image_paths == requests[0].image_paths
-    assert requests[2].image_paths == requests[0].image_paths
+    assert requests[0].image_paths == images[:1]
+    assert requests[1].image_paths == images[1:]
+    assert requests[2].image_paths == images
+    assert requests[3].image_paths == images
 
 
 def test_visual_prompt_labels_each_image_with_one_based_physical_page(tmp_path):
@@ -649,14 +664,14 @@ def test_visual_prompt_labels_each_image_with_one_based_physical_page(tmp_path):
     )
 
     assert result.claims[0].outcome == "verified"
-    assert "image 1 = physical PDF page 14" in requests[1].user_prompt
-    assert "image 2 = physical PDF page 15" in requests[1].user_prompt
     assert "image 1 = physical PDF page 14" in requests[2].user_prompt
     assert "image 2 = physical PDF page 15" in requests[2].user_prompt
-    assert "authoritative" in requests[1].user_prompt.lower()
-    assert "printed footer" in requests[1].user_prompt.lower()
+    assert "image 1 = physical PDF page 14" in requests[3].user_prompt
+    assert "image 2 = physical PDF page 15" in requests[3].user_prompt
+    assert "authoritative" in requests[2].user_prompt.lower()
+    assert "printed footer" in requests[2].user_prompt.lower()
     assert (
-        "cite this page, not any printed page label" in requests[1].user_prompt.lower()
+        "cite this page, not any printed page label" in requests[2].user_prompt.lower()
     )
 
 

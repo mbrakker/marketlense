@@ -34,15 +34,32 @@ INTERPRETATION = (
 ORIGINAL = "ORIGINAL CANDIDATE PRIVATE SENTINEL"
 
 
-def _run(tmp_path, claim_text, verdict, *, run_budget=None):
-    request = _request(tmp_path, [_claim("candidate", ORIGINAL)])
+def _run(
+    tmp_path,
+    claim_text,
+    verdict,
+    *,
+    run_budget=None,
+    blind_reject=False,
+    pages=None,
+    invalid_page=False,
+):
+    candidate = _claim("candidate", ORIGINAL)
+    if pages is not None:
+        candidate["pages"] = pages
+    request = _request(tmp_path, [candidate])
     reading = {
         "schema_version": "1.0",
         "source_identity": request.source_identity,
         "request_id": "reading-id",
         "model": "gpt-6-luna",
         "pages": [
-            {"physical_page": 5, "observations": [SOURCE_TEXT], "uncertainties": []}
+            {
+                "physical_page": page,
+                "observations": [SOURCE_TEXT if page == 5 else "Second page context."],
+                "uncertainties": [],
+            }
+            for page in (pages or [5])
         ],
     }
     calls = []
@@ -54,8 +71,25 @@ def _run(tmp_path, claim_text, verdict, *, run_budget=None):
         calls.append(("image", model_request))
         namespace = model_request.prompt_namespace
         if namespace.endswith("visual_source_reading"):
-            payload = {"status": "read", "pages": reading["pages"]}
-            request_id = "reading-id"
+            inspected = {
+                int(path.rsplit("page-", 1)[1].split(".", 1)[0]) + 1
+                for path in model_request.image_paths
+            }
+            payload = {
+                "status": "read",
+                "pages": [
+                    page
+                    for page in reading["pages"]
+                    if page["physical_page"] in inspected
+                ],
+            }
+            if invalid_page and inspected == {6}:
+                payload["pages"] = [reading["pages"][0]]
+            request_id = (
+                f"reading-id-{next(iter(inspected))}"
+                if len(pages or []) > 1 and len(inspected) == 1
+                else "reading-id"
+            )
         elif namespace.endswith("visual_claim_correction"):
             payload = {"status": "corrected", "claim": claim_text, "issues": []}
             request_id = "correction-id"
@@ -86,6 +120,17 @@ def _run(tmp_path, claim_text, verdict, *, run_budget=None):
                 },
             }
             request_id = "verifier-id"
+            if (
+                blind_reject
+                and "independent_source_reading" not in model_request.user_prompt
+            ):
+                payload = {
+                    "outcome": "rejected",
+                    "diagnostics": ["source chart contradicts the claim"],
+                    "source_truth_notes": "The chart contradicts the proposed mapping.",
+                    "supporting_physical_pages": [],
+                    "source_truth_notes_by_page": {},
+                }
         else:
             pytest.fail(f"Unexpected image model call: {namespace}")
         return SimpleNamespace(
@@ -125,12 +170,12 @@ def test_every_visual_provider_call_receives_scoped_run_budget(tmp_path):
         schema_version="1.0",
         run_id="budget-test",
         publisher_name="publisher",
-        max_calls=4,
+        max_calls=5,
     )
     _result, calls, _digest = _run(
         tmp_path, INTERPRETATION, _verdict("contradicted"), run_budget=budget
     )
-    assert len(calls) == 4
+    assert len(calls) == 5
     assert all(request.run_budget == budget for _kind, request in calls)
 
 
@@ -170,6 +215,70 @@ def test_comparison_is_separate_text_only_and_receives_exact_verified_inputs(tmp
     assert "FACT QUALIFIER SENTINEL" in prompt
     assert ORIGINAL not in prompt
     assert not getattr(comparison, "image_paths", None)
+    _assert_not_verified(result)
+
+
+def test_visual_verifier_is_not_anchored_by_prior_source_reading(tmp_path):
+    _, calls, _ = _run(tmp_path, REVERSED_CLAIM, _verdict("contradicted"))
+    verifier = next(
+        request
+        for kind, request in calls
+        if kind == "image"
+        and request.prompt_namespace.endswith("visual_claim_verification")
+    )
+    assert SOURCE_TEXT not in verifier.user_prompt
+    assert "independent_source_reading" not in verifier.user_prompt
+    assert REVERSED_CLAIM in verifier.user_prompt
+
+
+def test_source_readings_isolate_pages_and_retain_cross_page_context(tmp_path):
+    result, calls, _ = _run(
+        tmp_path, INTERPRETATION, _verdict("contradicted"), pages=[5, 6]
+    )
+    readings = [
+        request
+        for kind, request in calls
+        if kind == "image"
+        and request.prompt_namespace.endswith("visual_source_reading")
+    ]
+    assert len(readings) == 2
+    assert [len(request.image_paths) for request in readings] == [1, 1]
+    comparison = next(request for kind, request in calls if kind == "text")
+    assert SOURCE_TEXT in comparison.user_prompt
+    assert "Second page context." in comparison.user_prompt
+    assert "reading-id-5" in comparison.user_prompt
+    assert "reading-id-6" in comparison.user_prompt
+    _assert_not_verified(result)
+
+
+def test_source_reading_with_wrong_page_fails_before_candidate_correction(tmp_path):
+    result, calls, _ = _run(
+        tmp_path, INTERPRETATION, _verdict("supported"), pages=[5, 6], invalid_page=True
+    )
+    _assert_not_verified(result)
+    assert not any(
+        request.prompt_namespace.endswith("visual_claim_correction")
+        for _kind, request in calls
+    )
+
+
+def test_blind_visual_rejection_cannot_be_overridden_by_later_support(tmp_path):
+    request = _request(tmp_path, [_claim("candidate", ORIGINAL)])
+    reading = {
+        "schema_version": "1.0",
+        "source_identity": request.source_identity,
+        "request_id": "reading-id",
+        "model": "gpt-6-luna",
+        "pages": [
+            {"physical_page": 5, "observations": [SOURCE_TEXT], "uncertainties": []}
+        ],
+    }
+    result, _, _ = _run(
+        tmp_path,
+        REVERSED_CLAIM,
+        _verdict("supported", digest=sha256_json(reading)),
+        blind_reject=True,
+    )
     _assert_not_verified(result)
 
 

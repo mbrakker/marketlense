@@ -38,6 +38,17 @@ def test_visual_verifier_preserves_material_chart_values_in_authoritative_fact()
     assert "do not infer or add ambiguous or unrelated values" in text
 
 
+def test_source_reader_is_instructed_to_trace_explicit_color_legends():
+    prompt = load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=SOURCE, force_reload=True),
+        RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+    )
+    text = " ".join(prompt.system.text.lower().split())
+    assert "explicit color legend" in text
+    assert "matching" in text
+    assert "without a legend" in text
+
+
 def _evaluate(tmp_path, assessment, verifier_assessment=MISSING):
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"test-pdf")
@@ -206,7 +217,12 @@ def test_source_reader_is_claim_blind_and_sees_the_verified_page(tmp_path):
     assert namespaces.index(SOURCE) < namespaces.index(CORRECTION)
     assert namespaces.index(SOURCE) < namespaces.index(VERIFICATION)
     source = calls[namespaces.index(SOURCE)]
-    verifier = calls[namespaces.index(VERIFICATION)]
+    verifier = next(
+        call
+        for call in calls
+        if call.prompt_namespace == VERIFICATION
+        and "independent_source_reading" in call.user_prompt
+    )
     assert (
         source.image_paths
         == verifier.image_paths
@@ -254,7 +270,12 @@ def test_verifier_receives_source_observation_bound_to_physical_page(tmp_path):
     result, calls = _evaluate(tmp_path, _read_assessment())
     namespaces = [call.prompt_namespace for call in calls]
     assert SOURCE in namespaces, "source assessment must precede verification"
-    verifier = calls[namespaces.index(VERIFICATION)]
+    verifier = next(
+        call
+        for call in calls
+        if call.prompt_namespace == VERIFICATION
+        and "independent_source_reading" in call.user_prompt
+    )
     prompt = verifier.system_prompt + "\n" + verifier.user_prompt
     assert re.search(
         rf"(?:physical[_ ]page[^\n]{{0,30}}5[\s\S]{{0,200}}{re.escape(OBSERVATION)}|"

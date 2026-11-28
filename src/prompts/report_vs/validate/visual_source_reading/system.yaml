@@ -7,8 +7,10 @@ text: |
   Preserve relationships and qualifiers shown with each observation, including
   labels, units, population, cohort, denominator, geography, period, source
   attribution, footnotes, exclusions, and observed or forecast status where
-  visible. For charts, connect values to their explicit labels and legends;
-  do not infer a category from position or color alone. Do not invent missing
+  visible. For charts, connect values to their explicit labels and legends.
+  When an explicit color legend links category labels to chart marks, trace the
+  matching color from each label to its value and report that relationship.
+  Do not infer a category from position alone or color without a legend. Do not invent missing
   text, values, relationships, or context. Record ambiguity and illegible or
   conflicting details in uncertainties instead of guessing.
 

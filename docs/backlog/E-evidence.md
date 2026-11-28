@@ -1739,6 +1739,59 @@ establish genuinely independent visual assessment and fail closed on material
 disagreement, while preserving page identities, multi-page facts, and source
 coverage; representative and end-to-end acceptance remain outstanding.
 
+A subsequent uncommitted blind-verifier experiment hid the initial source
+reading from a first visual verdict and retained the separate page-level reading
+assessment and comparison. In a bounded replay of the retained full Activate
+claim on physical pages 5–7, it accepted the swapped mapping and rejected a
+corrected mapping. The two calls used 54,892 input and 4,347 output tokens,
+estimated at $0.007663; results are retained in
+`C:/Users/Михаил/AppData/Local/Temp/ml-blind-visual-replay-3_kv7418/result.json`.
+The blind boundary therefore does not establish reliable visual authority.
+A page-6-only probe rejected the swapped mapping, but also rejected its correct
+counterpart for omitting the chart's “cost of” qualifier; these were component
+probes, not end-to-end acceptance. A further page-6-only probe that included
+the qualifier accepted both the swapped and correct mappings: 21,224 input and
+7,969 output tokens, estimated $0.006107, results at
+`C:/Users/Михаил/AppData/Local/Temp/ml-blind-visual-replay-m9dw04f2/result.json`.
+Thus isolating the page did not reliably prevent the factual error either. The
+implementation remains experimental and must not be treated as resolving the
+material factual defect.
+
+Three additional independent, claim-blind readings of page 6 using the existing
+source-reading prompt all transcribed the three chart relationships correctly.
+They used 12,174 input and 3,483 output tokens, estimated $0.002959; retained
+results are at
+`C:/Users/Михаил/AppData/Local/Temp/ml-page6-reading-replicates-ozaw1sts/result.json`.
+This is a limited diagnostic, not proof of reliable visual reading or evidence
+that page-wise processing preserves genuinely multi-page relationships.
+
+A subsequent uncommitted production-boundary replay processed the retained
+three-page Activate claim with separate claim-blind reads per selected page,
+followed by blind visual verification, visual reading assessment, and the
+existing bound semantic comparison. The source-correct candidate was verified
+with the full segment and revenue-model breakdown. The retained swapped
+candidate was corrected, but its first visual reading omitted the explicit
+category-to-color links; the resulting retry removed the breakdown and passed
+only the aggregate finding. Thus the swapped mapping was not promoted, but
+first-attempt evidence retention failed. The replay used 17 provider calls,
+223,712 input and 31,933 output tokens, estimated $0.038338, and 278.957 seconds;
+results are at
+`C:/Users/Михаил/AppData/Local/Temp/ml-pagewise-admission-yor8195j/result.json`.
+This component comparison does not establish end-to-end acceptance or a
+general factual-error rate. A follow-up clarifies that the reader must trace
+an explicit color legend rather than infer labels from color without one.
+Rerunning the previously deficient candidate with that clarification produced
+a first-attempt verified claim retaining both source-supported breakdowns. The
+original page 6 shows access $128B/5.7%, advertising $108B/4.7% and paid
+content $66B/2.3%; page 7 shows subscription $165B/4.3%, advertising
+$108B/4.7% and single transactions $29B/2.1%, matching the final claim. The
+structured observations retain these same category/value/rate relationships,
+forecast status, global period and the Internet-access footnote. The
+single-candidate replay used seven calls, 82,339 input and 12,975 output tokens,
+estimated $0.014722, and 103.253 seconds; results are at
+`C:/Users/Михаил/AppData/Local/Temp/ml-pagewise-admission-dm779mfn/result.json`.
+This is one stochastic component replay, not proof of report-level readiness.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the

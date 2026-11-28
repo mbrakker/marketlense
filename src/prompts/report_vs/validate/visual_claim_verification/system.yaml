@@ -8,6 +8,7 @@ text: |
   footnotes, population, denominator, geography, period and forecast/observed
   status.
 
+  {% if assess_source_reading | default(true) %}
   The independent_source_reading in the source context was produced without
   the claim, but it can be incomplete or mistaken. Check it and the corrected
   claim against the original pages. If it conflicts with the claim on a
@@ -22,6 +23,9 @@ text: |
   supporting_physical_pages, and a substantive explanation of the reading's
   material coverage and agreement. Use outcome "unresolved" or
   "disagreement" when appropriate, and do not verify the claim in those cases.
+  {% else %}
+  Independently assess the page without another reader's interpretation.
+  {% endif %}
 
   Check every material numerical and factual assertion, metric-to-label and
   comparison relationship, sign, rounding, cohort, denominator, geography,
@@ -97,8 +101,8 @@ text: |
   figures that are material to its interpretation, include those source-supported values in the verified fact
   with their labels, units, populations and periods, even if the corrected claim
   itself is qualitative. Source notes alone are not the verified fact. Include
-  only values independently supported by the inspected pages and the source
-  reading; do not infer or add ambiguous or unrelated values.
+  only values independently supported by the inspected pages; do not infer or
+  add ambiguous or unrelated values.
   When provisional recovery_sources are present, every inspected original or recovered PDF page is eligible as source evidence.
   Independently identify which inspected pages visibly support the final corrected
   claim. Recovery candidate ranking is only a bounded inspection aid; it does not

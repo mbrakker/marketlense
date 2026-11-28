@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Mapping, Sequence
 
 VERIFIED_CLAIMS_VISUAL_SCHEMA_VERSION = "1.1"
 VERIFIED_FACT_SCHEMA_VERSION = "1.0"
-VISUAL_ADMISSION_POLICY_VERSION = "source-comparison-v1"
+VISUAL_ADMISSION_POLICY_VERSION = "blind-visual-source-comparison-v2"
 
 
 def source_reading_matches_binding(
@@ -349,7 +349,11 @@ class VisualClaimEvaluationResult:
     source_reading: Dict[str, Any] = field(
         default_factory=dict,
         metadata={
-            "doc": "Claim-blind source reading bound to the inspected PDF pages."
+            "doc": (
+                "Claim-blind reading bound to the inspected PDF pages. For multiple "
+                "pages, page_requests records the request and model for each page; "
+                "the top-level request_id and model refer to the first page."
+            )
         },
     )
     source_reading_assessment: Dict[str, Any] = field(
@@ -359,7 +363,9 @@ class VisualClaimEvaluationResult:
     source_reading_comparison: Dict[str, Any] = field(
         default_factory=dict,
         metadata={
-            "doc": "Independent semantic comparison bound to the reading and final claim."
+            "doc": (
+                "Independent semantic comparison bound to the reading and final claim."
+            )
         },
     )
 

@@ -45,7 +45,7 @@ def test_doc_map_only_claim_page_is_eligible_for_provisional_visual_inspection(
     assert result.claims[0].outcome == "verified"
     assert result.claims[0].evidence_ids == ["f1"]
     assert result.claims[0].evidence_spans == claim["evidence_spans"]
-    assert len(requests) == 4
+    assert len(requests) == 5
 
 
 def test_rejected_claim_does_not_require_supporting_pages(tmp_path):
@@ -311,7 +311,7 @@ def test_non_retryable_verification_error_does_not_retry_and_next_claim_runs(tmp
     assert len(result.claims[0].verification_attempts) == 1
     assert len(result.claims[1].correction_attempts) == 1
     assert len(result.claims[1].verification_attempts) == 1
-    assert calls == 4
+    assert calls == 5
 
 
 def test_real_recovery_inspects_new_pages_but_keeps_original_binding(tmp_path):
@@ -375,10 +375,13 @@ def test_real_recovery_inspects_new_pages_but_keeps_original_binding(tmp_path):
     assert item.evidence_ids == ["f1"]
     assert item.evidence_spans == claims[0]["evidence_spans"]
     assert [call.page for call in render_calls] == [4, 6]
-    assert requests[0].image_paths == [
+    images = [
         str(tmp_path / "report/crop_refine_pages/page-4.png"),
         str(tmp_path / "report/crop_refine_pages/page-6.png"),
     ]
+    assert requests[0].image_paths == images[:1]
+    assert requests[1].image_paths == images[1:]
+    assert requests[2].image_paths == images
 
 
 def test_recovery_accepts_visually_supported_original_page_with_irrelevant_candidate(

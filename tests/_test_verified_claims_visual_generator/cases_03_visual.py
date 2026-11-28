@@ -964,7 +964,7 @@ def test_visual_prompts_do_not_present_retained_span_text_as_source_proof(tmp_pa
 
     assert result.claims[0].outcome == "verified"
     assert result.claims[0].evidence_spans == claim["evidence_spans"]
-    assert len(requests) == 4
+    assert len(requests) == 5
     assert all(
         "unverified retained excerpt must not be source proof"
         not in request.user_prompt
