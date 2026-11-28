@@ -1710,6 +1710,24 @@ inference is safe or that the candidate is publishable. The calls used 236,694
 input and 25,121 output tokens for an estimated $0.035770. These are focused
 review replays, not complete validation, repair, or end-to-end runs.
 
+The fresh Activate run at `3c8d12be` (`C:/v51/fr-n4nce3hk/cohort_result.json`)
+failed publication readiness after three targeted repairs. It recorded 529
+provider calls, 3,533,991 input and 510,337 output tokens, an estimated
+$0.555025, and 3,706.464 seconds; no WordPress write occurred. The existing
+audit reported seven admitted facts and zero unsupported retained claims, but
+independent inspection of original physical page 6 found a material error in
+admitted `insight-01-revenue-growth`: it swaps paid content ($66B, 2.3% CAGR)
+and advertising ($108B, 4.7% CAGR). The canonical statement, structured
+observations, and verifier's page note all repeat that error. The retained
+source-reading response also made the same swap with no uncertainty; the
+visual verifier received that reading, and the text-only comparison subsequently
+reported support. Therefore this run demonstrates a correlated visual-reading
+and verification failure, not successful factual acceptance; report-level
+unsupported-claim counters did not detect it. The editorial repair reviews also
+introduced new findings on unchanged items across attempts. Both factual
+authority and editorial-repair reliability remain open; do not promote these
+results or claim the hybrid architecture accepted on this evidence.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the
