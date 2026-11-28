@@ -1698,6 +1698,18 @@ back. The visual chart's correctness has not been independently established by
 this run's admission counts. Fresh current-revision validation and the
 remaining Activate and Capgemini acceptance checks are still required.
 
+At `04ec2a20`, two targeted provider-backed replays used the original and the
+previously rejected candidate artifacts with the same hash-qualified verified
+authority and production semantic-review boundary. The original no longer
+received the LinkedIn binding error; the reviewer still flagged insight 07's
+implication and action, but did not repeat its earlier insight 01 objections.
+The candidate replay flagged unchanged insights 02, 03 and 06 for depth and
+did not repeat the previous unsupported-inference verdict on insight 07. This
+demonstrates variation across whole-report reviews, not that the disputed
+inference is safe or that the candidate is publishable. The calls used 236,694
+input and 25,121 output tokens for an estimated $0.035770. These are focused
+review replays, not complete validation, repair, or end-to-end runs.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the
