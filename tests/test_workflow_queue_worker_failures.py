@@ -259,6 +259,9 @@ def test_worker_fails_closed_for_invalid_queue_inputs(
     [
         ("report_pipeline_pdf_budget_stop", True, "budget_deferred"),
         ("cross_report_prompt_budget_exceeded", False, "dead_letter"),
+        ("retry_wait_reservation_window_exceeded", False, "dead_letter"),
+        ("retry_wait_reservation_conflict", False, "dead_letter"),
+        ("retry_wait_finalization_failed", False, "dead_letter"),
     ],
 )
 def test_worker_classifies_canonical_pipeline_budget_stop_and_immutable_input(

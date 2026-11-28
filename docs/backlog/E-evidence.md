@@ -1661,6 +1661,24 @@ input and 1,974 output tokens at an estimated $0.001272. This concise,
 manually transcribed input is not a visual-reader test or a full retained-fact
 replay, and does not resolve the earlier comparator false-acceptance probe.
 
+The next fresh Activate run at `d21716cd`
+(`C:/v49/fr-xh8nv_cd/cohort_result.json`) failed before visual admission after
+provider `InternalServerError` responses opened the evidence and taxonomy LLM
+circuits. The later pipeline attempt exhausted its retries while the circuits
+still had approximately 10 and 12 seconds of cooldown remaining. No report
+was published. The run recorded 408 provider calls, 366,636 input and 160,471
+output tokens, an estimated $0.116893 and 1,957.006 seconds. These results do
+not establish live editorial-repair effectiveness. The orchestrator retry
+decision now uses a valid finite reported circuit cooldown as a minimum retry
+delay, without changing retry counts or the circuit's half-open authority.
+Circuit-wait reservations forecast and record elapsed wait time, including
+interrupted waits, so configured runtime budgets can stop excessive or
+cumulative waits. Integer-second accounting rounds each wait up; a reused
+reservation identity or a wait that cannot fit the configured reservation
+window fails closed. A long process pause can still outlive the reservation.
+This does not guarantee recovery from provider errors or eliminate the need
+for fresh end-to-end acceptance.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the

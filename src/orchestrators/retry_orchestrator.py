@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import math
 import random
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, TypeVar
@@ -210,6 +212,13 @@ def resolve_retry_decision(
         reason = "retryable_error"
         next_action = "retry_after_delay"
         delay_seconds = _retry_delay_seconds(policy, attempt)
+        if _error_code(exc) == "llm_circuit_open":
+            try:
+                cooldown = float(_context_value(exc, "remaining_cooldown_seconds"))
+            except (TypeError, ValueError, OverflowError):
+                cooldown = 0.0
+            if math.isfinite(cooldown) and 0 < cooldown <= threading.TIMEOUT_MAX:
+                delay_seconds = max(delay_seconds, cooldown)
 
     return RetryDecision(
         schema_version="1.0",
@@ -242,12 +251,35 @@ def _decision_fields(decision: RetryDecision) -> dict[str, Any]:
 
 
 def _reserve_retry_budget(
-    *, policy: RetryPolicy, step_name: str, attempt: int, ctx: RunContext
-) -> None:
-    """Reserve and finalize a retry slot before another expensive attempt begins."""
+    *,
+    policy: RetryPolicy,
+    step_name: str,
+    attempt: int,
+    ctx: RunContext,
+    delay_seconds: float,
+    track_wait: bool,
+) -> str:
+    """Reserve a retry slot; circuit waits retain it until sleep completes."""
     budget = policy.budget
     if budget is None:
-        return
+        return ""
+    retry_budget_enabled = not budget.enabled_effect_kinds or (
+        "retry" in budget.enabled_effect_kinds
+    )
+    if (
+        track_wait
+        and retry_budget_enabled
+        and math.ceil(delay_seconds) + 1 > budget.reservation_ttl_seconds
+    ):
+        raise AppError(
+            code="retry_wait_reservation_window_exceeded",
+            message="Retry wait exceeds the budget reservation window",
+            retryable=False,
+            context={
+                "reason_code": "reservation_window_too_short",
+                "next_action": "review_retry_reservation_window",
+            },
+        )
     decision = evaluate_budget_request(
         BudgetRequest(
             schema_version="1.0",
@@ -258,9 +290,14 @@ def _reserve_retry_budget(
             report_id=policy.budget_report_id,
             resource_type="retry",
             operation=f"retry:{step_name}",
+            estimated_duration_seconds=math.ceil(delay_seconds) if track_wait else 0,
+            reservation_ttl_seconds=budget.reservation_ttl_seconds
+            if track_wait
+            else 300,
             attempt_number=attempt + 1,
             idempotency_key=(
-                f"retry:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}:{step_name}:{attempt + 1}"
+                f"retry:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}:"
+                f"{step_name}:{attempt + 1}"
             ),
             reserve_in_flight=True,
         ),
@@ -278,7 +315,7 @@ def _reserve_retry_budget(
                 "next_action": decision.next_action,
             },
         )
-    if decision.reservation_key:
+    if decision.reservation_key and not track_wait:
         finalize_budget_side_effect(
             BudgetSideEffectFinalizeRequest(
                 schema_version="1.0",
@@ -288,6 +325,48 @@ def _reserve_retry_budget(
                 outcome="completed",
             ),
             ctx,
+        )
+        return ""
+    if decision.reservation_key and not decision.reservation_created:
+        raise AppError(
+            code="retry_wait_reservation_conflict",
+            message="Retry budget reservation identity was already used",
+            retryable=False,
+            context={"reason_code": "retry_reservation_not_created"},
+        )
+    return decision.reservation_key
+
+
+def _finalize_retry_budget(
+    *,
+    policy: RetryPolicy,
+    reservation_key: str,
+    started: float,
+    ctx: RunContext,
+    outcome: str,
+) -> None:
+    if not reservation_key or policy.budget is None:
+        return
+    result = finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=policy.budget.usage_db_path,
+            reservation_key=reservation_key,
+            actual_usage=RunBudgetUsage(
+                schema_version="1.0",
+                retries=1,
+                runtime_seconds=math.ceil(max(0.0, time.monotonic() - started)),
+            ),
+            outcome=outcome,
+        ),
+        ctx,
+    )
+    if not result.finalized or not result.actual_recorded:
+        raise AppError(
+            code="retry_wait_finalization_failed",
+            message="Retry wait usage was not recorded",
+            retryable=False,
+            context={"reason_code": "retry_usage_not_recorded"},
         )
 
 
@@ -355,13 +434,44 @@ def run_with_retry(
                     fields=fields,
                 )
             )
-            _reserve_retry_budget(
+            reservation_key = _reserve_retry_budget(
                 policy=policy,
                 step_name=step_name,
                 attempt=attempt,
                 ctx=ctx,
+                delay_seconds=decision.delay_seconds,
+                track_wait=_error_code(exc) == "llm_circuit_open",
             )
-            sleep_fn(decision.delay_seconds)
+            started = time.monotonic()
+            try:
+                sleep_fn(decision.delay_seconds)
+            except BaseException:
+                try:
+                    _finalize_retry_budget(
+                        policy=policy,
+                        reservation_key=reservation_key,
+                        started=started,
+                        ctx=ctx,
+                        outcome="cancelled",
+                    )
+                except Exception:
+                    logger.warning(
+                        log_event(
+                            ctx,
+                            role="orchestrator",
+                            event="retry_reservation_finalization_failed",
+                            module=module_name,
+                            fields={"step": step_name},
+                        )
+                    )
+                raise
+            _finalize_retry_budget(
+                policy=policy,
+                reservation_key=reservation_key,
+                started=started,
+                ctx=ctx,
+                outcome="completed",
+            )
             attempt += 1
 
 
