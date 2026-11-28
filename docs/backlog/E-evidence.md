@@ -1728,6 +1728,17 @@ introduced new findings on unchanged items across attempts. Both factual
 authority and editorial-repair reliability remain open; do not promote these
 results or claim the hybrid architecture accepted on this evidence.
 
+A bounded page-isolated canary using the unchanged production source-reading
+prompt and the same original page 6 returned the correct three segment/value/
+CAGR relationships. It used 4,058 input and 1,158 output tokens, at an
+estimated $0.000985. The failed run's three-page reading returned the swapped
+mapping. This single contrast is a hypothesis-generating observation, not a
+validated fix: page isolation may still produce errors, and the existing visual
+verifier sees the first reading before assessing it. A production change must
+establish genuinely independent visual assessment and fail closed on material
+disagreement, while preserving page identities, multi-page facts, and source
+coverage; representative and end-to-end acceptance remain outstanding.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the
