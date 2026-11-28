@@ -62,10 +62,10 @@ _LINKEDIN_PLACEHOLDER = re.compile(
     r"\[(?:placeholder|todo|tbd|not available|n/?a|unknown)\]", re.IGNORECASE
 )
 _MECHANICAL_PUBLIC_SCAFFOLD = re.compile(
-    r"\b(?:answer|observation|implication|executive action|executive takeaway|"
-    r"concrete finding|"
-    r"immediate implication)\s*:",
-    re.IGNORECASE,
+    r"(^|(?<=[.!?])\s+)(?:answer|observation|implication|executive action|"
+    r"executive takeaway|concrete finding|"
+    r"immediate implication)\s*:[ \t]*",
+    re.IGNORECASE | re.MULTILINE,
 )
 _CORE_SIGNAL_CLAUSE_BOUNDARY = re.compile(
     r";|(?<!\d):(?!\d)|\s+(?:but|while)\s+|,\s+(?:and|but|while)\s+(?=(?:(?:it|they|"
@@ -189,7 +189,7 @@ def _sanitize_public_prose(value: object) -> str:
     ).strip()
     if _PUBLIC_TRUNCATION_MARKER.search(sanitized):
         return ""
-    return _MECHANICAL_PUBLIC_SCAFFOLD.sub("", sanitized).strip()
+    return _MECHANICAL_PUBLIC_SCAFFOLD.sub(r"\1", sanitized).strip()
 
 
 def _sanitize_linkedin_post(value: object) -> str:
@@ -205,7 +205,7 @@ def _sanitize_linkedin_post(value: object) -> str:
     sanitized = _LINKEDIN_MARKDOWN_HEADING.sub("", sanitized)
     sanitized = _LINKEDIN_LIST_MARKER.sub(r"\1", sanitized)
     sanitized = re.sub(r"[*_`]", "", sanitized)
-    sanitized = _MECHANICAL_PUBLIC_SCAFFOLD.sub("", sanitized)
+    sanitized = _MECHANICAL_PUBLIC_SCAFFOLD.sub(r"\1", sanitized)
     return "\n".join(
         re.sub(r"[ \t]{2,}", " ", line).strip() for line in sanitized.split("\n")
     ).strip()

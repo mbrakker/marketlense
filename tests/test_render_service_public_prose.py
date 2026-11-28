@@ -698,6 +698,23 @@ def test_render_sanitizer_removes_editorial_labels_without_hiding_prose() -> Non
     )
 
 
+def test_render_sanitizer_preserves_implication_in_ordinary_prose() -> None:
+    text = (
+        "MarketLense’s conditional planning implication: if using this forecast, "
+        "keep assumptions distinct from realized results."
+    )
+
+    assert _sanitize_public_prose(text) == text
+    assert _sanitize_linkedin_post(text) == text
+
+
+def test_render_sanitizer_removes_labels_at_later_sentence_boundaries() -> None:
+    text = "The finding is clear. Implication: Compare the groups."
+
+    assert _sanitize_public_prose(text) == "The finding is clear. Compare the groups."
+    assert _sanitize_linkedin_post(text) == "The finding is clear. Compare the groups."
+
+
 def test_render_sanitizer_preserves_quarterly_and_half_year_periods() -> None:
     text = (
         "Share moved from 43% in Q1 2025 to 41% in Q2 2025 and from H1 2025 to H2 2025."

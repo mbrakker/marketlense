@@ -1679,6 +1679,25 @@ window fails closed. A long process pause can still outlive the reservation.
 This does not guarantee recovery from provider errors or eliminate the need
 for fresh end-to-end acceptance.
 
+The fresh Activate run at `8bc6fe40` (`C:/v50/fr-q171mpko/cohort_result.json`)
+passed the previous provider failure, evaluated seven visual candidates and
+admitted six, but failed publication readiness after targeted repair; no
+WordPress write occurred. It recorded 501 provider calls, 2,001,027 input and
+394,309 output tokens, $0.382361 estimated cost, and 2,907.352 seconds. A
+retained LinkedIn post's three claim bindings exactly cover its original text,
+but the public-prose sanitizer removed the ordinary phrase `implication:` from
+the middle of a sentence before the provenance check. This both broke the
+sentence and caused a false missing-identity failure. Restricting scaffold
+removal to standalone labels preserves the original wording and exact evidence
+bindings; a provider-free replay of the retained artifact now resolves all
+three claims without that deterministic error. This is not a semantic-review
+or publication-readiness pass. The independent reviewer also identified
+generic or insufficiently distinct implications and actions for two insights;
+the attempted insight repair introduced other quality issues and was rolled
+back. The visual chart's correctness has not been independently established by
+this run's admission counts. Fresh current-revision validation and the
+remaining Activate and Capgemini acceptance checks are still required.
+
 The current Activate follow-up corrects a verified grounding batch context
 handoff and refines existing editorial instructions; it does not establish live
 first-pass or first-repair success. The retained baseline and limits are in the
