@@ -9,6 +9,7 @@ from src.contracts.public_editorial_quality import (
     PublicEditorialQualityReport,
 )
 from src.contracts.validation import ValidationReport
+from src.contracts.verified_claims import VISUAL_ADMISSION_POLICY_VERSION
 from src.generators.public_editorial_quality_generator import (
     merge_public_editorial_quality_validation,
 )
@@ -180,7 +181,7 @@ def test_verified_authority_reentry_accepts_only_matching_saved_snapshot(
     )
     artifacts = _authority_artifacts()
     artifacts["_cache"]["visual_authority_canary"]["admission_policy_version"] = (
-        "source-comparison-v1"
+        VISUAL_ADMISSION_POLICY_VERSION
     )
     authority = build_verified_authority_context(
         artifacts, expected_source_identity=source_identity

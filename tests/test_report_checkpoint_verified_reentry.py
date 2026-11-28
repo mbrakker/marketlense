@@ -9,6 +9,7 @@ import pytest
 
 from src.contracts.files import PipelineCheckpointWriteRequest, PipelineStageCheckpoint
 from src.contracts.ingest import IngestOutcome
+from src.contracts.verified_claims import VISUAL_ADMISSION_POLICY_VERSION
 from src.generators.verified_claims_canary import VisualAuthorityCanaryConfig
 from src.orchestrators._report_generation_orchestrator.checkpoints import (
     _render_checkpoint_payload,
@@ -100,7 +101,7 @@ def test_verified_render_reentry_reads_sibling_source_and_selection_payloads(
     tmp_path: Path,
 ) -> None:
     runtime, outcome = _write_verified_render_checkpoint(
-        tmp_path, "source-comparison-v1"
+        tmp_path, VISUAL_ADMISSION_POLICY_VERSION
     )
 
     restored = _resume_from_render_checkpoint(
@@ -116,7 +117,9 @@ def test_verified_render_reentry_reads_sibling_source_and_selection_payloads(
 def test_verified_analysis_reentry_accepts_current_admission_policy(
     tmp_path: Path,
 ) -> None:
-    runtime, _ = _write_verified_render_checkpoint(tmp_path, "source-comparison-v1")
+    runtime, _ = _write_verified_render_checkpoint(
+        tmp_path, VISUAL_ADMISSION_POLICY_VERSION
+    )
 
     outcome = _resume_from_analysis_checkpoint(
         runtime,
@@ -133,7 +136,13 @@ def test_verified_analysis_reentry_accepts_current_admission_policy(
 
 @pytest.mark.parametrize(
     "policy_version",
-    [None, "source-reading-v0", "source-reading-v1", "source-reading-v2"],
+    [
+        None,
+        "source-reading-v0",
+        "source-reading-v1",
+        "source-reading-v2",
+        "source-comparison-v1",
+    ],
 )
 def test_verified_analysis_reentry_rejects_missing_or_outdated_admission_policy(
     tmp_path: Path, policy_version: str | None
@@ -154,7 +163,13 @@ def test_verified_analysis_reentry_rejects_missing_or_outdated_admission_policy(
 
 @pytest.mark.parametrize(
     "policy_version",
-    [None, "source-reading-v0", "source-reading-v1", "source-reading-v2"],
+    [
+        None,
+        "source-reading-v0",
+        "source-reading-v1",
+        "source-reading-v2",
+        "source-comparison-v1",
+    ],
 )
 def test_verified_render_reentry_rejects_missing_or_outdated_admission_policy(
     tmp_path: Path, policy_version: str | None
